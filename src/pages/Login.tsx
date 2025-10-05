@@ -13,20 +13,39 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Placeholder for authentication logic
-    if (email && password) {
-      toast.success("Login successful!");
-      // Navigate based on role
-      if (role === "coordinator") {
+    if (!email || !password) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+        credentials: "include",
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.message || "Login failed");
+      }
+
+      // Save token and user
+      if (data?.token) localStorage.setItem("idea_hub_token", data.token);
+      if (data?.user) localStorage.setItem("idea_hub_user", JSON.stringify(data.user));
+
+      toast.success("Logged in");
+      const userRole = data?.user?.role as "coordinator" | "team" | undefined;
+      if (userRole === "coordinator") {
         navigate("/coordinator-dashboard");
       } else {
         navigate("/book-slots");
       }
-    } else {
-      toast.error("Please fill in all fields");
+    } catch (err: any) {
+      toast.error(err?.message || "Login failed");
     }
   };
 
