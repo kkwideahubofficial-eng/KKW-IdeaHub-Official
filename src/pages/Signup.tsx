@@ -18,20 +18,37 @@ const Signup = () => {
     teamName: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (formData.password !== formData.confirmPassword) {
       toast.error("Passwords do not match");
       return;
     }
-
-    // Placeholder for registration logic
-    if (formData.name && formData.email && formData.password) {
-      toast.success("Account created successfully!");
-      navigate("/login");
-    } else {
+    if (!formData.name || !formData.email || !formData.password) {
       toast.error("Please fill in all required fields");
+      return;
+    }
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          role,
+          teamName: role === "team" ? formData.teamName : "",
+        }),
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.message || "Signup failed");
+      }
+      toast.success("Account created");
+      navigate("/login");
+    } catch (err: any) {
+      toast.error(err?.message || "Signup failed");
     }
   };
 

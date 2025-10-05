@@ -6,8 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
+import axios from "../lib/axios";
+import { useNavigate } from "react-router-dom";
 
 const BookSlots = () => {
+  const navigate = useNavigate();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [formData, setFormData] = useState({
     teamName: "",
@@ -17,19 +21,121 @@ const BookSlots = () => {
   });
 
   const timeSlots = [
-    "09:00 AM - 11:00 AM",
-    "11:00 AM - 01:00 PM",
-    "02:00 PM - 04:00 PM",
-    "04:00 PM - 06:00 PM",
+    { label: "09:00 AM - 11:00 AM", start: "09:00", end: "11:00" },
+    { label: "11:00 AM - 01:00 PM", start: "11:00", end: "13:00" },
+    { label: "02:00 PM - 04:00 PM", start: "14:00", end: "16:00" },
+    { label: "04:00 PM - 06:00 PM", start: "16:00", end: "18:00" },
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.teamName && formData.projectTitle && formData.timeSlot && date) {
-      toast.success("Booking request submitted successfully! Waiting for coordinator approval.");
-      setFormData({ teamName: "", projectTitle: "", description: "", timeSlot: "" });
-    } else {
-      toast.error("Please fill in all required fields");
+    
+    // Validate required fields
+    const requiredFields = [
+      { 
+        field: 'teamName', 
+        label: 'Team Name',
+        minLength: 1,
+        error: 'Team Name is required'
+      },
+      { 
+        field: 'projectTitle', 
+        label: 'Project Title',
+        minLength: 3,
+        error: 'Project Title must be at least 3 characters long'
+      },
+      { 
+        field: 'timeSlot', 
+        label: 'Time Slot',
+        minLength: 1,
+        error: 'Please select a time slot'
+      },
+    ];
+
+    // Check for missing or invalid fields
+    const invalidFields = requiredFields.filter(({ field, minLength }) => {
+      const value = formData[field as keyof typeof formData];
+      return !value || (minLength && value.length < minLength);
+    });
+    
+    if (invalidFields.length > 0 || !date) {
+      if (invalidFields.length > 0) {
+        // Show the first error message
+        toast.error(invalidFields[0].error);
+      } else if (!date) {
+        toast.error('Please select a date');
+      }
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      
+      // Format the date as YYYY-MM-DD
+      const formattedDate = date.toISOString().split('T')[0];
+      
+      // Find the selected time slot
+      const selectedSlot = timeSlots.find(slot => slot.label === formData.timeSlot);
+      
+      if (!selectedSlot) {
+        throw new Error("Invalid time slot selected");
+      }
+
+      // Prepare the booking data
+      const bookingData = {
+        slotDate: formattedDate,
+        startTime: selectedSlot.start,
+        endTime: selectedSlot.end,
+        purpose: formData.projectTitle,
+        description: formData.description || '',
+        teamName: formData.teamName
+      };
+
+      console.log('Submitting booking data:', JSON.stringify(bookingData, null, 2));
+      
+      // Make the API call
+      const response = await axios.post('/bookings', bookingData);
+      
+      if (response.data) {
+        toast.success("Booking request submitted successfully! Waiting for coordinator approval.");
+        setFormData({ teamName: "", projectTitle: "", description: "", timeSlot: "" });
+        navigate('/'); // Redirect to home page after successful booking
+      }
+    } catch (error: any) {
+      console.error('Booking error:', error);
+      
+      // Enhanced error handling
+      let errorMessage = 'Failed to submit booking';
+      
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        console.error('Response data:', error.response.data);
+        console.error('Response status:', error.response.status);
+        console.error('Response headers:', error.response.headers);
+        
+        if (error.response.data && error.response.data.errors) {
+          // Handle validation errors
+          const validationErrors = error.response.data.errors
+            .map((err: any) => `${err.param}: ${err.msg}`)
+            .join('\n');
+          errorMessage = `Validation error: ${validationErrors}`;
+        } else if (error.response.data && error.response.data.message) {
+          errorMessage = error.response.data.message;
+        }
+      } else if (error.request) {
+        // The request was made but no response was received
+        console.error('No response received:', error.request);
+        errorMessage = 'No response from server. Please try again.';
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        console.error('Error:', error.message);
+        errorMessage = error.message || 'An unexpected error occurred';
+      }
+      
+      toast.error(errorMessage);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -111,9 +217,9 @@ const BookSlots = () => {
                   required
                 >
                   <option value="">Select a time slot</option>
-                  {timeSlots.map((slot) => (
-                    <option key={slot} value={slot}>
-                      {slot}
+                  {timeSlots.map((slot, index) => (
+                    <option key={`slot-${index}`} value={slot.label}>
+                      {slot.label}
                     </option>
                   ))}
                 </select>

@@ -1,11 +1,27 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const Navigation = () => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const [userRole, setUserRole] = useState<"coordinator" | "team" | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("idea_hub_user");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setUserRole(parsed?.role === "coordinator" ? "coordinator" : "team");
+      } else {
+        setUserRole(null);
+      }
+    } catch {
+      setUserRole(null);
+    }
+  }, [location.pathname]);
 
   const navLinks = [
     { name: "Home", path: "/" },
@@ -13,7 +29,8 @@ const Navigation = () => {
     { name: "Achievements", path: "/achievements" },
     { name: "Events", path: "/events" },
     { name: "Lab Info", path: "/lab-info" },
-    { name: "Dashboard", path: "/coordinator-dashboard" },
+    // Coordinator-only entry
+    ...(userRole === "coordinator" ? [{ name: "Dashboard", path: "/coordinator-dashboard" }] : []),
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -49,14 +66,28 @@ const Navigation = () => {
 
           {/* Auth Buttons */}
           <div className="hidden md:flex items-center space-x-2">
-            <Link to="/login">
-              <Button variant="ghost" size="sm">
-                Login
+            {userRole ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  localStorage.removeItem("idea_hub_token");
+                  localStorage.removeItem("idea_hub_user");
+                  window.location.href = "/";
+                }}
+              >
+                Logout
               </Button>
-            </Link>
-            <Link to="/signup">
-              <Button size="sm">Sign Up</Button>
-            </Link>
+            ) : (
+              <>
+                <Link to="/login">
+                  <Button variant="ghost" size="sm">Login</Button>
+                </Link>
+                <Link to="/signup">
+                  <Button size="sm">Sign Up</Button>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -87,16 +118,30 @@ const Navigation = () => {
                 </Link>
               ))}
               <div className="pt-2 flex flex-col space-y-2">
-                <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
-                  <Button variant="ghost" size="sm" className="w-full">
-                    Login
+                {userRole ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => {
+                      localStorage.removeItem("idea_hub_token");
+                      localStorage.removeItem("idea_hub_user");
+                      setMobileMenuOpen(false);
+                      window.location.href = "/";
+                    }}
+                  >
+                    Logout
                   </Button>
-                </Link>
-                <Link to="/signup" onClick={() => setMobileMenuOpen(false)}>
-                  <Button size="sm" className="w-full">
-                    Sign Up
-                  </Button>
-                </Link>
+                ) : (
+                  <>
+                    <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
+                      <Button variant="ghost" size="sm" className="w-full">Login</Button>
+                    </Link>
+                    <Link to="/signup" onClick={() => setMobileMenuOpen(false)}>
+                      <Button size="sm" className="w-full">Sign Up</Button>
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </div>
