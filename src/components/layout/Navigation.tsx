@@ -49,32 +49,45 @@ const Navigation = () => {
     navigate("/");
   };
 
-  const commonLinks = [
-    { name: "Home", path: "/" },
-    { name: "Achievements", path: "/achievements" },
-    { name: "Events", path: "/events" },
-    { name: "Lab Info", path: "/lab-info" },
-    { name: "E-commerce", path: "/ecommerce" },
-  ];
+  /* 
+     Requested Order: 
+     1. Home
+     2. Book Slot (Team only)
+     3. My Bookings (Team only)
+     4. Achievements
+     5. Events
+     6. E-commerce
+     7. Lab Info
+     8. Coordinator Links (if applicable)
+  */
+  const getNavLinks = () => {
+    const links = [
+      { name: "Home", path: "/" },
+    ];
 
-  const teamLinks = user?.role === 'team' 
-    ? [
-        { name: "Book Slots", path: "/book-slots" },
-        { name: "My Bookings", path: "/my-bookings" }
-      ]
-    : [];
+    if (user?.role === 'team') {
+      links.push({ name: "Book Slots", path: "/book-slots" });
+      links.push({ name: "My Bookings", path: "/my-bookings" });
+    }
 
-  const coordinatorLinks = user?.role === 'coordinator'
-    ? [
+    links.push(
+      { name: "Achievements", path: "/achievements" },
+      { name: "Events", path: "/events" },
+      { name: "E-commerce", path: "/ecommerce" },
+      { name: "Lab Info", path: "/lab-info" }
+    );
+
+    if (user?.role === 'coordinator') {
+      links.push(
         { name: "Dashboard", path: "/coordinator-dashboard" },
         { name: "Manage Rooms", path: "/manage-rooms" }
-      ]
-    : [];
+      );
+    }
 
-  const navLinks = [
-    ...commonLinks,
-    ...(user ? [...teamLinks, ...coordinatorLinks] : [])
-  ];
+    return links;
+  };
+
+  const navLinks = getNavLinks();
 
   const isActive = (path: string) => location.pathname === path;
 
