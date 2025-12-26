@@ -33,8 +33,87 @@ interface DashboardStats {
   totalRejected: number;
 }
 
+// A reusable component to render a list of bookings
+interface BookingListProps {
+  bookings: BookingRequest[];
+  showActions?: boolean;
+  onApprove?: (id: string) => void;
+  onReject?: (id: string) => void;
+  isProcessing?: boolean;
+}
+
+const BookingList: React.FC<BookingListProps> = ({ 
+  bookings, 
+  showActions = false, 
+  onApprove = () => {},
+  onReject = () => {},
+  isProcessing = false 
+}) => {
+  if (bookings.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <Calendar className="mx-auto h-12 w-12 text-muted-foreground" />
+        <h3 className="mt-4 text-lg font-medium">No bookings found</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
+          There are no bookings in this category.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {bookings.map((request) => (
+        <div
+          key={request._id}
+          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border rounded-lg"
+        >
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <h4 className="font-medium">{request.team?.teamName || 'No Team Name'}</h4>
+              <Badge variant="outline" className="text-xs">
+                {request.team?.name || 'Team Member'}
+              </Badge>
+              <Badge variant={request.status === 'approved' ? 'default' : request.status === 'rejected' ? 'destructive' : 'secondary'}>{request.status}</Badge>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {new Date(request.slotDate).toLocaleDateString()} • {request.startTime} - {request.endTime}
+            </p>
+            <p className="text-sm">{request.purpose}</p>
+          </div>
+          {showActions && (
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full sm:w-auto"
+                onClick={() => onReject(request._id)}
+                disabled={isProcessing}
+              >
+                {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <X className="mr-2 h-4 w-4" />}
+                Reject
+              </Button>
+              <Button
+                size="sm"
+                className="w-full sm:w-auto"
+                onClick={() => onApprove(request._id)}
+                disabled={isProcessing}
+              >
+                {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+                Approve
+              </Button>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const CoordinatorDashboard = () => {
-  const [bookingRequests, setBookingRequests] = useState<BookingRequest[]>([]);
+  const [pendingBookings, setPendingBookings] = useState<BookingRequest[]>([]);
+  const [approvedBookings, setApprovedBookings] = useState<BookingRequest[]>([]);
+  const [rejectedBookings, setRejectedBookings] = useState<BookingRequest[]>([]);
   const [stats, setStats] = useState<{
     totalPending: number;
     totalApproved: number;
@@ -70,28 +149,21 @@ const CoordinatorDashboard = () => {
           }));
 
         // Fetch pending bookings
-        const pendingRes = await axios.get('/bookings/pending')
-          .catch(() => ({ 
-            data: { 
-              bookings: [] 
-            } 
-          }));
+        const allBookingsRes = await axios.get('/bookings/all');
+        const allBookings: BookingRequest[] = allBookingsRes.data;
 
         // Update stats
-        setStats({
-          totalPending: statsRes.data.stats?.totalPending || 0,
-          totalApproved: statsRes.data.stats?.totalApproved || 0,
-          totalRejected: statsRes.data.stats?.totalRejected || 0,
-          activeTeams: 0,
-          thisWeek: 0
-        });
+        setStats(prev => ({
+          ...prev,
+          totalPending: allBookings.filter(b => b.status === 'pending').length,
+          totalApproved: allBookings.filter(b => b.status === 'approved').length,
+          totalRejected: allBookings.filter(b => b.status === 'rejected').length,
+        }));
 
-        // Update pending bookings
-        const pendingBookings: BookingRequest[] = Array.isArray(pendingRes.data.bookings) 
-          ? pendingRes.data.bookings 
-          : [];
-          
-        setBookingRequests(pendingBookings);
+        // Filter and set bookings by status
+        setPendingBookings(allBookings.filter(b => b.status === 'pending'));
+        setApprovedBookings(allBookings.filter(b => b.status === 'approved'));
+        setRejectedBookings(allBookings.filter(b => b.status === 'rejected'));
       } catch (error) {
         console.error('Error in fetchDashboardData:', error);
         toast.error('Failed to load dashboard data');
@@ -115,10 +187,15 @@ const CoordinatorDashboard = () => {
       });
       
       // Update local state
-      setBookingRequests(prev => prev.filter(req => req._id !== id));
+      const bookingToApprove = pendingBookings.find(req => req._id === id);
+      if (bookingToApprove) {
+        setPendingBookings(prev => prev.filter(req => req._id !== id));
+        setApprovedBookings(prev => [{ ...bookingToApprove, status: 'approved' }, ...prev]);
+      }
+      // The stats are already updated from the main fetch, but we can adjust them here for immediate feedback
       setStats(prev => ({
         ...prev,
-        totalPending: Math.max(0, prev.totalPending - 1),
+        totalPending: prev.totalPending - 1,
         totalApproved: prev.totalApproved + 1
       }));
       
@@ -142,10 +219,15 @@ const CoordinatorDashboard = () => {
       });
       
       // Update local state
-      setBookingRequests(prev => prev.filter(req => req._id !== id));
+      const bookingToReject = pendingBookings.find(req => req._id === id);
+      if (bookingToReject) {
+        setPendingBookings(prev => prev.filter(req => req._id !== id));
+        setRejectedBookings(prev => [{ ...bookingToReject, status: 'rejected' }, ...prev]);
+      }
+      // Adjust stats for immediate feedback
       setStats(prev => ({
         ...prev,
-        totalPending: Math.max(0, prev.totalPending - 1),
+        totalPending: prev.totalPending - 1,
         totalRejected: prev.totalRejected + 1
       }));
       
@@ -222,7 +304,9 @@ const CoordinatorDashboard = () => {
       {/* Booking Requests */}
       <Tabs defaultValue="pending" className="space-y-6">
         <TabsList>
+          <TabsTrigger value="pending">Pending</TabsTrigger>
           <TabsTrigger value="approved">Approved</TabsTrigger>
+          <TabsTrigger value="rejected">Rejected</TabsTrigger>
           <TabsTrigger value="all">All Bookings</TabsTrigger>
         </TabsList>
 
@@ -233,66 +317,13 @@ const CoordinatorDashboard = () => {
               <CardDescription>Review and manage pending lab booking requests</CardDescription>
             </CardHeader>
             <CardContent>
-              {bookingRequests.length === 0 ? (
-                <div className="text-center py-8">
-                  <Calendar className="mx-auto h-12 w-12 text-muted-foreground" />
-                  <h3 className="mt-4 text-lg font-medium">No pending requests</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    There are no pending booking requests at the moment.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {bookingRequests.map((request) => (
-                    <div
-                      key={request._id}
-                      className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border rounded-lg"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-medium">{request.team.teamName || 'No Team Name'}</h4>
-                          <Badge variant="outline" className="text-xs">
-                            {request.team.name || 'Team Member'}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {new Date(request.slotDate).toLocaleDateString()} • {request.startTime} - {request.endTime}
-                        </p>
-                        <p className="text-sm">{request.purpose}</p>
-                      </div>
-                      <div className="flex gap-2 w-full sm:w-auto">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full sm:w-auto"
-                          onClick={() => handleReject(request._id)}
-                          disabled={isProcessing}
-                        >
-                          {isProcessing ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          ) : (
-                            <X className="mr-2 h-4 w-4" />
-                          )}
-                          Reject
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="w-full sm:w-auto"
-                          onClick={() => handleApprove(request._id)}
-                          disabled={isProcessing}
-                        >
-                          {isProcessing ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          ) : (
-                            <Check className="mr-2 h-4 w-4" />
-                          )}
-                          Approve
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <BookingList 
+                bookings={pendingBookings} 
+                showActions={true} 
+                onApprove={handleApprove} 
+                onReject={handleReject} 
+                isProcessing={isProcessing} 
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -304,13 +335,19 @@ const CoordinatorDashboard = () => {
               <CardDescription>View all approved lab bookings</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8">
-                <Calendar className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-medium">Approved bookings will appear here</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  This section will show all approved booking requests.
-                </p>
-              </div>
+              <BookingList bookings={approvedBookings} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="rejected" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Rejected Bookings</CardTitle>
+              <CardDescription>View all rejected lab bookings</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <BookingList bookings={rejectedBookings} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -322,13 +359,7 @@ const CoordinatorDashboard = () => {
               <CardDescription>View all booking requests</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8">
-                <Calendar className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-medium">All bookings will appear here</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  This section will show all booking requests, including pending, approved, and rejected.
-                </p>
-              </div>
+              <BookingList bookings={[...pendingBookings, ...approvedBookings, ...rejectedBookings].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())} />
             </CardContent>
           </Card>
         </TabsContent>

@@ -10,6 +10,17 @@ const bookingSchema = new Schema(
       required: true,
       index: true,
     },
+    room: {
+      type: Schema.Types.ObjectId,
+      ref: 'Room',
+      required: true,
+      index: true,
+    },
+    teamSize: {
+      type: Number,
+      required: true,
+      min: 1,
+    },
     slotDate: {
       type: String, // YYYY-MM-DD
       required: true,
@@ -53,11 +64,34 @@ const bookingSchema = new Schema(
       type: String, // base64 data URL
       default: '',
     },
+    history: [
+      {
+        status: {
+          type: String,
+          enum: ['pending', 'approved', 'rejected'],
+          required: true,
+        },
+        reason: {
+          type: String,
+          default: '',
+          trim: true,
+        },
+        by: {
+          type: Schema.Types.ObjectId,
+          ref: 'User',
+          required: false,
+        },
+        at: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   { timestamps: { createdAt: true, updatedAt: true } }
 );
 
-bookingSchema.index({ slotDate: 1, startTime: 1, endTime: 1, status: 1 });
+bookingSchema.index({ slotDate: 1, startTime: 1, endTime: 1, room: 1, status: 1 });
 
 export const Booking = mongoose.models.Booking || mongoose.model('Booking', bookingSchema);
 export default Booking;

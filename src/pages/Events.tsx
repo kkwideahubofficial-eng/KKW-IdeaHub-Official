@@ -1,162 +1,195 @@
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import api from "@/lib/axios";
+import { toast } from "sonner";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { PlusCircle, Calendar, Users } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, MapPin, Users, ExternalLink } from "lucide-react";
 
-interface Event {
-  id: number;
+interface EventItem {
+  _id: string;
   title: string;
   description: string;
   date: string;
-  time: string;
-  location: string;
-  category: string;
-  capacity: number;
-  registered: number;
-  registrationLink: string;
+  organizer: string;
+  imageUrl?: string;
+}
+
+function getCurrentUser() {
+  try {
+    const raw = localStorage.getItem("idea_hub_user");
+    const token = localStorage.getItem("idea_hub_token");
+    if (!raw || !token) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
 }
 
 const Events = () => {
-  const events: Event[] = [
-    {
-      id: 1,
-      title: "AI & Machine Learning Workshop",
-      description: "Hands-on workshop covering fundamentals of AI, machine learning algorithms, and practical applications in real-world scenarios.",
-      date: "2025-10-20",
-      time: "10:00 AM - 04:00 PM",
-      location: "IDEA Lab - Main Hall",
-      category: "Workshop",
-      capacity: 50,
-      registered: 32,
-      registrationLink: "#",
-    },
-    {
-      id: 2,
-      title: "Innovation Hackathon 2025",
-      description: "48-hour hackathon focused on developing solutions for sustainable development goals. Teams will compete for prizes worth $10,000.",
-      date: "2025-11-05",
-      time: "09:00 AM (2 days)",
-      location: "IDEA Lab - All Facilities",
-      category: "Hackathon",
-      capacity: 100,
-      registered: 78,
-      registrationLink: "#",
-    },
-    {
-      id: 3,
-      title: "Startup Pitch Competition",
-      description: "Present your innovative startup ideas to industry experts and potential investors. Top 3 pitches win funding opportunities.",
-      date: "2025-10-28",
-      time: "02:00 PM - 06:00 PM",
-      location: "IDEA Lab - Conference Room",
-      category: "Competition",
-      capacity: 30,
-      registered: 18,
-      registrationLink: "#",
-    },
-    {
-      id: 4,
-      title: "IoT and Smart Systems Seminar",
-      description: "Expert talk on the future of Internet of Things, smart cities, and connected devices. Featuring guest speakers from industry leaders.",
-      date: "2025-11-12",
-      time: "03:00 PM - 05:00 PM",
-      location: "IDEA Lab - Auditorium",
-      category: "Seminar",
-      capacity: 80,
-      registered: 45,
-      registrationLink: "#",
-    },
-    {
-      id: 5,
-      title: "3D Printing & Prototyping Masterclass",
-      description: "Learn advanced 3D printing techniques, prototyping best practices, and bring your product ideas to life.",
-      date: "2025-11-18",
-      time: "11:00 AM - 03:00 PM",
-      location: "IDEA Lab - Fabrication Zone",
-      category: "Workshop",
-      capacity: 25,
-      registered: 19,
-      registrationLink: "#",
-    },
-    {
-      id: 6,
-      title: "Blockchain Technology Symposium",
-      description: "Comprehensive overview of blockchain technology, cryptocurrency, smart contracts, and decentralized applications.",
-      date: "2025-12-02",
-      time: "01:00 PM - 05:00 PM",
-      location: "IDEA Lab - Main Hall",
-      category: "Symposium",
-      capacity: 60,
-      registered: 28,
-      registrationLink: "#",
-    },
-  ];
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({ title: "", description: "", date: "", organizer: "", imageUrl: "" });
 
-  const getCategoryColor = (category: string) => {
-    const colors: { [key: string]: string } = {
-      Workshop: "bg-blue-100 text-blue-800",
-      Hackathon: "bg-purple-100 text-purple-800",
-      Competition: "bg-green-100 text-green-800",
-      Seminar: "bg-orange-100 text-orange-800",
-      Symposium: "bg-pink-100 text-pink-800",
+  const user = useMemo(getCurrentUser, []);
+  const isCoordinator = user?.role === "coordinator";
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const res = await api.get("/events");
+        setEvents(res.data);
+      } catch (e) {
+        toast.error("Failed to load events");
+      } finally {
+        setLoading(false);
+      }
     };
-    return colors[category] || "bg-gray-100 text-gray-800";
+    fetchEvents();
+  }, []);
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const formData = new FormData();
+      formData.append('title', form.title);
+      formData.append('description', form.description);
+      formData.append('date', new Date(form.date).toISOString());
+      formData.append('organizer', form.organizer);
+      if (form.imageUrl) {
+        // Support URL fallback if pasted
+        formData.append('imageUrl', form.imageUrl);
+      }
+      const fileInput = document.getElementById('event-image') as HTMLInputElement | null;
+      if (fileInput?.files && fileInput.files[0]) {
+        formData.append('image', fileInput.files[0]);
+      }
+      const res = await api.post("/events", formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setEvents([res.data, ...events]);
+      setOpen(false);
+      setForm({ title: "", description: "", date: "", organizer: "", imageUrl: "" });
+      toast.success("Event created");
+    } catch (err) {
+      toast.error("Failed to create event");
+    }
   };
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground mb-2">Upcoming Events</h1>
-        <p className="text-muted-foreground">
-          Join workshops, hackathons, and seminars to enhance your innovation journey
-        </p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Events</h1>
+          <p className="text-muted-foreground">Stay updated with lab happenings</p>
+        </div>
+        {isCoordinator ? (
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <PlusCircle className="w-4 h-4 mr-2" /> Add Event
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Event</DialogTitle>
+                <DialogDescription>Fill details to create a new event.</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleCreate} className="space-y-4">
+                <div>
+                  <Label htmlFor="title">Title</Label>
+                  <Input id="title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
+                </div>
+                <div>
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea id="description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} required />
+                </div>
+                <div>
+                  <Label htmlFor="date">Date</Label>
+                  <Input id="date" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
+                </div>
+                <div>
+                  <Label htmlFor="organizer">Organizer</Label>
+                  <Input id="organizer" value={form.organizer} onChange={(e) => setForm({ ...form, organizer: e.target.value })} required />
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="event-image">Upload Image (optional)</Label>
+                    <Input id="event-image" type="file" accept="image/*" />
+                  </div>
+                  <div>
+                    <Label htmlFor="imageUrl">Or Image URL</Label>
+                    <Input id="imageUrl" value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} placeholder="https://..." />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="submit">Create</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        ) : null}
       </div>
 
-      {/* Events Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {events.map((event) => (
-          <Card key={event.id} className="hover:shadow-lg transition-all duration-300">
-            <CardHeader>
-              <div className="flex items-start justify-between mb-2">
-                <Badge className={getCategoryColor(event.category)}>{event.category}</Badge>
-                <span className="text-xs text-muted-foreground">
-                  {event.registered}/{event.capacity} registered
-                </span>
-              </div>
-              <CardTitle className="line-clamp-2">{event.title}</CardTitle>
-              <CardDescription className="line-clamp-2">
-                {event.description}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Calendar className="w-4 h-4 text-primary" />
-                  <span>{new Date(event.date).toLocaleDateString()} • {event.time}</span>
+      {loading ? (
+        <div>Loading...</div>
+      ) : events.length === 0 ? (
+        <p className="text-muted-foreground">No events yet. {isCoordinator ? "Create the first one." : "Check back later."}</p>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {events.map((event) => (
+            <Card key={event._id} className="hover:shadow-lg transition-all duration-300">
+              <CardHeader>
+                <div className="flex items-start justify-between mb-2">
+                  <Badge variant="outline">{new Date(event.date).toLocaleDateString()}</Badge>
                 </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <MapPin className="w-4 h-4 text-primary" />
-                  <span>{event.location}</span>
+                <CardTitle className="line-clamp-2">{event.title}</CardTitle>
+                <CardDescription className="line-clamp-3">
+                  {event.description}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {event.imageUrl ? (
+                  <img src={event.imageUrl} alt={event.title} className="w-full max-h-56 object-cover rounded" />
+                ) : null}
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Calendar className="w-4 h-4 text-primary" />
+                    <span>{new Date(event.date).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Users className="w-4 h-4 text-primary" />
+                    <span>Organizer: {event.organizer}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Users className="w-4 h-4 text-primary" />
-                  <span>{event.capacity - event.registered} spots remaining</span>
+                {isCoordinator && (
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="destructive" onClick={async () => {
+                      if (!confirm('Delete this event?')) return;
+                      try {
+                        await api.delete(`/events/${event._id}`);
+                        setEvents(events.filter((e) => e._id !== event._id));
+                        toast.success('Event deleted');
+                      } catch {
+                        toast.error('Failed to delete');
+                      }
+                    }}>Delete</Button>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Link to={`/events/${event._id}`} className="flex-1">
+                    <Button variant="outline" className="w-full">View Details</Button>
+                  </Link>
                 </div>
-              </div>
-              <div className="flex gap-2">
-                <Link to={`/events/${event.id}`} className="flex-1">
-                  <Button variant="outline" className="w-full">View Details</Button>
-                </Link>
-                <Button className="flex-1">
-                  <ExternalLink className="w-4 h-4 mr-1" />
-                  Register
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

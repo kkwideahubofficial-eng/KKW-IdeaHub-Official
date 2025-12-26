@@ -2,20 +2,24 @@ import { Router } from 'express';
 import { body, param, query } from 'express-validator';
 import { requireAuth, requireCoordinator } from '../middlewares/auth.js';
 import { 
-  getAvailableSlots, 
+  getRoomAvailability, 
   createBooking, 
   getPendingBookings, 
   decideBooking, 
-  getDashboardStats 
+  getDashboardStats, 
+  getMyBookings,
+  getAllBookings,
+  getMyBookingHistory,
+  getAllBookingHistory
 } from '../controllers/bookingController.js';
 
 const router = Router();
 
 router.get(
-  '/available',
+  '/availability',
   [query('date').isString().matches(/^\d{4}-\d{2}-\d{2}$/)],
   requireAuth,
-  getAvailableSlots
+  getRoomAvailability
 );
 
 router.post(
@@ -26,7 +30,9 @@ router.post(
     body('endTime').isString(),
     body('purpose').isString().isLength({ min: 3 }),
     body('description').optional().isString(),
-    body('teamName').optional().isString()
+    body('teamName').optional().isString(),
+    body('roomId').isMongoId(),
+    body('teamSize').isInt({ min: 1 })
   ],
   requireAuth,
   createBooking
@@ -43,6 +49,16 @@ router.patch(
   requireCoordinator,
   decideBooking
 );
+
+// Route for a user to get their own bookings
+router.get('/my-bookings', requireAuth, getMyBookings);
+
+// Booking history for the logged-in student
+router.get('/my-history', requireAuth, getMyBookingHistory);
+
+// Get all bookings (coordinator only)
+router.get('/all', requireAuth, requireCoordinator, getAllBookings);
+router.get('/history', requireAuth, requireCoordinator, getAllBookingHistory);
 
 // Dashboard stats for coordinators only
 router.get('/dashboard-stats', requireAuth, requireCoordinator, getDashboardStats);

@@ -1,5 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Lightbulb, Target, Eye, Cpu, Printer, Microscope, Zap, Wifi } from "lucide-react";
+import { Lightbulb, Target, Eye, Cpu, Printer, Microscope, Zap, Wifi, Image as ImageIcon } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import api from "@/lib/axios";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 const LabInfo = () => {
   const facilities = [
@@ -34,6 +42,39 @@ const LabInfo = () => {
       description: "Meeting rooms and brainstorming areas for team work",
     },
   ];
+
+  const [machines, setMachines] = useState<{ _id: string; name: string; summary?: string; details?: string; imageUrl?: string; }[]>([]);
+  const [loadingMachines, setLoadingMachines] = useState(true);
+  const [openAdd, setOpenAdd] = useState(false);
+  const [form, setForm] = useState({ name: '', summary: '', details: '', imageUrl: '' });
+  const user = useMemo(() => {
+    try {
+      const raw = localStorage.getItem('idea_hub_user');
+      const token = localStorage.getItem('idea_hub_token');
+      if (!raw || !token) return null;
+      return JSON.parse(raw);
+    } catch { return null; }
+  }, []);
+  const isCoordinator = user?.role === 'coordinator';
+
+  useEffect(() => {
+    const fetchMachines = async () => {
+      try {
+        const res = await api.get('/machines');
+        setMachines(res.data);
+      } catch { /* ignore */ }
+      finally { setLoadingMachines(false); }
+    };
+    fetchMachines();
+  }, []);
+
+  const [open, setOpen] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
+
+  const handlePreview = (src: string) => {
+    setPreview(src);
+    setOpen(true);
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -107,6 +148,51 @@ const LabInfo = () => {
         </div>
       </div>
 
+      {/* Machines Section */}
+      <div className="mb-12">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-3xl font-bold text-foreground">Machines</h2>
+          {isCoordinator && (
+            <Button onClick={() => setOpenAdd(true)}>Add Machine</Button>
+          )}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {loadingMachines ? (<div>Loading...</div>) : machines.length === 0 ? (
+            <p className="text-muted-foreground">No machines yet.{isCoordinator ? ' Add one.' : ''}</p>
+          ) : machines.map((m) => (
+            <Card key={m._id} className="hover:shadow-lg transition-all duration-300">
+              <CardHeader>
+                <CardTitle>{m.name}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {m.imageUrl ? (
+                  <img
+                    src={m.imageUrl}
+                    alt={m.name}
+                    className="w-full h-44 object-cover rounded mb-3 cursor-pointer"
+                    onClick={() => handlePreview(m.imageUrl!)}
+                  />
+                ) : null}
+                <p className="text-sm text-muted-foreground mb-2">{m.summary}</p>
+                <p className="text-sm">{m.details}</p>
+                {isCoordinator && (
+                  <div className="mt-3 flex justify-end">
+                    <Button variant="destructive" onClick={async () => {
+                      if (!confirm('Delete this machine?')) return;
+                      try {
+                        await api.delete(`/machines/${m._id}`);
+                        setMachines(machines.filter((x) => x._id !== m._id));
+                        toast.success('Machine deleted');
+                      } catch { toast.error('Failed to delete'); }
+                    }}>Delete</Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
       {/* About Section */}
       <Card>
         <CardHeader>
@@ -148,6 +234,58 @@ const LabInfo = () => {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="p-0">
+          {preview ? <img src={preview} alt="Preview" className="w-full h-auto" /> : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={openAdd} onOpenChange={setOpenAdd}>
+        <DialogContent>
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            try {
+              const fd = new FormData();
+              fd.append('name', form.name);
+              if (form.summary) fd.append('summary', form.summary);
+              if (form.details) fd.append('details', form.details);
+              if (form.imageUrl) fd.append('imageUrl', form.imageUrl);
+              const fileInput = document.getElementById('machine-image') as HTMLInputElement | null;
+              if (fileInput?.files && fileInput.files[0]) fd.append('image', fileInput.files[0]);
+              const res = await api.post('/machines', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+              setMachines([res.data, ...machines]);
+              setOpenAdd(false);
+              setForm({ name: '', summary: '', details: '', imageUrl: '' });
+              toast.success('Machine added');
+            } catch { toast.error('Failed to add machine'); }
+          }} className="space-y-4">
+            <div>
+              <Label htmlFor="mname">Name</Label>
+              <Input id="mname" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+            </div>
+            <div>
+              <Label htmlFor="msummary">Summary</Label>
+              <Input id="msummary" value={form.summary} onChange={(e) => setForm({ ...form, summary: e.target.value })} />
+            </div>
+            <div>
+              <Label htmlFor="mdetails">Details</Label>
+              <Textarea id="mdetails" value={form.details} onChange={(e) => setForm({ ...form, details: e.target.value })} />
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="machine-image">Upload Image (optional)</Label>
+                <Input id="machine-image" type="file" accept="image/*" />
+              </div>
+              <div>
+                <Label htmlFor="mimageUrl">Or Image URL</Label>
+                <Input id="mimageUrl" value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} placeholder="https://..." />
+              </div>
+            </div>
+            <Button type="submit">Create</Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
