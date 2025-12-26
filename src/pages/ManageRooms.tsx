@@ -162,18 +162,25 @@ const ManageRooms = () => {
     ];
 
     try {
-      await axios.put(`/rooms/${selectedRoom._id}`, {
-        ...selectedRoom,
+      // sanitize payload
+      const payload = {
+        name: selectedRoom.name,
+        capacity: selectedRoom.capacity,
+        features: selectedRoom.features,
+        isActive: selectedRoom.isActive,
         timeSlots: updatedSlots
-      });
+      };
+      
+      await axios.put(`/rooms/${selectedRoom._id}`, payload);
       toast.success("Slot added successfully");
       setSlotForm({ startTime: "", endTime: "" });
-      fetchData();
+      await fetchData();
       // Update selected room in place to reflect changes immediately in modal if needed, 
       // but fetchData refreshes 'rooms'. We need to update 'selectedRoom' too.
       setSelectedRoom({ ...selectedRoom, timeSlots: updatedSlots });
-    } catch (error) {
-      toast.error("Failed to add slot");
+    } catch (error: any) {
+      console.error("Add Slot Error:", error.response?.data || error.message);
+      toast.error(error.response?.data?.message || "Failed to add slot");
     }
   };
 
@@ -183,12 +190,17 @@ const ManageRooms = () => {
     const updatedSlots = room.timeSlots.filter((_, i) => i !== slotIndex);
 
     try {
-      await axios.put(`/rooms/${room._id}`, {
-        ...room,
+      const payload = {
+        name: room.name,
+        capacity: room.capacity,
+        features: room.features,
+        isActive: room.isActive,
         timeSlots: updatedSlots
-      });
+      };
+
+      await axios.put(`/rooms/${room._id}`, payload);
       toast.success("Slot removed");
-      fetchData();
+      await fetchData();
       if (selectedRoom && selectedRoom._id === room._id) {
          setSelectedRoom({ ...selectedRoom, timeSlots: updatedSlots });
       }
