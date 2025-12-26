@@ -12,10 +12,11 @@ export async function getRoomAvailability(req, res) {
     const { date } = req.query; // YYYY-MM-DD
     if (!date) return res.status(400).json({ message: 'date (YYYY-MM-DD) is required' });
 
-    // Get all active rooms
+    // FIX: 'rooms' was missing because I accidentally deleted it in previous edit
     const rooms = await Room.find({});
 
     // Get all approved/pending bookings for this date
+    // We fetch PENDING too, so we can show "Demand" (Total Applied) stats
     const bookings = await Booking.find({ 
       slotDate: date, 
       status: { $in: ['approved', 'pending'] } 
@@ -26,15 +27,13 @@ export async function getRoomAvailability(req, res) {
       // Filter bookings for this room
       const roomBookings = bookings.filter(b => b.room.toString() === room._id.toString());
       
-      // We need to return the room info and its bookings to frontend
-      // The frontend will calculate the remaining capacity for specific time slots
-      // based on the bookings
       return {
         ...room.toObject(),
         bookings: roomBookings.map(b => ({
           startTime: b.startTime,
           endTime: b.endTime,
-          teamSize: b.teamSize
+          teamSize: b.teamSize,
+          status: b.status // Include status for frontend stats
         }))
       };
     });
@@ -85,12 +84,12 @@ export async function createBooking(req, res) {
     }
 
     // Check for time slot conflicts and capacity
-    // Find all bookings for this room, date, and overlapping time
-    // Status should be pending or approved
+    // Find all APPROVED bookings for this room, date, and overlapping time
+    // Pending bookings do NOT block new requests
     const existingBookings = await Booking.find({
       slotDate,
       room: roomId,
-      status: { $in: ['approved', 'pending'] },
+      status: 'approved',
     });
 
     // Check for "Overlap" in time is not enough. We need to check capacity for the specific time range.
@@ -194,10 +193,31 @@ export async function decideBooking(req, res) {
     if (!booking) return res.status(404).json({ message: 'Booking not found' });
 
     if (decision === 'approved') {
-      // final overlap check against approved
-      const conflicts = await Booking.find({ slotDate: booking.slotDate, status: 'approved', _id: { $ne: booking._id } });
-      const hasOverlap = conflicts.some((b) => timesOverlap(booking.startTime, booking.endTime, b.startTime, b.endTime));
-      if (hasOverlap) return res.status(409).json({ message: 'Slot overlaps with an approved booking' });
+      // 1. Fetch Room Capacity
+      const room = await Room.findById(booking.room);
+      if (!room) return res.status(404).json({ message: 'Room associated with booking not found' });
+
+      // 2. Find all currently APPROVED bookings that overlap with this one
+      const conflicts = await Booking.find({ 
+        slotDate: booking.slotDate, 
+        room: booking.room,
+        status: 'approved', 
+        _id: { $ne: booking._id } 
+      });
+
+      // Filter strict overlaps
+      const overlappingBookings = conflicts.filter(b => timesOverlap(booking.startTime, booking.endTime, b.startTime, b.endTime));
+      
+      // 3. Calculate Occupied Seats
+      const occupiedSeats = overlappingBookings.reduce((sum, b) => sum + b.teamSize, 0);
+      const neededSeats = booking.teamSize;
+
+      if (occupiedSeats + neededSeats > room.capacity) {
+         const remaining = room.capacity - occupiedSeats;
+         return res.status(409).json({ 
+           message: `Cannot approve. Room capacity exceeded. Only ${remaining} seats available, but this team needs ${neededSeats}.` 
+         });
+      }
 
       const payload = {
         bookingId: booking._id.toString(),

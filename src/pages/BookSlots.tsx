@@ -16,7 +16,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Users, Clock, AlertCircle } from "lucide-react";
+import { Users, Clock, AlertCircle, Info } from "lucide-react";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 
 interface Slot {
   startTime: string; // HH:mm
@@ -34,6 +39,7 @@ interface Room {
     startTime: string;
     endTime: string;
     teamSize: number;
+    status: string;
   }[];
   timeSlots: Slot[];
 }
@@ -103,32 +109,39 @@ const BookSlots = () => {
     return `${h12}:${minutes} ${ampm}`;
   };
 
-  const generateHourIntervals = (start: string, end: string) => {
+  const generateTimeIntervals = (start: string, end: string) => {
     const intervals = [];
     let [currH, currM] = start.split(':').map(Number);
     const [endH, endM] = end.split(':').map(Number);
     
-    // Simple loop adding 1 hour until we reach or exceed end
-    while (currH < endH || (currH === endH && currM < endM)) {
-      const nextH = currH + 1;
-      
-      const startStr = `${currH.toString().padStart(2, '0')}:${currM.toString().padStart(2, '0')}`;
-      const endStr = `${nextH.toString().padStart(2, '0')}:${currM.toString().padStart(2, '0')}`;
-      
-      if (nextH > endH || (nextH === endH && currM > endM)) {
-           break; 
-      }
-      
-      intervals.push({ start: startStr, end: endStr });
-      currH = nextH;
+    // Convert to minutes for easier calculation
+    let currentInMinutes = currH * 60 + currM;
+    const endInMinutes = endH * 60 + endM;
+
+    while (currentInMinutes < endInMinutes) {
+        const nextInMinutes = currentInMinutes + 15;
+        
+        if (nextInMinutes > endInMinutes) break;
+
+        const sH = Math.floor(currentInMinutes / 60);
+        const sM = currentInMinutes % 60;
+        const eH = Math.floor(nextInMinutes / 60);
+        const eM = nextInMinutes % 60;
+
+        const startStr = `${sH.toString().padStart(2, '0')}:${sM.toString().padStart(2, '0')}`;
+        const endStr = `${eH.toString().padStart(2, '0')}:${eM.toString().padStart(2, '0')}`;
+
+        intervals.push({ start: startStr, end: endStr });
+        currentInMinutes = nextInMinutes;
     }
+
     return intervals;
   };
 
   const getSingleIntervalCapacity = (room: Room, start: string, end: string) => {
      const occupied = room.bookings.reduce((sum, booking) => {
-       // Check strictly overlapping
-       if (booking.startTime < end && booking.endTime > start) {
+       // Check strictly overlapping and ONLY APPROVED
+       if (booking.status === 'approved' && booking.startTime < end && booking.endTime > start) {
          return sum + booking.teamSize;
        }
        return sum;
@@ -136,9 +149,19 @@ const BookSlots = () => {
      return room.capacity - occupied; 
   };
 
+  const getSlotStats = (room: Room, start: string, end: string) => {
+      // Find all overlapping bookings (Pending + Approved)
+      const relevantBookings = room.bookings.filter(b => b.startTime < end && b.endTime > start);
+      
+      const totalApplied = relevantBookings.reduce((sum, b) => sum + b.teamSize, 0);
+      const approved = relevantBookings.filter(b => b.status === 'approved').reduce((sum, b) => sum + b.teamSize, 0);
+      
+      return { totalApplied, approved };
+  };
+
   const getRemainingCapacity = (room: Room, start: string, end: string) => {
-      // Split into 1-hour intervals to check bottleneck
-      const intervals = generateHourIntervals(start, end);
+      // Split into 15-minute intervals to check bottleneck
+      const intervals = generateTimeIntervals(start, end);
       if (intervals.length === 0) return getSingleIntervalCapacity(room, start, end); // Fallback
 
       // The capacity of the range is the MINIMUM capacity of any sub-interval
@@ -239,7 +262,7 @@ const BookSlots = () => {
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-foreground mb-2">Book a Lab Slot</h1>
-        <p className="text-muted-foreground">Select one or more consecutive 1-hour slots.</p>
+        <p className="text-muted-foreground">Select one or more consecutive 15-minute slots.</p>
       </div>
 
       <div className="grid lg:grid-cols-12 gap-8">
@@ -271,7 +294,7 @@ const BookSlots = () => {
                             {formatTime(currentSelection.intervals[0].start)} - {formatTime(currentSelection.intervals[currentSelection.intervals.length - 1].end)}
                         </p>
                         <p className="text-sm text-muted-foreground mt-1">
-                            {currentSelection.intervals.length} hour{currentSelection.intervals.length > 1 ? 's' : ''} selected
+                            {currentSelection.intervals.length * 15} mins selected
                         </p>
                     </div>
                     <Button className="w-full" onClick={handleBookSelection}>Proceed to Book</Button>
@@ -316,7 +339,7 @@ const BookSlots = () => {
                     </CardHeader>
                     <CardContent>
                        <div className="grid grid-cols-4 md:grid-cols-6 gap-2">
-                          {room.timeSlots?.flatMap(slot => generateHourIntervals(slot.startTime, slot.endTime)).map((interval, idx) => {
+                          {room.timeSlots?.flatMap(slot => generateTimeIntervals(slot.startTime, slot.endTime)).map((interval, idx) => {
                              const remaining = getRemainingCapacity(room, interval.start, interval.end);
                              const isFull = remaining <= 0;
                              const isSelected = currentSelection.roomId === room._id && currentSelection.intervals.some(i => i.start === interval.start);
@@ -327,17 +350,17 @@ const BookSlots = () => {
                                  onClick={(e) => { e.preventDefault(); handleIntervalClick(room, interval.start, interval.end); }}
                                  disabled={isFull}
                                  className={`
-                                   p-2 rounded-md text-xs text-center border transition-all flex flex-col items-center justify-center gap-1 h-20
+                                   p-1 rounded-md text-[10px] text-center border transition-all flex flex-col items-center justify-center gap-0.5 h-14
                                    ${isFull 
                                      ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-50' 
                                      : isSelected
-                                        ? 'bg-primary text-primary-foreground border-primary ring-2 ring-primary ring-offset-2'
+                                        ? 'bg-primary text-primary-foreground border-primary ring-1 ring-primary ring-offset-1'
                                         : 'hover:border-primary hover:shadow-sm bg-card'
                                    }
                                  `}
                                >
-                                  <div className="font-semibold">{formatTime(interval.start)}</div>
-                                  <div className="text-[10px] opacity-80">
+                                  <div className="font-semibold whitespace-nowrap">{formatTime(interval.start)}</div>
+                                  <div className="text-[9px] opacity-80">
                                      {isFull ? 'Full' : `${remaining} left`}
                                   </div>
                                </button>
@@ -383,7 +406,7 @@ const BookSlots = () => {
                         value={formData.teamSize} 
                         onChange={e => setFormData({...formData, teamSize: parseInt(e.target.value)})}
                         required
-                      />
+                       />
                       <p className="text-xs text-muted-foreground">
                          Max: {selectedRoom && selectedSlot ? getRemainingCapacity(selectedRoom, selectedSlot.startTime, selectedSlot.endTime) : '-'}
                       </p>

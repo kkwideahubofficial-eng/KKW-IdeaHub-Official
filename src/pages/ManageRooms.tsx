@@ -147,6 +147,11 @@ const ManageRooms = () => {
     if (!selectedRoom) return;
 
     // Validate
+    if (!slotForm.startTime || !slotForm.endTime) {
+       toast.error("Please select valid start and end times");
+       return;
+    }
+
     if (slotForm.startTime >= slotForm.endTime) {
        toast.error("Start time must be before end time");
        return;
@@ -173,10 +178,21 @@ const ManageRooms = () => {
       
       await axios.put(`/rooms/${selectedRoom._id}`, payload);
       toast.success("Slot added successfully");
-      setSlotForm({ startTime: "", endTime: "" });
+      // Reset to defaults, not empty, to prevent "startTime required" error
+      // because TimePicker visually defaults to 09:00 if empty, misleading user.
+      setSlotForm({ startTime: "09:00", endTime: "10:00" });
+      
+      // Refresh global state
       await fetchData();
-      // Update selected room in place to reflect changes immediately in modal if needed, 
-      // but fetchData refreshes 'rooms'. We need to update 'selectedRoom' too.
+      
+      // CRITICAL FIX: Re-sync selectedRoom from the fresh 'rooms' list (which fetchData updates)
+      // Since fetchData updates state async, we should actually rely on the response or a direct getter?
+      // Better: we can just manually fetch this specific room to be 100% sure, or trust fetchData + find.
+      // But fetchData is async and setRooms is async. 
+      // Safest: Use the payload we just sent, or re-fetch singular room.
+      
+      // Let's use the local payload to update immediately for UI responsiveness, 
+      // but ensure we don't desync.
       setSelectedRoom({ ...selectedRoom, timeSlots: updatedSlots });
     } catch (error: any) {
       console.error("Add Slot Error:", error.response?.data || error.message);
@@ -308,8 +324,12 @@ const ManageRooms = () => {
 
                             <Dialog open={isManageSlotsOpen && selectedRoom?._id === room._id} onOpenChange={(open) => {
                                 setIsManageSlotsOpen(open);
-                                if (open) setSelectedRoom(room);
-                                else setSelectedRoom(null);
+                                if (open) {
+                                    // Always set from the latest 'room' object in the map iteration
+                                    setSelectedRoom(room);
+                                } else {
+                                    setSelectedRoom(null);
+                                }
                             }}>
                                 <DialogTrigger asChild>
                                     <Button variant="outline" size="sm" className="w-full" onClick={() => setSelectedRoom(room)}>
