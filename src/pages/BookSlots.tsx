@@ -343,27 +343,47 @@ const BookSlots = () => {
                              const remaining = getRemainingCapacity(room, interval.start, interval.end);
                              const isFull = remaining <= 0;
                              const isSelected = currentSelection.roomId === room._id && currentSelection.intervals.some(i => i.start === interval.start);
-                             
+                             const stats = getSlotStats(room, interval.start, interval.end);
+
                              return (
-                               <button
-                                 key={`${room._id}-${interval.start}`}
-                                 onClick={(e) => { e.preventDefault(); handleIntervalClick(room, interval.start, interval.end); }}
-                                 disabled={isFull}
-                                 className={`
-                                   p-1 rounded-md text-[10px] text-center border transition-all flex flex-col items-center justify-center gap-0.5 h-14
-                                   ${isFull 
-                                     ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-50' 
-                                     : isSelected
-                                        ? 'bg-primary text-primary-foreground border-primary ring-1 ring-primary ring-offset-1'
-                                        : 'hover:border-primary hover:shadow-sm bg-card'
-                                   }
-                                 `}
-                               >
-                                  <div className="font-semibold whitespace-nowrap">{formatTime(interval.start)}</div>
-                                  <div className="text-[9px] opacity-80">
-                                     {isFull ? 'Full' : `${remaining} left`}
-                                  </div>
-                               </button>
+                                <HoverCard key={`${room._id}-${interval.start}`}>
+                                  <HoverCardTrigger asChild>
+                                    <button
+                                      onClick={(e) => { e.preventDefault(); handleIntervalClick(room, interval.start, interval.end); }}
+                                      disabled={isFull}
+                                      className={`
+                                        p-2 rounded-md text-xs text-center border transition-all flex flex-col items-center justify-center gap-1 h-20 relative group
+                                        ${isFull 
+                                          ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-50' 
+                                          : isSelected
+                                             ? 'bg-primary text-primary-foreground border-primary ring-1 ring-primary ring-offset-1'
+                                             : 'hover:border-primary hover:shadow-sm bg-card'
+                                        }
+                                      `}
+                                    >
+                                       <div className="font-semibold whitespace-nowrap flex items-center gap-1">
+                                          {formatTime(interval.start)}
+                                       </div>
+                                       <div className="text-[10px] opacity-80 font-medium">
+                                          {isFull ? 'Full' : `${remaining} left`}
+                                       </div>
+                                       {/* Visual cue for View More */}
+                                       <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                           <Info className="h-3 w-3 text-muted-foreground" />
+                                       </div>
+                                    </button>
+                                  </HoverCardTrigger>
+                                  <HoverCardContent className="w-auto p-3 z-50">
+                                      <div className="space-y-2">
+                                          <h4 className="text-sm font-semibold border-b pb-1">Slot Statistics</h4>
+                                          <div className="text-xs grid grid-cols-2 gap-x-6 gap-y-2">
+                                              <span className="text-muted-foreground">Total Applied:</span> <span className="font-medium text-foreground text-right">{stats.totalApplied}</span>
+                                              <span className="text-muted-foreground">Approved:</span> <span className="font-medium text-green-600 text-right">{stats.approved}</span>
+                                              <span className="text-muted-foreground">Pending:</span> <span className="font-medium text-amber-600 text-right">{stats.totalApplied - stats.approved}</span>
+                                          </div>
+                                      </div>
+                                  </HoverCardContent>
+                                </HoverCard>
                              );
                           })}
                        </div>
