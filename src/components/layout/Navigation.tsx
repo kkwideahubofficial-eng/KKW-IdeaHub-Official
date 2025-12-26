@@ -80,7 +80,8 @@ const Navigation = () => {
     if (user?.role === 'coordinator') {
       links.push(
         { name: "Dashboard", path: "/coordinator-dashboard" },
-        { name: "Manage Rooms", path: "/manage-rooms" }
+        { name: "Manage Rooms", path: "/manage-rooms" },
+        { name: "Records", path: "/records" }
       );
     }
 

@@ -49,9 +49,17 @@ const bookingSchema = new Schema(
       default: '',
       trim: true,
     },
+    actualEntryTime: {
+      type: Date,
+      default: null,
+    },
+    actualExitTime: {
+      type: Date,
+      default: null,
+    },
     status: {
       type: String,
-      enum: ['pending', 'approved', 'rejected'],
+      enum: ['pending', 'approved', 'rejected', 'completed', 'cancelled', 'overstayed'],
       default: 'pending',
       index: true,
     },

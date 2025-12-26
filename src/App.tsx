@@ -22,6 +22,7 @@ import MyBookings from "./pages/MyBookings";
 import ManageEvents from "./pages/ManageEvents";
 import ManageAchievements from "./pages/ManageAchievements";
 import ManageRooms from "./pages/ManageRooms";
+import Records from "./pages/Records";
 
 const queryClient = new QueryClient();
 
@@ -107,6 +108,14 @@ const App = () => (
                 element={
                   <RequireCoordinator>
                     <CoordinatorDashboard />
+                  </RequireCoordinator>
+                }
+              />
+              <Route
+                path="/records"
+                element={
+                  <RequireCoordinator>
+                    <Records />
                   </RequireCoordinator>
                 }
               />

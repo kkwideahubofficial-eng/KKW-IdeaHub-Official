@@ -320,6 +320,57 @@ export async function getDashboardStats(req, res) {
   }
 }
 
+export async function getBookingRecords(req, res) {
+  try {
+    const { filter } = req.query; // daily, weekly, monthly, last3months, etc.
+    let startDate = new Date();
+    startDate.setHours(0, 0, 0, 0);
+
+    // Calculate start date based on filter
+    switch (filter) {
+      case 'daily':
+        // Today (start is already 00:00 today)
+        break;
+      case 'weekly':
+        startDate.setDate(startDate.getDate() - 7);
+        break;
+      case 'monthly':
+        startDate.setMonth(startDate.getMonth() - 1);
+        break;
+      case 'last3months':
+        startDate.setMonth(startDate.getMonth() - 3);
+        break;
+      case 'last6months':
+        startDate.setMonth(startDate.getMonth() - 6);
+        break;
+      case 'last9months':
+        startDate.setMonth(startDate.getMonth() - 9);
+        break;
+      case 'last12months':
+      case 'yearly':
+        startDate.setFullYear(startDate.getFullYear() - 1);
+        break;
+      default:
+        startDate = new Date(0); // All time if invalid/empty
+    }
+
+    // Since slotDate is string YYYY-MM-DD, we need string comparison
+    // Or we can rely on standard string comparison for YYYY-MM-DD which works correctly
+    const formattedStartDate = startDate.toISOString().split('T')[0];
+
+    const bookings = await Booking.find({
+      slotDate: { $gte: formattedStartDate }
+    })
+    .populate('team', 'name email teamName')
+    .populate('room', 'name')
+    .sort({ slotDate: -1, startTime: -1 });
+
+    return res.status(200).json(bookings);
+  } catch (err) {
+    return res.status(500).json({ message: 'Failed to fetch booking records', error: err.message });
+  }
+}
+
 export default { 
   getRoomAvailability, 
   createBooking, 
@@ -329,6 +380,7 @@ export default {
   getMyBookings,
   getAllBookings,
   getMyBookingHistory,
-  getAllBookingHistory
+  getAllBookingHistory,
+  getBookingRecords
 };
 

@@ -354,7 +354,7 @@ const BookSlots = () => {
                                       className={`
                                         p-2 rounded-md text-xs text-center border transition-all flex flex-col items-center justify-center gap-1 h-20 relative group
                                         ${isFull 
-                                          ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-50' 
+                                          ? 'bg-red-100 text-red-700 border-red-200 cursor-not-allowed' 
                                           : isSelected
                                              ? 'bg-primary text-primary-foreground border-primary ring-1 ring-primary ring-offset-1'
                                              : 'hover:border-primary hover:shadow-sm bg-card'

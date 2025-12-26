@@ -10,7 +10,8 @@ import {
   getMyBookings,
   getAllBookings,
   getMyBookingHistory,
-  getAllBookingHistory
+  getAllBookingHistory,
+  getBookingRecords
 } from '../controllers/bookingController.js';
 
 const router = Router();
@@ -62,6 +63,9 @@ router.get('/history', requireAuth, requireCoordinator, getAllBookingHistory);
 
 // Dashboard stats for coordinators only
 router.get('/dashboard-stats', requireAuth, requireCoordinator, getDashboardStats);
+
+// Booking records with filters (Coordinator only)
+router.get('/records', requireAuth, requireCoordinator, getBookingRecords);
 
 export default router;
 
