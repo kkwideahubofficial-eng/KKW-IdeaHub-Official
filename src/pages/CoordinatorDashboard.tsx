@@ -62,49 +62,70 @@ const BookingList: React.FC<BookingListProps> = ({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {bookings.map((request) => (
-        <div
-          key={request._id}
-          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border rounded-lg"
-        >
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <h4 className="font-medium">{request.team?.teamName || 'No Team Name'}</h4>
-              <Badge variant="outline" className="text-xs">
-                {request.team?.name || 'Team Member'}
-              </Badge>
-              <Badge variant={request.status === 'approved' ? 'default' : request.status === 'rejected' ? 'destructive' : 'secondary'}>{request.status}</Badge>
+        <Card key={request._id} className="flex flex-col h-full border rounded-xl shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="pb-3">
+             <div className="flex justify-between items-start mb-2">
+                <Badge variant={request.status === 'approved' ? 'default' : request.status === 'rejected' ? 'destructive' : 'secondary'} className="uppercase text-[10px] tracking-wide">
+                  {request.status}
+                </Badge>
+                <div className="text-xs text-muted-foreground font-medium flex items-center">
+                  <Clock className="w-3 h-3 mr-1" />
+                  {new Date(request.createdAt).toLocaleDateString()}
+                </div>
             </div>
-            <p className="text-sm text-muted-foreground">
-              {new Date(request.slotDate).toLocaleDateString()} • {request.startTime} - {request.endTime}
-            </p>
-            <p className="text-sm">{request.purpose}</p>
-          </div>
+            <CardTitle className="text-lg font-semibold line-clamp-1" title={request.team?.teamName || 'No Team Name'}>
+              {request.team?.teamName || 'No Team Name'}
+            </CardTitle>
+            <CardDescription className="text-sm">
+               <span className="font-medium text-foreground">{request.team?.name || 'Team Member'}</span>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex-grow space-y-4 text-sm">
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="bg-muted/50 p-2 rounded">
+                 <p className="text-muted-foreground mb-1">Date</p>
+                 <p className="font-medium truncate" title={new Date(request.slotDate).toLocaleDateString()}>
+                    {new Date(request.slotDate).toLocaleDateString()}
+                 </p>
+              </div>
+              <div className="bg-muted/50 p-2 rounded">
+                 <p className="text-muted-foreground mb-1">Time</p>
+                 <p className="font-medium truncate">
+                   {request.startTime} - {request.endTime}
+                 </p>
+              </div>
+            </div>
+            
+            <div className="bg-muted/30 p-3 rounded-md border border-border/50">
+               <p className="text-muted-foreground text-xs mb-1 uppercase tracking-wider font-semibold">Purpose</p>
+               <p className="line-clamp-3 text-muted-foreground/90 italic">"{request.purpose}"</p>
+            </div>
+          </CardContent>
+          
           {showActions && (
-            <div className="flex gap-2 w-full sm:w-auto">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full sm:w-auto"
-                onClick={() => onReject(request._id)}
-                disabled={isProcessing}
-              >
-                {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <X className="mr-2 h-4 w-4" />}
-                Reject
-              </Button>
-              <Button
-                size="sm"
-                className="w-full sm:w-auto"
-                onClick={() => onApprove(request._id)}
-                disabled={isProcessing}
-              >
-                {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
-                Approve
-              </Button>
-            </div>
+             <div className="p-4 pt-0 mt-auto flex gap-3">
+                <Button
+                    variant="outline"
+                    className="flex-1 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground transition-all"
+                    onClick={() => onReject(request._id)}
+                    disabled={isProcessing}
+                  >
+                    {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4 mr-1" />}
+                    Reject
+                  </Button>
+                  <Button
+                    className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground transition-all"
+                    onClick={() => onApprove(request._id)}
+                    disabled={isProcessing}
+                  >
+                    {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
+                    Approve
+                  </Button>
+             </div>
           )}
-        </div>
+        </Card>
       ))}
     </div>
   );

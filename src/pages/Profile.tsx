@@ -180,38 +180,42 @@ const Profile = () => {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="branch">Branch</Label>
-              <Input
-                id="branch"
-                value={profile.branch}
-                disabled={!isEditing}
-                onChange={(e) => handleProfileChange("branch", e.target.value)}
-                placeholder="Ex. Computer Engineering"
-              />
-            </div>
+            {profile.role !== 'coordinator' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="branch">Branch</Label>
+                  <Input
+                    id="branch"
+                    value={profile.branch}
+                    disabled={!isEditing}
+                    onChange={(e) => handleProfileChange("branch", e.target.value)}
+                    placeholder="Ex. Computer Engineering"
+                  />
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="year">Engineering Year</Label>
-              {isEditing ? (
-                <Select
-                  value={profile.year}
-                  onValueChange={(value) => handleProfileChange("year", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Year" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="FE">FE (First Year)</SelectItem>
-                    <SelectItem value="SE">SE (Second Year)</SelectItem>
-                    <SelectItem value="TE">TE (Third Year)</SelectItem>
-                    <SelectItem value="BE">BE (Final Year)</SelectItem>
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Input value={profile.year || "Not set"} disabled />
-              )}
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="year">Engineering Year</Label>
+                  {isEditing ? (
+                    <Select
+                      value={profile.year}
+                      onValueChange={(value) => handleProfileChange("year", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Year" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="FE">FE (First Year)</SelectItem>
+                        <SelectItem value="SE">SE (Second Year)</SelectItem>
+                        <SelectItem value="TE">TE (Third Year)</SelectItem>
+                        <SelectItem value="BE">BE (Final Year)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input value={profile.year || "Not set"} disabled />
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </CardContent>
         <CardFooter className="flex justify-end space-x-2 border-t pt-4">

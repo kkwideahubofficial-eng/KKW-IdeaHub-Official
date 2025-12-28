@@ -30,6 +30,94 @@ function getCurrentUser() {
   }
 }
 
+// Extracted ProductCard component
+const ProductCard = ({ product, isCoordinator, onDelete }: { product: ProductItem; isCoordinator: boolean; onDelete: (id: string) => void }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const isLongDescription = product.description.length > 100;
+
+  return (
+    <Card className="flex flex-col h-full hover:shadow-lg transition-transform duration-300 hover:-translate-y-1">
+      <CardHeader className="pb-3">
+        <CardTitle className="line-clamp-1 text-lg" title={product.title}>{product.title}</CardTitle>
+        <CardDescription className="line-clamp-1">{product.category || 'General'}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex-1 flex flex-col gap-4">
+        <div className="relative w-full pt-[56.25%] overflow-hidden rounded-md bg-muted">
+          {product.imageUrl ? (
+            <img 
+              src={product.imageUrl} 
+              alt={product.title} 
+              className="absolute inset-0 w-full h-full object-cover transition-transform hover:scale-105" 
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center text-muted-foreground bg-secondary/30">
+              No Image
+            </div>
+          )}
+        </div>
+        
+        <div className="flex items-center justify-between">
+          <div className="text-xl font-bold text-primary">₹{product.price.toFixed(2)}</div>
+          {product.stock !== undefined && (
+            <span className={`text-xs px-2 py-1 rounded-full ${product.stock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+              {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
+            </span>
+          )}
+        </div>
+
+        <div className="flex-1 min-h-[3rem]">
+          <p 
+            className={`text-sm text-muted-foreground break-words ${isExpanded ? '' : 'line-clamp-3'}`} 
+            title={!isExpanded ? product.description : ''}
+          >
+            {product.description}
+          </p>
+          {isLongDescription && (
+            <Button 
+              variant="link" 
+              size="sm" 
+              className="p-0 h-auto mt-1 text-xs text-primary/80 hover:text-primary"
+              onClick={() => setIsExpanded(!isExpanded)}
+            >
+              {isExpanded ? 'Show Less' : 'Read More'}
+            </Button>
+          )}
+        </div>
+
+        <div className="flex gap-2 mt-auto pt-4 border-t">
+          <Button className="flex-1" disabled={product.stock === 0}>Buy Now</Button>
+          {isCoordinator && (
+            <Button
+              variant="destructive"
+              size="icon"
+              className="shrink-0"
+              onClick={() => onDelete(product._id)}
+            >
+              <span className="sr-only">Delete</span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-4 w-4"
+              >
+                <path d="M3 6h18" />
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+              </svg>
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 const Ecommerce = () => {
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,6 +161,17 @@ const Ecommerce = () => {
       toast.success('Product created');
     } catch {
       toast.error('Failed to create product');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this product?')) return;
+    try {
+      await api.delete(`/products/${id}`);
+      setProducts(prev => prev.filter((x) => x._id !== id));
+      toast.success('Product deleted');
+    } catch {
+      toast.error('Failed to delete');
     }
   };
 
@@ -141,41 +240,14 @@ const Ecommerce = () => {
       ) : products.length === 0 ? (
         <p className="text-muted-foreground">No products yet. {isCoordinator ? 'Create the first one.' : 'Check back later.'}</p>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {products.map((p) => (
-            <Card key={p._id} className="hover:shadow-lg transition-all duration-300">
-              <CardHeader>
-                <CardTitle className="line-clamp-2">{p.title}</CardTitle>
-                <CardDescription className="line-clamp-2">{p.category}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {p.imageUrl ? (
-                  <img src={p.imageUrl} alt={p.title} className="w-full h-48 object-cover rounded mb-3" />
-                ) : null}
-                <div className="text-lg font-semibold mb-2">₹{p.price.toFixed(2)}</div>
-                <p className="text-sm text-muted-foreground line-clamp-3 mb-4">{p.description}</p>
-                <div className="flex gap-2">
-                  <Button className="flex-1">Buy Now</Button>
-                  {isCoordinator && (
-                    <Button
-                      variant="destructive"
-                      onClick={async () => {
-                        if (!confirm('Delete this product?')) return;
-                        try {
-                          await api.delete(`/products/${p._id}`);
-                          setProducts(products.filter((x) => x._id !== p._id));
-                          toast.success('Product deleted');
-                        } catch {
-                          toast.error('Failed to delete');
-                        }
-                      }}
-                    >
-                      Delete
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <ProductCard 
+              key={p._id} 
+              product={p} 
+              isCoordinator={isCoordinator} 
+              onDelete={handleDelete}
+            />
           ))}
         </div>
       )}
