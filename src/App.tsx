@@ -24,6 +24,8 @@ import ManageAchievements from "./pages/ManageAchievements";
 import ManageRooms from "./pages/ManageRooms";
 import Records from "./pages/Records";
 
+import Profile from "./pages/Profile";
+
 const queryClient = new QueryClient();
 
 function getCurrentUser() {
@@ -63,6 +65,14 @@ const App = () => (
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
+              <Route
+                path="/profile"
+                element={
+                  <RequireAuth>
+                    <Profile />
+                  </RequireAuth>
+                }
+              />
               <Route
                 path="/book-slots"
                 element={

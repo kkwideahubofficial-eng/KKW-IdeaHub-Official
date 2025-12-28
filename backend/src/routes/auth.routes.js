@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
-import { signup, login } from '../controllers/authController.js';
+import { signup, login, getProfile, updateProfile, changePassword } from '../controllers/authController.js';
+import { requireAuth } from '../middlewares/auth.js';
 
 const router = Router();
 
@@ -16,6 +17,18 @@ const validateSignup = [
 const validateLogin = [
   body('email').isEmail().withMessage('Valid email required'),
   body('password').isString().withMessage('Password required'),
+];
+
+const validateProfileUpdate = [
+  body('name').optional().isString().isLength({ min: 2 }),
+  body('mobile').optional().isString(),
+  body('year').optional().isIn(['FE', 'SE', 'TE', 'BE', '']),
+  body('branch').optional().isString(),
+];
+
+const validatePasswordChange = [
+  body('currentPassword').isString().withMessage('Current password required'),
+  body('newPassword').isLength({ min: 6 }).withMessage('New password min length 6'),
 ];
 
 // Simple validation error handler
@@ -35,6 +48,11 @@ function validate(req, res, next) {
 
 router.post('/signup', validateSignup, validate, signup);
 router.post('/login', validateLogin, validate, login);
+
+// Protected routes
+router.get('/profile', requireAuth, getProfile);
+router.put('/profile', requireAuth, validateProfileUpdate, validate, updateProfile);
+router.post('/change-password', requireAuth, validatePasswordChange, validate, changePassword);
 
 export default router;
 

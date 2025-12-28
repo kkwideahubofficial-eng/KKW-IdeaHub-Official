@@ -1,8 +1,15 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, LogIn, LogOut, User } from "lucide-react";
+import { Menu } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 interface UserData {
   id: string;
@@ -47,6 +54,7 @@ const Navigation = () => {
     setUser(null);
     toast.success("Successfully logged out");
     navigate("/");
+    setMobileMenuOpen(false);
   };
 
   /* 
@@ -68,6 +76,7 @@ const Navigation = () => {
     if (user?.role === 'team') {
       links.push({ name: "Book Slots", path: "/book-slots" });
       links.push({ name: "My Bookings", path: "/my-bookings" });
+      links.push({ name: "Profile", path: "/profile" });
     }
 
     links.push(
@@ -81,7 +90,8 @@ const Navigation = () => {
       links.push(
         { name: "Dashboard", path: "/coordinator-dashboard" },
         { name: "Manage Rooms", path: "/manage-rooms" },
-        { name: "Records", path: "/records" }
+        { name: "Records", path: "/records" },
+        { name: "Profile", path: "/profile" }
       );
     }
 
@@ -97,22 +107,76 @@ const Navigation = () => {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
-            {/* Mobile menu button */}
-            <button
-              type="button"
-              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 md:hidden"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              <span className="sr-only">Open main menu</span>
-              {mobileMenuOpen ? (
-                <X className="block h-6 w-6" aria-hidden="true" />
-              ) : (
-                <Menu className="block h-6 w-6" aria-hidden="true" />
-              )}
-            </button>
+            {/* Mobile menu (Left Drawer) */}
+            <div className="md:hidden mr-4">
+              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <button
+                    type="button"
+                    className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500"
+                  >
+                    <span className="sr-only">Open main menu</span>
+                    <Menu className="block h-6 w-6" aria-hidden="true" />
+                  </button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-[280px] sm:w-[350px]">
+                  <SheetHeader>
+                    <div className="flex items-center space-x-2 pb-4 border-b">
+                      <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
+                        <span className="text-primary-foreground font-bold text-lg">I</span>
+                      </div>
+                      <SheetTitle className="text-lg font-bold">IDEA Hub</SheetTitle>
+                    </div>
+                  </SheetHeader>
+                  <div className="flex flex-col space-y-3 mt-6">
+                    {navLinks.map((link) => (
+                      <Link
+                        key={link.path}
+                        to={link.path}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                          isActive(link.path)
+                            ? "bg-accent text-accent-foreground"
+                            : "text-foreground hover:bg-muted"
+                        }`}
+                      >
+                        {link.name}
+                      </Link>
+                    ))}
+                    
+                    <div className="my-4 border-t border-border" />
+                    
+                    {user?.role ? (
+                      <div className="space-y-3">
+                        <div className="px-3 text-sm font-medium text-muted-foreground">
+                            Welcome, {user.name}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-start"
+                          onClick={handleLogout}
+                        >
+                          Logout
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col space-y-2">
+                        <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
+                          <Button variant="ghost" size="sm" className="w-full justify-start">Login</Button>
+                        </Link>
+                        <Link to="/signup" onClick={() => setMobileMenuOpen(false)}>
+                          <Button size="sm" className="w-full justify-start">Sign Up</Button>
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
             
             {/* Logo */}
-            <Link to="/" className="ml-4 md:ml-0 flex items-center space-x-2">
+            <Link to="/" className="flex items-center space-x-2">
               <div className="w-10 h-10 bg-primary rounded flex items-center justify-center">
                 <span className="text-primary-foreground font-bold text-xl">I</span>
               </div>
@@ -158,63 +222,7 @@ const Navigation = () => {
               </>
             )}
           </div>
-
-          {/* Mobile Menu Button */}
-          <button
-            className="md:hidden p-2"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
         </div>
-
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-border">
-            <div className="flex flex-col space-y-2">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`px-3 py-2 rounded-md text-sm font-medium ${
-                    isActive(link.path)
-                      ? "bg-accent text-accent-foreground"
-                      : "text-foreground hover:bg-muted"
-                  }`}
-                >
-                  {link.name}
-                </Link>
-              ))}
-              <div className="pt-2 flex flex-col space-y-2">
-                {user?.role ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => {
-                      localStorage.removeItem("idea_hub_token");
-                      localStorage.removeItem("idea_hub_user");
-                      setMobileMenuOpen(false);
-                      window.location.href = "/";
-                    }}
-                  >
-                    Logout
-                  </Button>
-                ) : (
-                  <>
-                    <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
-                      <Button variant="ghost" size="sm" className="w-full">Login</Button>
-                    </Link>
-                    <Link to="/signup" onClick={() => setMobileMenuOpen(false)}>
-                      <Button size="sm" className="w-full">Sign Up</Button>
-                    </Link>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </nav>
   );

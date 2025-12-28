@@ -36,6 +36,21 @@ const userSchema = new Schema(
       trim: true,
       default: '',
     },
+    mobile: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    year: {
+      type: String,
+      enum: ['FE', 'SE', 'TE', 'BE', ''], // Allow empty string for initial state
+      default: '',
+    },
+    branch: {
+      type: String,
+      trim: true,
+      default: '',
+    },
   },
   { timestamps: true }
 );

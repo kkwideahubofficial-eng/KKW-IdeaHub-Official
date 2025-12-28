@@ -77,6 +77,9 @@ export async function login(req, res) {
         email: user.email,
         role: user.role,
         teamName: user.teamName,
+        mobile: user.mobile,
+        year: user.year,
+        branch: user.branch,
       },
     });
   } catch (err) {
@@ -84,5 +87,72 @@ export async function login(req, res) {
   }
 }
 
-export default { signup, login };
+export async function getProfile(req, res) {
+  try {
+    const user = await User.findById(req.user._id).select('-passwordHash');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    return res.status(200).json({ user });
+  } catch (err) {
+    return res.status(500).json({ message: 'Failed to fetch profile', error: err.message });
+  }
+}
+
+export async function updateProfile(req, res) {
+  try {
+    const { name, mobile, year, branch } = req.body;
+    
+    // basic validation could go here or in routes
+    const updates = {};
+    if (name !== undefined) updates.name = name;
+    if (mobile !== undefined) updates.mobile = mobile;
+    if (year !== undefined) updates.year = year;
+    if (branch !== undefined) updates.branch = branch;
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).select('-passwordHash');
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    return res.status(200).json({ message: 'Profile updated successfully', user });
+  } catch (err) {
+    return res.status(500).json({ message: 'Failed to update profile', error: err.message });
+  }
+}
+
+export async function changePassword(req, res) {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    
+    // req.user has the user document attached by requireAuth middleware but typically we findById to get passwordHash because some auth middlewares might exclude it
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Incorrect current password' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(newPassword, salt);
+
+    user.passwordHash = passwordHash;
+    await user.save();
+
+    return res.status(200).json({ message: 'Password changed successfully' });
+  } catch (err) {
+    return res.status(500).json({ message: 'Failed to change password', error: err.message });
+  }
+}
+
+export default { signup, login, getProfile, updateProfile, changePassword };
 
