@@ -10,7 +10,7 @@ const validateSignup = [
   body('name').isString().isLength({ min: 2 }).withMessage('Name is required'),
   body('email').isEmail().withMessage('Valid email required'),
   body('password').isLength({ min: 6 }).withMessage('Password min length 6'),
-  body('role').optional().isIn(['team', 'coordinator']).withMessage('Invalid role'),
+  body('role').optional().isIn(['team', 'coordinator', 'head']).withMessage('Invalid role'),
   body('teamName').optional().isString(),
 ];
 

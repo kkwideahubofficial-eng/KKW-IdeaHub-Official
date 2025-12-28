@@ -9,7 +9,7 @@ import { toast } from "sonner";
 
 const Signup = () => {
   const navigate = useNavigate();
-  const [role, setRole] = useState<"coordinator" | "team">("team");
+  const [role, setRole] = useState<"coordinator" | "team" | "head">("team");
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -70,7 +70,7 @@ const Signup = () => {
             {/* Role Selection */}
             <div className="space-y-2">
               <Label>Register as</Label>
-              <RadioGroup value={role} onValueChange={(value: string) => setRole(value as "coordinator" | "team")}>
+              <RadioGroup value={role} onValueChange={(value: string) => setRole(value as "coordinator" | "team" | "head")}>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="team" id="team" />
                   <Label htmlFor="team" className="font-normal cursor-pointer">Team Member</Label>
@@ -78,6 +78,10 @@ const Signup = () => {
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="coordinator" id="coordinator" />
                   <Label htmlFor="coordinator" className="font-normal cursor-pointer">Coordinator</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="head" id="head" />
+                  <Label htmlFor="head" className="font-normal cursor-pointer">Idea Lab Head</Label>
                 </div>
               </RadioGroup>
             </div>

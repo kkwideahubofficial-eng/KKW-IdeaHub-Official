@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const { Schema } = mongoose;
 
-const roles = ['team', 'coordinator'];
+const roles = ['team', 'coordinator', 'head'];
 
 const userSchema = new Schema(
   {

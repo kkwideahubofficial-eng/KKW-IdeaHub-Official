@@ -37,8 +37,10 @@ export function requireCoordinator(req, res, next) {
   if (!req.user) {
     return res.status(401).json({ message: 'Authentication required' });
   }
-  if (req.user.role !== 'coordinator') {
-    return res.status(403).json({ message: 'Coordinator access required' });
+  // Allow coordinator, head, or admin
+  const allowedRoles = ['coordinator', 'head', 'admin'];
+  if (!allowedRoles.includes(req.user.role)) {
+    return res.status(403).json({ message: 'Access denied: Coordinators/Heads only' });
   }
   return next();
 }

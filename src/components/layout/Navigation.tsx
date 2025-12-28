@@ -15,7 +15,7 @@ interface UserData {
   id: string;
   name: string;
   email: string;
-  role: 'coordinator' | 'team';
+  role: 'coordinator' | 'team' | 'head';
   teamName?: string;
 }
 
@@ -69,6 +69,17 @@ const Navigation = () => {
      8. Coordinator Links (if applicable)
   */
   const getNavLinks = () => {
+    // Head Role - Exclusive Navigation
+    if (user?.role === 'head') {
+      return [
+        { name: "Dashboard", path: "/head-dashboard" },
+        { name: "Requests", path: "/head/requests" },
+        { name: "Manage Machinery", path: "/head/machinery" },
+        { name: "Records & Attendance", path: "/head/records" },
+        { name: "E-commerce Stats", path: "/head/ecommerce-stats" }
+      ];
+    }
+
     const links = [
       { name: "Home", path: "/" },
     ];
@@ -76,6 +87,7 @@ const Navigation = () => {
     if (user?.role === 'team') {
       links.push({ name: "Book Slots", path: "/book-slots" });
       links.push({ name: "My Bookings", path: "/my-bookings" });
+      links.push({ name: "Machinery Permission", path: "/machinery" });
       links.push({ name: "Profile", path: "/profile" });
     }
 

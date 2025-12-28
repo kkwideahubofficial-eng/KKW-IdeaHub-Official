@@ -11,6 +11,7 @@ import roomRouter from './routes/room.routes.js';
 import timeSlotRouter from './routes/timeSlot.routes.js';
 import eventRouter from './routes/event.routes.js';
 import achievementRouter from './routes/achievement.routes.js';
+import machineryRoutes from './routes/machinery.routes.js';
 import machineRouter from './routes/machine.routes.js';
 import productRouter from './routes/product.routes.js';
 
@@ -57,6 +58,7 @@ app.use('/api/rooms', roomRouter);
 app.use('/api/time-slots', timeSlotRouter);
 app.use('/api/events', eventRouter);
 app.use('/api/achievements', achievementRouter);
+app.use('/api/machinery', machineryRoutes);
 app.use('/api/machines', machineRouter);
 app.use('/api/products', productRouter);
 // Static uploads

@@ -24,6 +24,16 @@ import ManageAchievements from "./pages/ManageAchievements";
 import ManageRooms from "./pages/ManageRooms";
 import Records from "./pages/Records";
 
+import ManageMachinery from "./pages/head/ManageMachinery";
+import MachineryRequests from "./pages/head/MachineryRequests";
+import HeadDashboard from "./pages/head/HeadDashboard";
+import EcommerceStats from "./pages/head/EcommerceStats";
+import RecordStats from "./pages/head/RecordStats";
+import MachineryList from "./pages/machinery/MachineryList";
+import MachineryRequestForm from "./pages/machinery/MachineryRequestForm";
+
+
+
 import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient();
@@ -49,6 +59,13 @@ function RequireCoordinator({ children }: { children: ReactNode }) {
   const user = getCurrentUser();
   if (!user) return <Navigate to="/login" replace />;
   if (user.role !== 'coordinator') return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+function RequireHead({ children }: { children: ReactNode }) {
+  const user = getCurrentUser();
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role !== 'head' && user.role !== 'admin') return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
@@ -127,6 +144,65 @@ const App = () => (
                   <RequireCoordinator>
                     <Records />
                   </RequireCoordinator>
+                }
+              />
+              {/* Head Routes */}
+              <Route
+                path="/head-dashboard"
+                element={
+                  <RequireHead>
+                    <HeadDashboard />
+                  </RequireHead>
+                }
+              />
+              <Route
+                path="/head/machinery"
+                element={
+                  <RequireHead>
+                    <ManageMachinery />
+                  </RequireHead>
+                }
+              />
+              <Route
+                path="/head/requests"
+                element={
+                  <RequireHead>
+                    <MachineryRequests />
+                  </RequireHead>
+                }
+              />
+                <Route
+                path="/head/ecommerce-stats"
+                element={
+                  <RequireHead>
+                    <EcommerceStats />
+                  </RequireHead>
+                }
+              />
+              <Route
+                path="/head/records"
+                element={
+                  <RequireHead>
+                    <RecordStats />
+                  </RequireHead>
+                }
+              />
+              
+              {/* Student Machinery Routes */}
+              <Route
+                path="/machinery"
+                element={
+                  <RequireAuth>
+                    <MachineryList />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/machinery/request/:id"
+                element={
+                  <RequireAuth>
+                    <MachineryRequestForm />
+                  </RequireAuth>
                 }
               />
               <Route path="/achievements" element={<Achievements />} />

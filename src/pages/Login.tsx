@@ -9,7 +9,7 @@ import { toast } from "sonner";
 
 const Login = () => {
   const navigate = useNavigate();
-  const [role, setRole] = useState<"coordinator" | "team">("team");
+  const [role, setRole] = useState<"coordinator" | "team" | "head">("team");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -38,9 +38,11 @@ const Login = () => {
       if (data?.user) localStorage.setItem("idea_hub_user", JSON.stringify(data.user));
 
       toast.success("Logged in");
-      const userRole = data?.user?.role as "coordinator" | "team" | undefined;
+      const userRole = data?.user?.role as "coordinator" | "team" | "head" | undefined;
       if (userRole === "coordinator") {
         navigate("/coordinator-dashboard");
+      } else if (userRole === "head") {
+        navigate("/head-dashboard");
       } else {
         navigate("/book-slots");
       }
@@ -63,7 +65,7 @@ const Login = () => {
             {/* Role Selection */}
             <div className="space-y-2">
               <Label>Login as</Label>
-              <RadioGroup value={role} onValueChange={(value: string) => setRole(value as "coordinator" | "team")}>
+              <RadioGroup value={role} onValueChange={(value: string) => setRole(value as "coordinator" | "team" | "head")}>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="team" id="team" />
                   <Label htmlFor="team" className="font-normal cursor-pointer">Team Member</Label>
@@ -71,6 +73,10 @@ const Login = () => {
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="coordinator" id="coordinator" />
                   <Label htmlFor="coordinator" className="font-normal cursor-pointer">Coordinator</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="head" id="head" />
+                  <Label htmlFor="head" className="font-normal cursor-pointer">Idea Lab Head</Label>
                 </div>
               </RadioGroup>
             </div>
