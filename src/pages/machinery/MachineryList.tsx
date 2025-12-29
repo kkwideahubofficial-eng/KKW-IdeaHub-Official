@@ -66,9 +66,9 @@ const MachineryList = () => {
             
             <CardHeader>
               <CardTitle>{machine.name}</CardTitle>
-              <CardDescription>
+              <div className="text-sm text-muted-foreground">
                 <ReadMore text={machine.description} limit={30} />
-              </CardDescription>
+              </div>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col gap-4">
               <div className="text-sm">

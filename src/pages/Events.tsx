@@ -145,28 +145,26 @@ const Events = () => {
           {events.map((event) => (
             <Card key={event._id} className="hover:shadow-lg transition-all duration-300">
               <CardHeader>
-                <div className="flex items-start justify-between mb-2">
-                  <Badge variant="outline">{new Date(event.date).toLocaleDateString()}</Badge>
-                </div>
-                <CardTitle className="line-clamp-2">{event.title}</CardTitle>
-                <CardDescription>
-                  <ReadMore text={event.description} limit={30} />
-                </CardDescription>
+                <CardTitle className="line-clamp-2 text-xl">{event.title}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {event.imageUrl ? (
-                  <img src={event.imageUrl} alt={event.title} className="w-full max-h-56 object-cover rounded" />
+                  <img src={event.imageUrl} alt={event.title} className="w-full h-80 object-cover rounded-md shadow-sm" />
                 ) : null}
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Calendar className="w-4 h-4 text-primary" />
-                    <span>{new Date(event.date).toLocaleDateString()}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Users className="w-4 h-4 text-primary" />
-                    <span>Organizer: {event.organizer}</span>
-                  </div>
+                <div className="flex items-center justify-between mt-4">
+                   <Badge variant="secondary" className="px-3 py-1">
+                      {new Date(event.date).toLocaleDateString()}
+                   </Badge>
+                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                     <Users className="w-4 h-4 text-primary" />
+                     <span>{event.organizer}</span>
+                   </div>
                 </div>
+
+                <div className="text-sm text-muted-foreground">
+                  <ReadMore text={event.description} limit={60} />
+                </div>
+
                 {isCoordinator && (
                   <div className="flex gap-2 justify-end">
                     <Button variant="destructive" onClick={async () => {

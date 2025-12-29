@@ -79,8 +79,34 @@ const MyBookings = () => {
     return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin" /></div>;
   }
 
+  const getNormalizedDate = (item: any): Date => {
+    if ('slotDate' in item) return new Date(item.slotDate);
+    if ('usageDate' in item) return new Date(item.usageDate);
+    return new Date();
+  };
+
+  const isPast = (date: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return d < today;
+  };
+
   const filterData = <T extends { status: string }>(data: T[], status: string) => {
-      return status === 'all' ? data : data.filter(item => item.status === status);
+      if (status === 'all') return data;
+      
+      return data.filter(item => {
+          const matchesStatus = item.status === status;
+          if (!matchesStatus) return false;
+
+          // For Approved and Pending, render only upcoming (or today's) items
+          if (status === 'approved' || status === 'pending') {
+              return !isPast(getNormalizedDate(item));
+          }
+          
+          return true;
+      });
   };
 
   const StatusTabs = ({ type }: { type: 'room' | 'machinery' }) => (
