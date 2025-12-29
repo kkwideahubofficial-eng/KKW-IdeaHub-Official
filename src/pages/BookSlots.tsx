@@ -260,7 +260,7 @@ const BookSlots = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
-      <div className="mb-8">
+      <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold text-foreground mb-2">Book a Lab Slot</h1>
         <p className="text-muted-foreground">Select one or more consecutive 15-minute slots.</p>
       </div>
@@ -323,73 +323,16 @@ const BookSlots = () => {
                 )}
 
                 {rooms.map(room => (
-                  <Card key={room._id}>
-                    <CardHeader className="pb-3">
-                      <div className="flex justify-between items-start">
-                         <div>
-                            <CardTitle>{room.name}</CardTitle>
-                            <CardDescription>Capacity: {room.capacity} students</CardDescription>
-                         </div>
-                         <div className="flex gap-2">
-                            {room.features.map((f, i) => (
-                               <span key={i} className="text-xs px-2 py-1 bg-secondary rounded-full">{f}</span>
-                            ))}
-                         </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                       <div className="grid grid-cols-4 md:grid-cols-6 gap-2">
-                          {room.timeSlots?.flatMap(slot => generateTimeIntervals(slot.startTime, slot.endTime)).map((interval, idx) => {
-                             const remaining = getRemainingCapacity(room, interval.start, interval.end);
-                             const isFull = remaining <= 0;
-                             const isSelected = currentSelection.roomId === room._id && currentSelection.intervals.some(i => i.start === interval.start);
-                             const stats = getSlotStats(room, interval.start, interval.end);
-
-                             return (
-                                <HoverCard key={`${room._id}-${interval.start}`}>
-                                  <HoverCardTrigger asChild>
-                                    <button
-                                      onClick={(e) => { e.preventDefault(); handleIntervalClick(room, interval.start, interval.end); }}
-                                      disabled={isFull}
-                                      className={`
-                                        p-2 rounded-md text-xs text-center border transition-all flex flex-col items-center justify-center gap-1 h-20 relative group
-                                        ${isFull 
-                                          ? 'bg-red-100 text-red-700 border-red-200 cursor-not-allowed' 
-                                          : isSelected
-                                             ? 'bg-primary text-primary-foreground border-primary ring-1 ring-primary ring-offset-1'
-                                             : 'hover:border-primary hover:shadow-sm bg-card'
-                                        }
-                                      `}
-                                    >
-                                       <div className="font-semibold whitespace-nowrap flex items-center gap-1">
-                                          {formatTime(interval.start)}
-                                       </div>
-                                       <div className="text-[10px] opacity-80 font-medium">
-                                          {isFull ? 'Full' : `${remaining} left`}
-                                       </div>
-                                       {/* Visual cue for View More */}
-                                       <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                           <Info className="h-3 w-3 text-muted-foreground" />
-                                       </div>
-                                    </button>
-                                  </HoverCardTrigger>
-                                  <HoverCardContent className="w-auto p-3 z-50">
-                                      <div className="space-y-2">
-                                          <h4 className="text-sm font-semibold border-b pb-1">Slot Statistics</h4>
-                                          <div className="text-xs grid grid-cols-2 gap-x-6 gap-y-2">
-                                              <span className="text-muted-foreground">Total Applied:</span> <span className="font-medium text-foreground text-right">{stats.totalApplied}</span>
-                                              <span className="text-muted-foreground">Approved:</span> <span className="font-medium text-green-600 text-right">{stats.approved}</span>
-                                              <span className="text-muted-foreground">Pending:</span> <span className="font-medium text-amber-600 text-right">{stats.totalApplied - stats.approved}</span>
-                                          </div>
-                                      </div>
-                                  </HoverCardContent>
-                                </HoverCard>
-                             );
-                          })}
-                       </div>
-                       {(room.timeSlots?.length || 0) === 0 && <p className="text-sm text-muted-foreground italic">No time slots are currently configured for this room.</p>}
-                    </CardContent>
-                  </Card>
+                  <RoomCard 
+                    key={room._id} 
+                    room={room} 
+                    currentSelection={currentSelection}
+                    onIntervalClick={handleIntervalClick}
+                    formatTime={formatTime}
+                    getRemainingCapacity={getRemainingCapacity}
+                    getSlotStats={getSlotStats}
+                    generateTimeIntervals={generateTimeIntervals}
+                  />
                 ))}
              </div>
            )}
@@ -460,6 +403,130 @@ const BookSlots = () => {
          </DialogContent>
       </Dialog>
     </div>
+  );
+};
+
+// Extracted RoomCard Component
+interface RoomCardProps {
+  room: Room;
+  currentSelection: { roomId: string; intervals: { start: string, end: string }[] };
+  onIntervalClick: (room: Room, start: string, end: string) => void;
+  formatTime: (time: string) => string;
+  getRemainingCapacity: (room: Room, start: string, end: string) => number;
+  getSlotStats: (room: Room, start: string, end: string) => { totalApplied: number; approved: number };
+  generateTimeIntervals: (start: string, end: string) => { start: string, end: string }[];
+}
+
+const RoomCard = ({ 
+  room, 
+  currentSelection, 
+  onIntervalClick, 
+  formatTime, 
+  getRemainingCapacity, 
+  getSlotStats,
+  generateTimeIntervals
+}: RoomCardProps) => {
+  const [visibleCount, setVisibleCount] = useState(16); // Show 16 slots initially (4 rows of 4)
+  
+  const allIntervals = room.timeSlots?.flatMap(slot => generateTimeIntervals(slot.startTime, slot.endTime)) || [];
+  const visibleIntervals = allIntervals.slice(0, visibleCount);
+  const hasMore = allIntervals.length > visibleCount;
+
+  const handleLoadMore = () => {
+    setVisibleCount(prev => prev + 16);
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex justify-between items-start">
+           <div className="space-y-1">
+              <CardTitle className="text-xl">{room.name}</CardTitle>
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <Users className="h-4 w-4" /> Capacity: {room.capacity} students
+                </span>
+                {room.features.includes('projector') && ( // Assuming 'projector' is the key, checks dynamically
+                  <span className="flex items-center gap-1">
+                     Projector Available
+                  </span>
+                )}
+              </div>
+           </div>
+           <div className="flex flex-wrap gap-2 justify-end max-w-[50%]">
+              {room.features.map((f, i) => (
+                 <span key={i} className="text-xs px-2 py-1 bg-white text-black border rounded-full capitalize shadow-sm">{f}</span>
+              ))}
+           </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+         <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
+            {visibleIntervals.map((interval) => {
+               const remaining = getRemainingCapacity(room, interval.start, interval.end);
+               const isFull = remaining <= 0;
+               const isSelected = currentSelection.roomId === room._id && currentSelection.intervals.some(i => i.start === interval.start);
+               const stats = getSlotStats(room, interval.start, interval.end);
+
+               return (
+                  <HoverCard key={`${room._id}-${interval.start}`}>
+                    <HoverCardTrigger asChild>
+                      <button
+                        onClick={(e) => { e.preventDefault(); onIntervalClick(room, interval.start, interval.end); }}
+                        disabled={isFull}
+                        className={`
+                          p-2 rounded-lg text-xs text-center border transition-all flex flex-col items-center justify-center gap-1 h-20 relative group
+                          ${isFull 
+                            ? 'bg-red-100 text-red-900 border-red-200 cursor-not-allowed' 
+                            : isSelected
+                               ? 'bg-primary text-primary-foreground border-primary shadow-md scale-105'
+                               : 'bg-green-100 text-green-900 border-green-200 hover:border-green-400 hover:shadow-md'
+                          }
+                        `}
+                      >
+                         <div className="font-bold whitespace-nowrap text-sm">
+                            {formatTime(interval.start)}
+                         </div>
+                         <div className={`text-[11px] font-medium ${isFull ? '' : isSelected ? 'text-primary-foreground/90' : 'text-muted-foreground'}`}>
+                            {isFull ? 'Full' : `${remaining} left`}
+                         </div>
+                         {/* Visual cue for View More */}
+                         <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                             <Info className={`h-3 w-3 ${isSelected ? 'text-primary-foreground' : 'text-muted-foreground'}`} />
+                         </div>
+                      </button>
+                    </HoverCardTrigger>
+                    <HoverCardContent className="w-auto p-4 shadow-lg">
+                        <div className="space-y-3">
+                            <h4 className="text-sm font-semibold border-b pb-2">Slot Statistics</h4>
+                            <div className="text-xs grid grid-cols-2 gap-x-8 gap-y-2">
+                                <span className="text-muted-foreground">Total Applied:</span> <span className="font-semibold text-right">{stats.totalApplied}</span>
+                                <span className="text-muted-foreground">Approved:</span> <span className="font-semibold text-green-600 text-right">{stats.approved}</span>
+                                <span className="text-muted-foreground">Pending:</span> <span className="font-semibold text-amber-600 text-right">{stats.totalApplied - stats.approved}</span>
+                            </div>
+                        </div>
+                    </HoverCardContent>
+                  </HoverCard>
+               );
+            })}
+         </div>
+         
+         <div className="mt-4 flex justify-center gap-2">
+           {hasMore && (
+              <Button variant="outline" size="sm" onClick={handleLoadMore}>
+                Load more Time slots
+              </Button>
+           )}
+           {visibleCount > 16 && (
+              <Button variant="ghost" size="sm" onClick={() => setVisibleCount(16)}>
+                View Less
+              </Button>
+           )}
+         </div>
+
+         {allIntervals.length === 0 && <p className="text-sm text-muted-foreground italic text-center py-4">No time slots are currently configured for this room.</p>}
+      </CardContent>
+    </Card>
   );
 };
 
