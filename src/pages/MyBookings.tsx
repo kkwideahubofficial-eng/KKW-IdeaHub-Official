@@ -130,7 +130,7 @@ const MyBookings = () => {
                                     <p className="text-sm text-foreground italic">"{booking.purpose}"</p>
                                 </div>
 
-                                {booking.reason && (
+                                {booking.status === 'rejected' && booking.reason && (
                                     <div className="mt-4 p-3 bg-red-50 text-red-700 text-sm rounded-md border border-red-100">
                                         <strong>Rejection Reason:</strong> {booking.reason}
                                     </div>
@@ -173,7 +173,7 @@ const MyBookings = () => {
                                     <p className="text-sm text-foreground italic">"{req.purpose}"</p>
                                 </div>
 
-                                {req.rejectionReason && (
+                                {req.status === 'rejected' && req.rejectionReason && (
                                     <div className="mt-4 p-3 bg-red-50 text-red-700 text-sm rounded-md border border-red-100">
                                         <strong>Rejection Reason:</strong> {req.rejectionReason}
                                     </div>

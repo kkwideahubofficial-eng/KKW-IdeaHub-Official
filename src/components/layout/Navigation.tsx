@@ -74,7 +74,7 @@ const Navigation = () => {
       return [
         { name: "Dashboard", path: "/head-dashboard" },
         { name: "Requests", path: "/head/requests" },
-        { name: "Manage Machinery", path: "/head/machinery" },
+        { name: "Manage Machinery", path: "/manage-machinery" },
         { name: "Records & Attendance", path: "/head/records" },
         { name: "E-commerce Stats", path: "/head/ecommerce-stats" }
       ];

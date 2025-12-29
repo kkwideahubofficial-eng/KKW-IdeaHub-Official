@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
 import { PlusCircle, Trash2, Edit } from "lucide-react";
+import { ReadMore } from "@/components/ReadMore";
 
 interface TimeSlot {
   day: string;
@@ -367,7 +368,9 @@ const ManageMachinery = () => {
             )}
             <CardHeader>
               <CardTitle>{machine.name}</CardTitle>
-              <CardDescription className="line-clamp-2">{machine.description}</CardDescription>
+              <CardDescription>
+                <ReadMore text={machine.description} limit={30} />
+              </CardDescription>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col">
               <div className="text-sm text-muted-foreground mb-4 space-y-1">
@@ -375,7 +378,7 @@ const ManageMachinery = () => {
                 <div className="flex flex-wrap gap-1">
                    {machine.timeSlots.map((s, i) => (
                       <span key={i} className="text-xs bg-secondary px-2 py-0.5 rounded-full">
-                        {s.day.slice(0,3)}
+                        {s.day.slice(0,3)} ({getNextDayDate(s.day)})
                       </span>
                    ))}
                 </div>

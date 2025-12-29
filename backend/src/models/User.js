@@ -20,6 +20,10 @@ const userSchema = new Schema(
       lowercase: true,
       trim: true,
     },
+    imageUrl: {
+      type: String,
+      default: '',
+    },
     passwordHash: {
       type: String,
       required: true,

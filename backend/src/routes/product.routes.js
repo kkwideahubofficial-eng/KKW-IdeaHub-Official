@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { body, param } from 'express-validator';
 import { requireAuth, requireCoordinator } from '../middlewares/auth.js';
 import { upload } from '../middlewares/upload.js';
-import { listProducts, createProduct, deleteProduct } from '../controllers/productController.js';
+import { listProducts, createProduct, updateProduct, deleteProduct } from '../controllers/productController.js';
 
 const router = Router();
 
@@ -22,6 +22,20 @@ router.post(
 );
 
 router.delete('/:id', requireAuth, requireCoordinator, param('id').isMongoId(), deleteProduct);
+
+router.put(
+  '/:id',
+  requireAuth,
+  requireCoordinator,
+  upload.single('image'),
+  param('id').isMongoId(),
+  [
+    body('title').optional().not().isEmpty(),
+    body('description').optional().not().isEmpty(),
+    body('price').optional().isFloat({ min: 0 }),
+  ],
+  updateProduct
+);
 
 export default router;
 

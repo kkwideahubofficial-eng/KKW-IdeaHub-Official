@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { body, param } from 'express-validator';
 import { requireAuth, requireCoordinator } from '../middlewares/auth.js';
 import { upload } from '../middlewares/upload.js';
-import { createMachine, listMachines, deleteMachine } from '../controllers/machineController.js';
+import { createMachine, updateMachine, listMachines, deleteMachine } from '../controllers/machineController.js';
 
 const router = Router();
 
@@ -18,6 +18,16 @@ router.post(
 );
 
 router.delete('/:id', requireAuth, requireCoordinator, param('id').isMongoId(), deleteMachine);
+
+router.put(
+  '/:id',
+  requireAuth,
+  requireCoordinator,
+  upload.single('image'),
+  param('id').isMongoId(),
+  [body('name').optional().not().isEmpty()],
+  updateMachine
+);
 
 export default router;
 

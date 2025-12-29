@@ -58,7 +58,7 @@ const HeadDashboard = () => {
                         <ListTodo className="mr-3 h-6 w-6" /> Review Requests
                     </Button>
                 </Link>
-                <Link to="/head/machinery">
+                <Link to="/manage-machinery">
                     <Button size="lg" className="w-full h-24 text-lg" variant="outline">
                         <Settings className="mr-3 h-6 w-6" /> Manage Inventory
                     </Button>

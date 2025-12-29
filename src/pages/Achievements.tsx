@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { ReadMore } from "@/components/ReadMore";
 
 interface AchievementItem {
   _id: string;
@@ -33,6 +34,7 @@ const Achievements = () => {
   const [achievements, setAchievements] = useState<AchievementItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ title: "", description: "", date: "", achievedBy: "", imageUrl: "" });
   const user = useMemo(getCurrentUser, []);
   const isCoordinator = user?.role === 'coordinator';
@@ -51,7 +53,7 @@ const Achievements = () => {
     fetchAchievements();
   }, []);
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const formData = new FormData();
@@ -60,18 +62,42 @@ const Achievements = () => {
       formData.append('date', new Date(form.date).toISOString());
       formData.append('achievedBy', form.achievedBy);
       if (form.imageUrl) formData.append('imageUrl', form.imageUrl);
+      
       const fileInput = document.getElementById('achievement-image') as HTMLInputElement | null;
       if (fileInput?.files && fileInput.files[0]) {
         formData.append('image', fileInput.files[0]);
       }
-      const res = await api.post('/achievements', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      setAchievements([res.data, ...achievements]);
+
+      if (editingId) {
+        // Update
+        const res = await api.put(`/achievements/${editingId}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+        setAchievements(achievements.map(a => a._id === editingId ? res.data : a));
+        toast.success('Achievement updated');
+      } else {
+        // Create
+        const res = await api.post('/achievements', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+        setAchievements([res.data, ...achievements]);
+        toast.success('Achievement created');
+      }
+      
       setOpen(false);
       setForm({ title: "", description: "", date: "", achievedBy: "", imageUrl: "" });
-      toast.success('Achievement created');
+      setEditingId(null);
     } catch {
-      toast.error('Failed to create achievement');
+      toast.error(editingId ? 'Failed to update achievement' : 'Failed to create achievement');
     }
+  };
+
+  const startEdit = (achievement: AchievementItem) => {
+    setEditingId(achievement._id);
+    setForm({
+      title: achievement.title,
+      description: achievement.description,
+      date: new Date(achievement.date).toISOString().split('T')[0],
+      achievedBy: achievement.achievedBy,
+      imageUrl: achievement.imageUrl || ""
+    });
+    setOpen(true);
   };
 
   return (
@@ -82,7 +108,7 @@ const Achievements = () => {
           <p className="text-muted-foreground">Celebrating innovation and success stories</p>
         </div>
         {isCoordinator ? (
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog open={open} onOpenChange={(val) => { if(!val) { setEditingId(null); setForm({ title: "", description: "", date: "", achievedBy: "", imageUrl: "" }); } setOpen(val); }}>
             <DialogTrigger asChild>
               <button className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium">
                 <PlusCircle className="w-4 h-4 mr-2" /> Add Achievement
@@ -90,10 +116,10 @@ const Achievements = () => {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add Achievement</DialogTitle>
+                <DialogTitle>{editingId ? "Edit Achievement" : "Add Achievement"}</DialogTitle>
                 <DialogDescription>Provide details and optionally an image.</DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleCreate} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <Label htmlFor="title">Title</Label>
                   <Input id="title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
@@ -121,7 +147,9 @@ const Achievements = () => {
                   </div>
                 </div>
                 <DialogFooter>
-                  <button type="submit" className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium">Create</button>
+                  <button type="submit" className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium">
+                    {editingId ? "Update" : "Create"}
+                  </button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -180,7 +208,7 @@ const Achievements = () => {
       ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {achievements.map((achievement) => (
-          <Card key={achievement._id} className="hover:shadow-lg transition-all duration-300 cursor-pointer">
+          <Card key={achievement._id} className="hover:shadow-lg transition-all duration-300 cursor-pointer flex flex-col h-full">
             <CardHeader>
               <div className="flex items-start justify-between mb-2">
                 <Badge variant="outline">{new Date(achievement.date).toLocaleDateString()}</Badge>
@@ -191,16 +219,25 @@ const Achievements = () => {
                 {achievement.achievedBy}
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex flex-col flex-1">
               {achievement.imageUrl ? (
-                <img src={achievement.imageUrl} alt={achievement.title} className="w-full max-h-56 object-cover rounded mb-3" />
+                <img src={achievement.imageUrl} alt={achievement.title} className="w-full h-48 object-cover rounded mb-3" />
               ) : null}
-              <p className="text-sm text-muted-foreground line-clamp-4">{achievement.description}</p>
+              
+              <ReadMore text={achievement.description} limit={30} className="flex-1 mb-2" />
+              
               {isCoordinator && (
-                <div className="mt-3 flex justify-end">
+                <div className="mt-auto pt-2 flex justify-end gap-2">
+                   <button
+                    className="px-3 py-1.5 text-sm rounded border border-input bg-background hover:bg-accent hover:text-accent-foreground"
+                    onClick={(e) => { e.stopPropagation(); startEdit(achievement); }}
+                  >
+                    Edit
+                  </button>
                   <button
-                    className="px-3 py-1.5 text-sm rounded bg-destructive text-destructive-foreground"
-                    onClick={async () => {
+                    className="px-3 py-1.5 text-sm rounded bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={async (e) => {
+                      e.stopPropagation();
                       if (!confirm('Delete this achievement?')) return;
                       try {
                         await api.delete(`/achievements/${achievement._id}`);

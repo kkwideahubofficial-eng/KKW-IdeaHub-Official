@@ -1,13 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Lightbulb, Target, Eye, Cpu, Printer, Microscope, Zap, Wifi, Image as ImageIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import api from "@/lib/axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { ReadMore } from "@/components/ReadMore";
 
 const LabInfo = () => {
   const facilities = [
@@ -46,6 +47,7 @@ const LabInfo = () => {
   const [machines, setMachines] = useState<{ _id: string; name: string; summary?: string; details?: string; imageUrl?: string; }[]>([]);
   const [loadingMachines, setLoadingMachines] = useState(true);
   const [openAdd, setOpenAdd] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', summary: '', details: '', imageUrl: '' });
   const user = useMemo(() => {
     try {
@@ -74,6 +76,45 @@ const LabInfo = () => {
   const handlePreview = (src: string) => {
     setPreview(src);
     setOpen(true);
+  };
+
+  const startEdit = (machine: any) => {
+    setEditingId(machine._id);
+    setForm({
+      name: machine.name,
+      summary: machine.summary || '',
+      details: machine.details || '',
+      imageUrl: machine.imageUrl || ''
+    });
+    setOpenAdd(true);
+  };
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const fd = new FormData();
+      fd.append('name', form.name);
+      if (form.summary) fd.append('summary', form.summary);
+      if (form.details) fd.append('details', form.details);
+      if (form.imageUrl) fd.append('imageUrl', form.imageUrl);
+      const fileInput = document.getElementById('machine-image') as HTMLInputElement | null;
+      if (fileInput?.files && fileInput.files[0]) fd.append('image', fileInput.files[0]);
+
+      if (editingId) {
+        const res = await api.put(`/machines/${editingId}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+        setMachines(machines.map(m => m._id === editingId ? res.data : m));
+        toast.success('Machine updated');
+      } else {
+        const res = await api.post('/machines', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+        setMachines([res.data, ...machines]);
+        toast.success('Machine added');
+      }
+      setOpenAdd(false);
+      setForm({ name: '', summary: '', details: '', imageUrl: '' });
+      setEditingId(null);
+    } catch { 
+      toast.error(editingId ? 'Failed to update machine' : 'Failed to add machine'); 
+    }
   };
 
   return (
@@ -153,18 +194,18 @@ const LabInfo = () => {
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-3xl font-bold text-foreground">Machines</h2>
           {isCoordinator && (
-            <Button onClick={() => setOpenAdd(true)}>Add Machine</Button>
+            <Button onClick={() => { setEditingId(null); setForm({ name: '', summary: '', details: '', imageUrl: '' }); setOpenAdd(true); }}>Add Machine</Button>
           )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {loadingMachines ? (<div>Loading...</div>) : machines.length === 0 ? (
             <p className="text-muted-foreground">No machines yet.{isCoordinator ? ' Add one.' : ''}</p>
           ) : machines.map((m) => (
-            <Card key={m._id} className="hover:shadow-lg transition-all duration-300">
+            <Card key={m._id} className="hover:shadow-lg transition-all duration-300 flex flex-col h-full">
               <CardHeader>
                 <CardTitle>{m.name}</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex flex-col flex-1">
                 {m.imageUrl ? (
                   <img
                     src={m.imageUrl}
@@ -174,10 +215,13 @@ const LabInfo = () => {
                   />
                 ) : null}
                 <p className="text-sm text-muted-foreground mb-2">{m.summary}</p>
-                <p className="text-sm">{m.details}</p>
+                <div className="flex-1 text-sm">
+                   <ReadMore text={m.details || ''} limit={30} />
+                </div>
                 {isCoordinator && (
-                  <div className="mt-3 flex justify-end">
-                    <Button variant="destructive" onClick={async () => {
+                  <div className="mt-3 flex justify-end gap-2">
+                     <Button variant="outline" size="sm" onClick={() => startEdit(m)}>Edit</Button>
+                    <Button variant="destructive" size="sm" onClick={async () => {
                       if (!confirm('Delete this machine?')) return;
                       try {
                         await api.delete(`/machines/${m._id}`);
@@ -241,25 +285,12 @@ const LabInfo = () => {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={openAdd} onOpenChange={setOpenAdd}>
+      <Dialog open={openAdd} onOpenChange={(val) => { if (!val) { setEditingId(null); setForm({ name: '', summary: '', details: '', imageUrl: '' }); } setOpenAdd(val); }}>
         <DialogContent>
-          <form onSubmit={async (e) => {
-            e.preventDefault();
-            try {
-              const fd = new FormData();
-              fd.append('name', form.name);
-              if (form.summary) fd.append('summary', form.summary);
-              if (form.details) fd.append('details', form.details);
-              if (form.imageUrl) fd.append('imageUrl', form.imageUrl);
-              const fileInput = document.getElementById('machine-image') as HTMLInputElement | null;
-              if (fileInput?.files && fileInput.files[0]) fd.append('image', fileInput.files[0]);
-              const res = await api.post('/machines', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-              setMachines([res.data, ...machines]);
-              setOpenAdd(false);
-              setForm({ name: '', summary: '', details: '', imageUrl: '' });
-              toast.success('Machine added');
-            } catch { toast.error('Failed to add machine'); }
-          }} className="space-y-4">
+          <DialogHeader>
+            <CardTitle>{editingId ? "Edit Machine" : "Add Machine"}</CardTitle>
+          </DialogHeader>
+          <form onSubmit={handleFormSubmit} className="space-y-4">
             <div>
               <Label htmlFor="mname">Name</Label>
               <Input id="mname" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
@@ -282,7 +313,7 @@ const LabInfo = () => {
                 <Input id="mimageUrl" value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} placeholder="https://..." />
               </div>
             </div>
-            <Button type="submit">Create</Button>
+            <Button type="submit">{editingId ? "Update" : "Create"}</Button>
           </form>
         </DialogContent>
       </Dialog>

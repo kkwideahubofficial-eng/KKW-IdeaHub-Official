@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { body } from 'express-validator';
 import { signup, login, getProfile, updateProfile, changePassword } from '../controllers/authController.js';
 import { requireAuth } from '../middlewares/auth.js';
+import { validationResult } from 'express-validator';
+import { upload } from '../middlewares/upload.js';
 
 const router = Router();
 
@@ -37,16 +39,20 @@ function handleValidation(req, res, next) {
   next();
 }
 
-import { validationResult } from 'express-validator';
+// import { validationResult } from 'express-validator'; // Moved to top
 function validate(req, res, next) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    // eslint-disable-next-line no-console
+    console.log('Validation Errors:', errors.array());
     return res.status(400).json({ errors: errors.array() });
   }
   return next();
 }
 
-router.post('/signup', validateSignup, validate, signup);
+// import { upload } from '../middlewares/upload.js'; // Moved to top
+
+router.post('/signup', upload.single('image'), validateSignup, validate, signup);
 router.post('/login', validateLogin, validate, login);
 
 // Protected routes

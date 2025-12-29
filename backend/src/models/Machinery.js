@@ -15,7 +15,7 @@ const machinerySchema = new Schema(
     },
     imageUrl: {
       type: String,
-      default: '',
+      required: true,
     },
     capacity: {
       type: Number,

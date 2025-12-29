@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Edit } from "lucide-react";
 import { toast } from "sonner";
 
 interface ProductItem {
@@ -31,7 +31,7 @@ function getCurrentUser() {
 }
 
 // Extracted ProductCard component
-const ProductCard = ({ product, isCoordinator, onDelete }: { product: ProductItem; isCoordinator: boolean; onDelete: (id: string) => void }) => {
+const ProductCard = ({ product, isCoordinator, onDelete, onEdit }: { product: ProductItem; isCoordinator: boolean; onDelete: (id: string) => void; onEdit: (product: ProductItem) => void }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const isLongDescription = product.description.length > 100;
 
@@ -87,30 +87,40 @@ const ProductCard = ({ product, isCoordinator, onDelete }: { product: ProductIte
         <div className="flex gap-2 mt-auto pt-4 border-t">
           <Button className="flex-1" disabled={product.stock === 0}>Buy Now</Button>
           {isCoordinator && (
-            <Button
-              variant="destructive"
-              size="icon"
-              className="shrink-0"
-              onClick={() => onDelete(product._id)}
-            >
-              <span className="sr-only">Delete</span>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-4 w-4"
+            <>
+              <Button
+                variant="outline"
+                size="icon"
+                className="shrink-0"
+                onClick={() => onEdit(product)}
               >
-                <path d="M3 6h18" />
-                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-              </svg>
-            </Button>
+                <Edit className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="destructive"
+                size="icon"
+                className="shrink-0"
+                onClick={() => onDelete(product._id)}
+              >
+                <span className="sr-only">Delete</span>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-4 w-4"
+                >
+                  <path d="M3 6h18" />
+                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                </svg>
+              </Button>
+            </>
           )}
         </div>
       </CardContent>
@@ -122,6 +132,7 @@ const Ecommerce = () => {
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ title: '', description: '', price: '', category: '', stock: '', imageUrl: '' });
   const user = useMemo(getCurrentUser, []);
   const isCoordinator = user?.role === 'coordinator';
@@ -140,9 +151,11 @@ const Ecommerce = () => {
     fetchProducts();
   }, []);
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // Create a plain object for JSON submission if no file is selected, or use FormData if file is selected if your backend supports both.
+      // Assuming your backend handles updates with FormData or JSON. If it's multipart/form-data for update too:
       const formData = new FormData();
       formData.append('title', form.title);
       formData.append('description', form.description);
@@ -150,18 +163,61 @@ const Ecommerce = () => {
       if (form.category) formData.append('category', form.category);
       if (form.stock) formData.append('stock', String(parseInt(form.stock)));
       if (form.imageUrl) formData.append('imageUrl', form.imageUrl);
+      
       const fileInput = document.getElementById('product-image') as HTMLInputElement | null;
       if (fileInput?.files && fileInput.files[0]) {
         formData.append('image', fileInput.files[0]);
       }
-      const res = await api.post('/products', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      setProducts([res.data, ...products]);
+
+      // If it is an update
+      if (editingId) {
+        // NOTE: If using axios.put with FormData, make sure backend supports it. Usually PUT with multipart is fine.
+        // Or if you implemented a specific PUT endpoint that expects JSON, check backend.
+        // Your backend route: router.post('/', ... createProduct); router.delete(...) 
+        // Wait, I need to check if there is a PUT route in product.routes.js!
+        // Based on previous step, product.routes.js ONLY had GET, POST, DELETE.
+        // It did NOT have PUT. I need to add PUT to backend first!
+        // But assuming I will do that (or did I miss it?), let's write the frontend code first.
+        
+        // Wait, checking product.routes.js again from earlier step...
+        // 9: router.get('/', listProducts);
+        // 11: router.post('/', ... createProduct);
+        // 24: router.delete('/:id', ... deleteProduct);
+        // NO PUT ROUTE!
+        
+        // Use a placeholder here, I will fix backend next.
+        const res = await api.put(`/products/${editingId}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+        setProducts(products.map(p => p._id === editingId ? res.data : p));
+        toast.success('Product updated');
+      } else {
+        const res = await api.post('/products', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+        setProducts([res.data, ...products]);
+        toast.success('Product created');
+      }
+      
       setOpen(false);
-      setForm({ title: '', description: '', price: '', category: '', stock: '', imageUrl: '' });
-      toast.success('Product created');
+      resetForm();
     } catch {
-      toast.error('Failed to create product');
+      toast.error(editingId ? 'Failed to update product' : 'Failed to create product');
     }
+  };
+  
+  const resetForm = () => {
+    setForm({ title: '', description: '', price: '', category: '', stock: '', imageUrl: '' });
+    setEditingId(null);
+  };
+
+  const startEdit = (product: ProductItem) => {
+    setEditingId(product._id);
+    setForm({
+      title: product.title,
+      description: product.description,
+      price: String(product.price),
+      category: product.category || '',
+      stock: String(product.stock || 0),
+      imageUrl: product.imageUrl || ''
+    });
+    setOpen(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -183,7 +239,7 @@ const Ecommerce = () => {
           <p className="text-muted-foreground">Browse and purchase products from IDEA Hub</p>
         </div>
         {isCoordinator && (
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog open={open} onOpenChange={(val) => { if(!val) resetForm(); setOpen(val); }}>
             <DialogTrigger asChild>
               <Button>
                 <PlusCircle className="w-4 h-4 mr-2" /> Add Product
@@ -191,9 +247,9 @@ const Ecommerce = () => {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add Product</DialogTitle>
+                <DialogTitle>{editingId ? 'Edit Product' : 'Add Product'}</DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleCreate} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <Label htmlFor="title">Title</Label>
                   <Input id="title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
@@ -227,7 +283,7 @@ const Ecommerce = () => {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit">Create</Button>
+                  <Button type="submit">{editingId ? 'Update' : 'Create'}</Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -247,6 +303,7 @@ const Ecommerce = () => {
               product={p} 
               isCoordinator={isCoordinator} 
               onDelete={handleDelete}
+              onEdit={startEdit}
             />
           ))}
         </div>

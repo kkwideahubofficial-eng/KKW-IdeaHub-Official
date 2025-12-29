@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import api from '@/lib/axios';
 import { toast } from 'sonner';
+import { ReadMore } from '@/components/ReadMore';
 
 // EventForm component for the dialog
 interface EventFormProps {
@@ -245,7 +246,9 @@ const ManageEvents = () => {
             <CardContent>
               <p><strong>Date:</strong> {new Date(event.date).toLocaleDateString()}</p>
               <p><strong>Organizer:</strong> {event.organizer}</p>
-              <p className="mt-2">{event.description}</p>
+              <div className="mt-2 text-sm text-muted-foreground">
+                 <ReadMore text={event.description} limit={30} />
+              </div>
             </CardContent>
           </Card>
         ))}

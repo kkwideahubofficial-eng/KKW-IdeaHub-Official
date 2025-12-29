@@ -7,7 +7,7 @@ const machineSchema = new Schema(
     name: { type: String, required: true, trim: true },
     summary: { type: String, default: '', trim: true },
     details: { type: String, default: '', trim: true },
-    imageUrl: { type: String, default: '' },
+    imageUrl: { type: String, required: true },
   },
   { timestamps: true }
 );

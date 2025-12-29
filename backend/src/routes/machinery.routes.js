@@ -11,20 +11,12 @@ router.post('/upload', requireAuth, upload.single('image'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: 'No file uploaded' });
   }
-  // Construct URL. Since server.js serves '/uploads', we return that path.
-  // Note: Adjust if your server URL needs to be absolute
-  const url = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+  // Cloudinary storage provides the URL in req.file.path
+  const url = req.file.path;
   res.json({ url });
 });
 
-// Middleware to check if user is Head
-const requireHead = (req, res, next) => {
-  if (req.user && (req.user.role === 'head' || req.user.role === 'admin')) {
-    next();
-  } else {
-    res.status(403).json({ message: 'Access denied. Setup requires Head role.' });
-  }
-};
+
 
 // --- Machinery Management Routes ---
 
@@ -37,7 +29,8 @@ router.post('/requests', requireAuth, requestController.createRequest);
 router.get('/requests', requireAuth, requestController.getRequests);
 
 // Update request status (Head only)
-router.patch('/requests/:id/status', requireAuth, requireHead, requestController.updateRequestStatus);
+// Update request status (Head or Coordinator)
+router.patch('/requests/:id/status', requireAuth, requireCoordinator, requestController.updateRequestStatus);
 
 
 // --- Machinery Management Routes ---
@@ -45,8 +38,8 @@ router.patch('/requests/:id/status', requireAuth, requireHead, requestController
 // Get all machinery (Public/Auth)
 router.get('/', requireAuth, machineryController.getAllMachinery);
 
-// Create machinery (Head only)
-router.post('/', requireAuth, requireHead, machineryController.createMachinery);
+// Create machinery (Head or Coordinator)
+router.post('/', requireAuth, requireCoordinator, machineryController.createMachinery);
 
 // Route for getting machinery records (Coordinator, Head, Admin only)
 router.get('/records', requireAuth, requireCoordinator, machineryController.getMachineryRecords);
@@ -54,13 +47,13 @@ router.get('/records', requireAuth, requireCoordinator, machineryController.getM
 // Get single machinery details (Dynamic parameter :id matches anything, so keep at bottom)
 router.get('/:id', requireAuth, machineryController.getMachineryById);
 
-// Update machinery (Head only)
-router.put('/:id', requireAuth, requireHead, machineryController.updateMachinery);
+// Update machinery (Head or Coordinator)
+router.put('/:id', requireAuth, requireCoordinator, machineryController.updateMachinery);
 
 // Get availability stats
 router.get('/:id/availability', requireAuth, machineryController.getMachineryAvailability);
 
-// Delete machinery (Head only)
-router.delete('/:id', requireAuth, requireHead, machineryController.deleteMachinery);
+// Delete machinery (Head or Coordinator)
+router.delete('/:id', requireAuth, requireCoordinator, machineryController.deleteMachinery);
 
 export default router;

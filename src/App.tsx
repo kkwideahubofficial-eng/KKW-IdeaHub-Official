@@ -58,7 +58,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
 function RequireCoordinator({ children }: { children: ReactNode }) {
   const user = getCurrentUser();
   if (!user) return <Navigate to="/login" replace />;
-  if (user.role !== 'coordinator') return <Navigate to="/" replace />;
+  if (!['coordinator', 'head', 'admin'].includes(user.role)) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
@@ -156,11 +156,11 @@ const App = () => (
                 }
               />
               <Route
-                path="/head/machinery"
+                path="/manage-machinery"
                 element={
-                  <RequireHead>
+                  <RequireCoordinator>
                     <ManageMachinery />
-                  </RequireHead>
+                  </RequireCoordinator>
                 }
               />
               <Route

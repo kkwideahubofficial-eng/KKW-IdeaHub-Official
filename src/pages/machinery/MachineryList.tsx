@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Calendar } from "lucide-react";
+import { ReadMore } from "@/components/ReadMore";
 
 interface Machinery {
   _id: string;
@@ -65,7 +66,9 @@ const MachineryList = () => {
             
             <CardHeader>
               <CardTitle>{machine.name}</CardTitle>
-              <CardDescription className="line-clamp-2">{machine.description}</CardDescription>
+              <CardDescription>
+                <ReadMore text={machine.description} limit={30} />
+              </CardDescription>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col gap-4">
               <div className="text-sm">
@@ -75,9 +78,25 @@ const MachineryList = () => {
                    <div>
                      <p className="font-semibold mb-1">Available Slots:</p>
                      <ul className="text-muted-foreground list-disc pl-4 space-y-1">
-                        {machine.timeSlots.slice(0, 3).map((slot, i) => (
-                           <li key={i}>{slot.day}: {slot.startTime} - {slot.endTime}</li>
-                        ))}
+                        {machine.timeSlots.slice(0, 3).map((slot, i) => {
+                           // Helper to find next date for this day
+                           const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                           const today = new Date();
+                           const targetIdx = days.indexOf(slot.day);
+                           const currentIdx = today.getDay();
+                           let diff = targetIdx - currentIdx;
+                           if (diff < 0) diff += 7; // If passed this week, show next
+                           const nextDate = new Date();
+                           nextDate.setDate(today.getDate() + diff);
+                           const dateStr = nextDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+
+                           return (
+                              <li key={i}>
+                                {slot.day} ({dateStr}): {slot.startTime} - {slot.endTime}
+                              </li>
+                           );
+                        })}
+
                         {machine.timeSlots.length > 3 && <li>+{machine.timeSlots.length - 3} more</li>}
                      </ul>
                    </div>

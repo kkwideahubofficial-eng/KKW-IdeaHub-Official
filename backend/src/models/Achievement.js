@@ -19,7 +19,7 @@ const achievementSchema = new Schema(
     },
     imageUrl: {
       type: String,
-      default: '',
+      required: true,
     },
     achievedBy: {
       type: String, // e.g., Student name, team name

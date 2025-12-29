@@ -33,6 +33,7 @@ export async function signup(req, res) {
       passwordHash,
       role: role || 'team',
       teamName: teamName || '',
+      imageUrl: req.file ? req.file.path : '',
     });
 
     // eslint-disable-next-line no-console
@@ -45,6 +46,7 @@ export async function signup(req, res) {
         email: user.email,
         role: user.role,
         teamName: user.teamName,
+        imageUrl: user.imageUrl,
       },
     });
   } catch (err) {

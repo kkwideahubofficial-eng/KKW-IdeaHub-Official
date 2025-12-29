@@ -19,7 +19,7 @@ const eventSchema = new Schema(
     },
     imageUrl: {
       type: String,
-      default: '', // Will be used for image uploads later
+      required: true,
     },
     organizer: {
       type: String, // Can be a department or coordinator name

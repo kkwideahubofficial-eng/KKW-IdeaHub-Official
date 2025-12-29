@@ -12,7 +12,7 @@ export const createEvent = async (req, res) => {
 
   try {
     const { title, description, date, organizer } = req.body;
-    const imageUrl = req.file ? `/uploads/${req.file.filename}` : (req.body.imageUrl || '');
+    const imageUrl = req.file ? req.file.path : (req.body.imageUrl || '');
     const newEvent = new Event({
       title,
       description,
@@ -77,7 +77,7 @@ export const updateEvent = async (req, res) => {
     event.date = date || event.date;
     event.organizer = organizer || event.organizer;
     if (req.file) {
-      event.imageUrl = `/uploads/${req.file.filename}`;
+      event.imageUrl = req.file.path;
     } else if (typeof req.body.imageUrl === 'string') {
       event.imageUrl = req.body.imageUrl || event.imageUrl;
     }

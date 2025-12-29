@@ -10,6 +10,7 @@ import { PlusCircle, Calendar, Users } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ReadMore } from "@/components/ReadMore";
 
 interface EventItem {
   _id: string;
@@ -148,8 +149,8 @@ const Events = () => {
                   <Badge variant="outline">{new Date(event.date).toLocaleDateString()}</Badge>
                 </div>
                 <CardTitle className="line-clamp-2">{event.title}</CardTitle>
-                <CardDescription className="line-clamp-3">
-                  {event.description}
+                <CardDescription>
+                  <ReadMore text={event.description} limit={30} />
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">

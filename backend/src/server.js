@@ -69,6 +69,18 @@ app.get('/', (_req, res) => {
   res.status(200).send('IDEA HUB backend is running');
 });
 
+// Global Error Handler
+// eslint-disable-next-line no-unused-vars
+app.use((err, _req, res, _next) => {
+  // eslint-disable-next-line no-console
+  console.error('Global Error Handler:', err);
+  res.status(500).json({
+    message: 'Internal Server Error',
+    error: err.message,
+    stack: process.env.NODE_ENV === 'production' ? null : err.stack,
+  });
+});
+
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || '';
 
