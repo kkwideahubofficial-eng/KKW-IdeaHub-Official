@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Upload } from "lucide-react";
+import { formatTime12Hour } from "@/lib/dateUtils";
 
 interface Machinery {
   _id: string;
@@ -294,12 +295,12 @@ const MachineryRequestForm = () => {
                                                         disabled={remaining <= 0}
                                                         onClick={() => handleSlotClick(time)}
                                                     >
-                                                        {time}
+                                                        {formatTime12Hour(time)}
                                                     </Button>
                                                 </HoverCardTrigger>
                                                 <HoverCardContent className="w-64 text-xs p-3">
                                                     <div className="space-y-2">
-                                                        <h4 className="font-semibold text-sm border-b pb-1">Slot Details ({time})</h4>
+                                                        <h4 className="font-semibold text-sm border-b pb-1">Slot Details ({formatTime12Hour(time)})</h4>
                                                         <div className="grid grid-cols-2 gap-y-1">
                                                             <span className="text-muted-foreground">Total Capacity:</span>
                                                             <span className="text-right font-medium">{machine.capacity}</span>
@@ -329,7 +330,7 @@ const MachineryRequestForm = () => {
                                     <div className="flex items-center gap-6 p-4 bg-secondary/10 rounded-md border text-sm">
                                         <div>
                                             <span className="text-muted-foreground block text-xs uppercase tracking-wider">Start Time</span>
-                                            <span className="font-semibold text-lg">{formData.startTime}</span>
+                                            <span className="font-semibold text-lg">{formatTime12Hour(formData.startTime)}</span>
                                         </div>
                                         <div>
                                              <span className="text-muted-foreground block text-xs uppercase tracking-wider">Duration</span>
@@ -346,7 +347,7 @@ const MachineryRequestForm = () => {
                                                     const totalMins = h * 60 + m + ((formData.selectedSlots || []).length * 15);
                                                     const endH = Math.floor(totalMins / 60);
                                                     const endM = totalMins % 60;
-                                                    return `${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`;
+                                                    return formatTime12Hour(`${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`);
                                                 })()}
                                              </span>
                                         </div>

@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { toast } from "sonner";
 import { Calendar } from "lucide-react";
 import { ReadMore } from "@/components/ReadMore";
-import { getNextAvailableDate } from "@/lib/dateUtils";
+import { getNextAvailableDate, formatTime12Hour } from "@/lib/dateUtils";
 
 interface Machinery {
   _id: string;
@@ -82,7 +82,7 @@ const MachineryList = () => {
                            
                            return (
                               <li key={i}>
-                                {slot.day} ({dateStr}): {slot.startTime} - {slot.endTime}
+                                {slot.day} ({dateStr}): {formatTime12Hour(slot.startTime)} - {formatTime12Hour(slot.endTime)}
                               </li>
                            );
                         })}

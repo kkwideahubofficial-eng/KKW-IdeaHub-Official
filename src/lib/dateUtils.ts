@@ -29,3 +29,11 @@ export const getNextAvailableDate = (dayName: string, startTime?: string): strin
   nextDate.setDate(now.getDate() + diff);
   return nextDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 };
+
+export const formatTime12Hour = (time24: string): string => {
+  if (!time24) return '';
+  const [hours, minutes] = time24.split(':').map(Number);
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const hours12 = hours % 12 || 12; // Convert 0 -> 12
+  return `${hours12}:${minutes.toString().padStart(2, '0')} ${period}`;
+};
