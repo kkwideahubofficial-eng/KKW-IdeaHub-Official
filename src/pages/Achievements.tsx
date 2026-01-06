@@ -1,0 +1,264 @@
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Trophy, Users, Calendar, PlusCircle } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import api from "@/lib/axios";
+import { toast } from "sonner";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { ReadMore } from "@/components/ReadMore";
+
+interface AchievementItem {
+  _id: string;
+  title: string;
+  description: string;
+  date: string;
+  achievedBy: string;
+  imageUrl?: string;
+}
+
+function getCurrentUser() {
+  try {
+    const raw = localStorage.getItem("idea_hub_user");
+    const token = localStorage.getItem("idea_hub_token");
+    if (!raw || !token) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+const Achievements = () => {
+  const [achievements, setAchievements] = useState<AchievementItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState({ title: "", description: "", date: "", achievedBy: "", imageUrl: "" });
+  const user = useMemo(getCurrentUser, []);
+  const isCoordinator = user?.role === 'coordinator';
+
+  useEffect(() => {
+    const fetchAchievements = async () => {
+      try {
+        const res = await api.get('/achievements');
+        setAchievements(res.data);
+      } catch {
+        toast.error('Failed to load achievements');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAchievements();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const formData = new FormData();
+      formData.append('title', form.title);
+      formData.append('description', form.description);
+      formData.append('date', new Date(form.date).toISOString());
+      formData.append('achievedBy', form.achievedBy);
+      if (form.imageUrl) formData.append('imageUrl', form.imageUrl);
+      
+      const fileInput = document.getElementById('achievement-image') as HTMLInputElement | null;
+      if (fileInput?.files && fileInput.files[0]) {
+        formData.append('image', fileInput.files[0]);
+      }
+
+      if (editingId) {
+        // Update
+        const res = await api.put(`/achievements/${editingId}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+        setAchievements(achievements.map(a => a._id === editingId ? res.data : a));
+        toast.success('Achievement updated');
+      } else {
+        // Create
+        const res = await api.post('/achievements', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+        setAchievements([res.data, ...achievements]);
+        toast.success('Achievement created');
+      }
+      
+      setOpen(false);
+      setForm({ title: "", description: "", date: "", achievedBy: "", imageUrl: "" });
+      setEditingId(null);
+    } catch {
+      toast.error(editingId ? 'Failed to update achievement' : 'Failed to create achievement');
+    }
+  };
+
+  const startEdit = (achievement: AchievementItem) => {
+    setEditingId(achievement._id);
+    setForm({
+      title: achievement.title,
+      description: achievement.description,
+      date: new Date(achievement.date).toISOString().split('T')[0],
+      achievedBy: achievement.achievedBy,
+      imageUrl: achievement.imageUrl || ""
+    });
+    setOpen(true);
+  };
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Achievements</h1>
+          <p className="text-muted-foreground">Celebrating innovation and success stories</p>
+        </div>
+        {isCoordinator ? (
+          <Dialog open={open} onOpenChange={(val) => { if(!val) { setEditingId(null); setForm({ title: "", description: "", date: "", achievedBy: "", imageUrl: "" }); } setOpen(val); }}>
+            <DialogTrigger asChild>
+              <button className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium">
+                <PlusCircle className="w-4 h-4 mr-2" /> Add Achievement
+              </button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{editingId ? "Edit Achievement" : "Add Achievement"}</DialogTitle>
+                <DialogDescription>Provide details and optionally an image.</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <Label htmlFor="title">Title</Label>
+                  <Input id="title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
+                </div>
+                <div>
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea id="description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} required />
+                </div>
+                <div>
+                  <Label htmlFor="date">Date</Label>
+                  <Input id="date" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
+                </div>
+                <div>
+                  <Label htmlFor="achievedBy">Achieved By</Label>
+                  <Input id="achievedBy" value={form.achievedBy} onChange={(e) => setForm({ ...form, achievedBy: e.target.value })} required />
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="achievement-image">Upload Image (optional)</Label>
+                    <Input id="achievement-image" type="file" accept="image/*" />
+                  </div>
+                  <div>
+                    <Label htmlFor="imageUrl">Or Image URL</Label>
+                    <Input id="imageUrl" value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} placeholder="https://..." />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <button type="submit" className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium">
+                    {editingId ? "Update" : "Create"}
+                  </button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        ) : null}
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-accent rounded-lg flex items-center justify-center">
+                <Trophy className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">{achievements.length}</p>
+                <p className="text-sm text-muted-foreground">Total Projects</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-accent rounded-lg flex items-center justify-center">
+                <Users className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">24</p>
+                <p className="text-sm text-muted-foreground">Active Teams</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-accent rounded-lg flex items-center justify-center">
+                <Calendar className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">2025</p>
+                <p className="text-sm text-muted-foreground">Current Year</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Achievements Grid */}
+      {loading ? (
+        <div>Loading...</div>
+      ) : achievements.length === 0 ? (
+        <p className="text-muted-foreground">No achievements yet. {isCoordinator ? 'Create the first one.' : 'Check back later.'}</p>
+      ) : (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {achievements.map((achievement) => (
+          <Card key={achievement._id} className="hover:shadow-lg transition-all duration-300 cursor-pointer flex flex-col h-full">
+            <CardHeader>
+              <div className="flex items-start justify-between mb-2">
+                <Badge variant="outline">{new Date(achievement.date).toLocaleDateString()}</Badge>
+              </div>
+              <CardTitle className="line-clamp-2">{achievement.title}</CardTitle>
+              <CardDescription className="flex items-center gap-1">
+                <Users className="w-3 h-3" />
+                {achievement.achievedBy}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col flex-1">
+              {achievement.imageUrl ? (
+                <img src={achievement.imageUrl} alt={achievement.title} className="w-full h-48 object-cover rounded mb-3" />
+              ) : null}
+              
+              <ReadMore text={achievement.description} limit={30} className="flex-1 mb-2" />
+              
+              {isCoordinator && (
+                <div className="mt-auto pt-2 flex justify-end gap-2">
+                   <button
+                    className="px-3 py-1.5 text-sm rounded border border-input bg-background hover:bg-accent hover:text-accent-foreground"
+                    onClick={(e) => { e.stopPropagation(); startEdit(achievement); }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    className="px-3 py-1.5 text-sm rounded bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      if (!confirm('Delete this achievement?')) return;
+                      try {
+                        await api.delete(`/achievements/${achievement._id}`);
+                        setAchievements(achievements.filter((a) => a._id !== achievement._id));
+                        toast.success('Achievement deleted');
+                      } catch {
+                        toast.error('Failed to delete');
+                      }
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      )}
+    </div>
+  );
+};
+
+export default Achievements;
