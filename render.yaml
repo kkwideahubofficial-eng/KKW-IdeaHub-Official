@@ -1,0 +1,70 @@
+services:
+  # 1. IdeaHub Backend API
+  - type: web
+    name: ideahub-backend
+    env: node
+    root: innovate-hub-core/backend
+    plan: free
+    buildCommand: npm install
+    startCommand: node src/server.js
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: MONGO_URI
+        sync: false # You will be prompted to enter this
+      - key: CLIENT_URL
+        sync: false
+
+  # 2. Snapcart Socket Server
+  - type: web
+    name: snapcart-socket
+    env: node
+    root: innovate-hub-core/snapcart/socket
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: NEXT_BASE_URL
+        sync: false
+
+  # 3. Snapcart Driver App
+  - type: web
+    name: snapcart-driver-app
+    env: node
+    root: innovate-hub-core/snapcart/frontend
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: NEXTAUTH_SECRET
+        sync: false
+      - key: NEXTAUTH_URL
+        sync: false
+      - key: NEXT_PUBLIC_SOCKET_URL
+        fromService:
+          type: web
+          name: snapcart-socket
+          property: url
+
+  # 4. IdeaHub Main Website
+  - type: web
+    name: ideahub-main
+    env: static
+    root: innovate-hub-core
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: ideahub-backend
+          property: url
+      - key: VITE_SNAPCART_URL
+        fromService:
+          type: web
+          name: snapcart-driver-app
+          property: url
