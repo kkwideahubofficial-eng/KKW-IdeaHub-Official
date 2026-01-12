@@ -4,14 +4,13 @@ services:
     name: ideahub-backend
     env: node
     root: innovate-hub-core/backend
-    plan: free
     buildCommand: npm install
     startCommand: node src/server.js
     envVars:
       - key: PORT
-        value: 10000
+        value: "10000"
       - key: MONGO_URI
-        sync: false # You will be prompted to enter this
+        sync: false
       - key: CLIENT_URL
         sync: false
 
@@ -20,12 +19,11 @@ services:
     name: snapcart-socket
     env: node
     root: innovate-hub-core/snapcart/socket
-    plan: free
     buildCommand: npm install
     startCommand: npm start
     envVars:
       - key: PORT
-        value: 10000
+        value: "10000"
       - key: NEXT_BASE_URL
         sync: false
 
@@ -34,7 +32,6 @@ services:
     name: snapcart-driver-app
     env: node
     root: innovate-hub-core/snapcart/frontend
-    plan: free
     buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
