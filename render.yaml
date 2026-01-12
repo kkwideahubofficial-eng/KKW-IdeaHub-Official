@@ -1,9 +1,8 @@
+version: 1
 services:
-  # 1. IdeaHub Backend API (Express.js)
   - type: web
     name: ideahub-backend-service
-    env: node
-    plan: free
+    runtime: node
     root: innovate-hub-core/backend
     buildCommand: npm install
     startCommand: npm start
@@ -17,11 +16,9 @@ services:
       - key: NODE_VERSION
         value: "20"
 
-  # 2. Snapcart Socket Server (Node.js)
   - type: web
     name: snapcart-socket-service
-    env: node
-    plan: free
+    runtime: node
     root: innovate-hub-core/snapcart/socket
     buildCommand: npm install
     startCommand: npm start
@@ -33,11 +30,9 @@ services:
       - key: NODE_VERSION
         value: "20"
 
-  # 3. Snapcart Driver App (Next.js)
   - type: web
     name: snapcart-driver-service
-    env: node
-    plan: free
+    runtime: node
     root: innovate-hub-core/snapcart/frontend
     buildCommand: npm install && npm run build
     startCommand: npm start
