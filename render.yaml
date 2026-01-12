@@ -2,45 +2,48 @@ version: 1
 services:
   # 1. IdeaHub Backend API
   - type: web
-    name: ideahub-backend
+    name: ideahub-backend-service
     runtime: node
-    plan: free
     root: innovate-hub-core/backend
     buildCommand: npm install
     startCommand: node src/server.js
     envVars:
       - key: MONGO_URI
+        sync: false
       - key: CLIENT_URL
+        sync: false
       - key: PORT
-        value: "10000"
+        value: 10000
 
   # 2. Snapcart Socket Server
   - type: web
-    name: snapcart-socket
+    name: snapcart-socket-service
     runtime: node
-    plan: free
     root: innovate-hub-core/snapcart/socket
     buildCommand: npm install
     startCommand: node index.js
     envVars:
       - key: NEXT_BASE_URL
+        sync: false
       - key: PORT
-        value: "10000"
+        value: 10000
 
   # 3. Snapcart Driver App (Next.js)
   - type: web
-    name: snapcart-driver-app
+    name: snapcart-driver-service
     runtime: node
-    plan: free
     root: innovate-hub-core/snapcart/frontend
     buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
       - key: MONGODB_URI
+        sync: false
       - key: NEXTAUTH_SECRET
+        sync: false
       - key: NEXTAUTH_URL
+        sync: false
       - key: NEXT_PUBLIC_SOCKET_URL
         fromService:
           type: web
-          name: snapcart-socket
+          name: snapcart-socket-service
           property: url
