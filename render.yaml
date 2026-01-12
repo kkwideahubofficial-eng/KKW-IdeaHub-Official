@@ -3,7 +3,7 @@ services:
   - type: web
     name: ideahub-backend-service
     runtime: node
-    root: innovate-hub-core/backend
+    rootDir: innovate-hub-core/backend
     buildCommand: npm install
     startCommand: npm start
     envVars:
@@ -19,7 +19,7 @@ services:
   - type: web
     name: snapcart-socket-service
     runtime: node
-    root: innovate-hub-core/snapcart/socket
+    rootDir: innovate-hub-core/snapcart/socket
     buildCommand: npm install
     startCommand: npm start
     envVars:
@@ -33,7 +33,7 @@ services:
   - type: web
     name: snapcart-driver-service
     runtime: node
-    root: innovate-hub-core/snapcart/frontend
+    rootDir: innovate-hub-core/snapcart/frontend
     buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
