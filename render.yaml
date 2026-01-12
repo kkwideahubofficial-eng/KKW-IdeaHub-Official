@@ -1,16 +1,18 @@
 version: 1
 services:
-
   # 1. IdeaHub Backend API
   - type: web
     name: ideahub-backend-service
-    runtime: node
+    env: node
+    plan: free
     root: innovate-hub-core/backend
     buildCommand: npm install
-    startCommand: node src/server.js
+    startCommand: npm start
     envVars:
       - key: NODE_VERSION
-        value: 18
+        value: "20"
+      - key: PORT
+        value: "10000"
       - key: MONGO_URI
         sync: false
       - key: CLIENT_URL
@@ -19,26 +21,32 @@ services:
   # 2. Snapcart Socket Server
   - type: web
     name: snapcart-socket-service
-    runtime: node
+    env: node
+    plan: free
     root: innovate-hub-core/snapcart/socket
     buildCommand: npm install
-    startCommand: node index.js
+    startCommand: npm start
     envVars:
       - key: NODE_VERSION
-        value: 18
+        value: "20"
+      - key: PORT
+        value: "10000"
       - key: NEXT_BASE_URL
         sync: false
 
   # 3. Snapcart Driver App (Next.js)
   - type: web
     name: snapcart-driver-service
-    runtime: node
+    env: node
+    plan: free
     root: innovate-hub-core/snapcart/frontend
     buildCommand: npm install && npm run build
-    startCommand: npx next start -p $PORT
+    startCommand: npm start
     envVars:
       - key: NODE_VERSION
-        value: 18
+        value: "20"
+      - key: PORT
+        value: "10000"
       - key: MONGODB_URI
         sync: false
       - key: NEXTAUTH_SECRET
@@ -46,7 +54,4 @@ services:
       - key: NEXTAUTH_URL
         sync: false
       - key: NEXT_PUBLIC_SOCKET_URL
-        fromService:
-          type: web
-          name: snapcart-socket-service
-          property: url
+        sync: false # CRITICAL: fromService fails for build-time Next.js vars
