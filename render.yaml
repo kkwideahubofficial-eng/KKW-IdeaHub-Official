@@ -3,7 +3,6 @@ services:
   - type: web
     name: ideahub-backend
     env: node
-    plan: free
     root: innovate-hub-core/backend
     buildCommand: npm install
     startCommand: node src/server.js
@@ -13,13 +12,12 @@ services:
       - key: MONGO_URI
         sync: false
       - key: CLIENT_URL
-        sync: false # Set this manually AFTER frontend is deployed to avoid circular loop
+        sync: false
 
   # 2. Snapcart Socket Server
   - type: web
     name: snapcart-socket
     env: node
-    plan: free
     root: innovate-hub-core/snapcart/socket
     buildCommand: npm install
     startCommand: npm start
@@ -27,13 +25,12 @@ services:
       - key: PORT
         value: "10000"
       - key: NEXT_BASE_URL
-        sync: false # Set this manually AFTER driver app is deployed
+        sync: false
 
   # 3. Snapcart Driver App
   - type: web
     name: snapcart-driver-app
     env: node
-    plan: free
     root: innovate-hub-core/snapcart/frontend
     buildCommand: npm install && npm run build
     startCommand: npm start
@@ -43,29 +40,9 @@ services:
       - key: NEXTAUTH_SECRET
         sync: false
       - key: NEXTAUTH_URL
-        sync: false # Render generates this automatically, but you can override
+        sync: false
       - key: NEXT_PUBLIC_SOCKET_URL
         fromService:
           type: web
           name: snapcart-socket
-          property: url
-
-  # 4. IdeaHub Main Website
-  - type: web
-    name: ideahub-main
-    env: static
-    plan: free
-    root: innovate-hub-core
-    buildCommand: npm install && npm run build
-    staticPublishPath: dist
-    envVars:
-      - key: VITE_API_URL
-        fromService:
-          type: web
-          name: ideahub-backend
-          property: url
-      - key: VITE_SNAPCART_URL
-        fromService:
-          type: web
-          name: snapcart-driver-app
           property: url
