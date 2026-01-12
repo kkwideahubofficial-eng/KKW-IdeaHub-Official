@@ -1,48 +1,44 @@
 services:
-  # 1. IdeaHub Backend API
-  - type: web
-    name: ideahub-backend
-    env: node
-    root: innovate-hub-core/backend
-    buildCommand: npm install
-    startCommand: node src/server.js
-    envVars:
-      - key: PORT
-        value: "10000"
-      - key: MONGO_URI
-        sync: false
-      - key: CLIENT_URL
-        sync: false
+- type: web
+  name: ideahub-backend
+  runtime: node
+  plan: free
+  root: innovate-hub-core/backend
+  buildCommand: npm install
+  startCommand: node src/server.js
+  envVars:
+  - key: MONGO_URI
+    sync: false
+  - key: CLIENT_URL
+    sync: false
 
-  # 2. Snapcart Socket Server
-  - type: web
-    name: snapcart-socket
-    env: node
-    root: innovate-hub-core/snapcart/socket
-    buildCommand: npm install
-    startCommand: npm start
-    envVars:
-      - key: PORT
-        value: "10000"
-      - key: NEXT_BASE_URL
-        sync: false
+- type: web
+  name: snapcart-socket
+  runtime: node
+  plan: free
+  root: innovate-hub-core/snapcart/socket
+  buildCommand: npm install
+  startCommand: node index.js
+  envVars:
+  - key: NEXT_BASE_URL
+    sync: false
 
-  # 3. Snapcart Driver App
-  - type: web
-    name: snapcart-driver-app
-    env: node
-    root: innovate-hub-core/snapcart/frontend
-    buildCommand: npm install && npm run build
-    startCommand: npm start
-    envVars:
-      - key: MONGODB_URI
-        sync: false
-      - key: NEXTAUTH_SECRET
-        sync: false
-      - key: NEXTAUTH_URL
-        sync: false
-      - key: NEXT_PUBLIC_SOCKET_URL
-        fromService:
-          type: web
-          name: snapcart-socket
-          property: url
+- type: web
+  name: snapcart-driver-app
+  runtime: node
+  plan: free
+  root: innovate-hub-core/snapcart/frontend
+  buildCommand: npm install && npm run build
+  startCommand: npm start
+  envVars:
+  - key: MONGODB_URI
+    sync: false
+  - key: NEXTAUTH_SECRET
+    sync: false
+  - key: NEXTAUTH_URL
+    sync: false
+  - key: NEXT_PUBLIC_SOCKET_URL
+    fromService:
+      type: web
+      name: snapcart-socket
+      property: url
