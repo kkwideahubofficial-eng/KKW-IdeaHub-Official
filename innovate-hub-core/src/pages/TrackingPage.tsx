@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Navigation, Package } from 'lucide-react';
 import L from 'leaflet';
 import api from '@/lib/axios';
+import { API_BASE_URL, SOCKET_URL } from "@/lib/api";
 
 // Fix Leaflet marker icon
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -22,7 +23,7 @@ L.Icon.Default.mergeOptions({
     shadowUrl: markerShadow,
 });
 
-const socket = io('http://localhost:4000'); // Connect to SnapCart Socket
+const socket = io(SOCKET_URL); // Connect to SnapCart Socket
 
 const TrackingPage = () => {
     const { id } = useParams();
@@ -34,7 +35,7 @@ const TrackingPage = () => {
         // Fetch initial order details
         const fetchOrder = async () => {
             try {
-                const res = await api.get(`/orders/${id}`);
+                const res = await api.get(`${API_BASE_URL}/orders/${id}`);
                 setOrder(res.data);
                 setStatus(res.data.status);
             } catch (error) {
