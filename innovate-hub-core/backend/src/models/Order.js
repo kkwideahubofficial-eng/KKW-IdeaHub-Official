@@ -39,7 +39,13 @@ const orderSchema = new mongoose.Schema({
     subtotal: { type: Number, required: true },
     tax: { type: Number, default: 0 },
     total: { type: Number, required: true }
-  }
+  },
+  // Delivery Feature Fields
+  assignment: { type: mongoose.Schema.Types.ObjectId, ref: 'DeliveryAssignment', default: null },
+  assignedDeliveryBoy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  deliveryOtp: { type: String, default: null },
+  deliveryOtpVerification: { type: Boolean, default: false },
+  deliveredAt: { type: Date }
 }, { timestamps: true });
 
 export default mongoose.model('Order', orderSchema);

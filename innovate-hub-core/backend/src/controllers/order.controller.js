@@ -82,7 +82,11 @@ export const getMyOrders = async (req, res) => {
 
 export const getOrderById = async (req, res) => {
   try {
-    const order = await Order.findOne({ _id: req.params.id }); 
+    // Populate product details in items and delivery boy
+    const order = await Order.findOne({ _id: req.params.id })
+        .populate('items.productId')
+        .populate('assignedDeliveryBoy');
+    
     // Security note: In real app, check if req.user._id.toString() === order.userId.toString() OR if req.user.role === 'admin'
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
@@ -114,26 +118,19 @@ export const updateOrderStatus = async (req, res) => {
         console.log(`[DEBUG] Order ${req.params.id} updating to status: ${status}. Method: ${order.method}`);
 
         // Sync to SnapCart if status is moved to PROCESSING (Approved by Coordinator)
-        if (status === 'PROCESSING' && order.method === 'DELIVERY') {
-             console.log(`[DEBUG] Triggering SnapCart Sync for Order ${order._id}`);
-             try {
-                 const coords = getMockCoordinates(); // Fallback
-                 const realLocation = order.shippingAddress.latitude && order.shippingAddress.longitude 
-                    ? { lat: order.shippingAddress.latitude, lng: order.shippingAddress.longitude }
-                    : { lat: coords.latitude, lng: coords.longitude };
+        // Sync to SnapCart removed. Delivery Assignment is now handled via Coordinator 'Assign Driver' button.
+        // if (status === 'PROCESSING' && order.method === 'DELIVERY') { ... }
 
-                 await axios.post('http://localhost:4000/api/internal/create-delivery', {
-                     orderId: order._id,
-                     customerName: order.shippingAddress.fullName,
-                     address: `${order.shippingAddress.addressLine1}, ${order.shippingAddress.city}`,
-                     phone: order.shippingAddress.phone,
-                     items: order.items,
-                     location: realLocation
-                 });
-                 console.log(`Delivery Task Created for Order #${order._id} with coords`, coords);
-             } catch (syncError) {
-                 console.error("Failed to sync delivery task", syncError.message);
-             }
+        // Notify Socket Server of Status Update
+        try {
+            const socketUrl = process.env.SOCKET_URL || 'http://localhost:4000';
+            await axios.post(`${socketUrl}/notify`, {
+                event: 'order-status-update',
+                data: { orderId: req.params.id, status },
+                socketId: req.params.id // Room ID matching Order ID
+            });
+        } catch (e) { 
+            console.log("Socket notify failed", e.message); 
         }
 
         res.status(200).json(order);

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "install:all": "npm install && npm install --prefix innovate-hub-core && npm install --prefix innovate-hub-core/backend && npm install --prefix innovate-hub-core/snapcart/frontend && npm install --prefix innovate-hub-core/snapcart/socket",
-    "dev": "concurrently \"npm run dev --prefix innovate-hub-core\" \"npm run dev --prefix innovate-hub-core/backend\" \"npm run dev --prefix innovate-hub-core/snapcart/frontend\" \"npm run dev --prefix innovate-hub-core/snapcart/socket\""
+    "dev": "concurrently \"npm run dev --prefix innovate-hub-core\" \"npm run dev --prefix innovate-hub-core/backend\""
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

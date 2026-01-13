@@ -98,13 +98,6 @@ const MyOrders = () => {
                                          )}
                                      </div>
                                      <div className="flex gap-2">
-                                         {order.method === 'DELIVERY' && order.status !== 'DELIVERED' && order.status !== 'CANCELLED' && (
-                                              <Link to={`/track-order/${order._id}`}>
-                                                  <Button size="sm" variant="secondary" className="gap-2">
-                                                      <Package className="w-3 h-3" /> Track Order
-                                                  </Button>
-                                              </Link>
-                                         )}
                                          <Button variant="ghost" size="sm" className="gap-2">
                                              View Details <ExternalLink className="w-3 h-3" />
                                          </Button>

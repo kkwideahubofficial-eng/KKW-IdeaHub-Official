@@ -89,7 +89,6 @@ const Navigation = () => {
     if (user?.role === 'team') {
       links.push({ name: "Book Slots", path: "/book-slots" });
       links.push({ name: "My Bookings", path: "/my-bookings" });
-      links.push({ name: "My Orders", path: "/my-orders" });
       links.push({ name: "Machinery Permission", path: "/machinery" });
       links.push({ name: "Profile", path: "/profile" });
     }

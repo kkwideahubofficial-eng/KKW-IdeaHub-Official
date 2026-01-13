@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { Truck } from "lucide-react";
-import { API_BASE_URL, SNAPCART_URL } from "@/lib/api";
+import { API_BASE_URL } from "@/lib/api";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -121,16 +121,14 @@ const Login = () => {
             </p>
             
             <div className="mt-6 pt-6 border-t text-center">
-              <a 
-                href={`${SNAPCART_URL}/driver/login`} 
-                target="_blank" 
-                rel="noopener noreferrer"
+              <Link 
+                to="/driver/login" 
                 className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
-                title="Opens SnapCart Driver App"
+                title="Opens Driver Portal"
               >
                 <Truck className="w-4 h-4" />
                 Are you a Delivery Partner? Login here
-              </a>
+              </Link>
             </div>
           </form>
         </CardContent>

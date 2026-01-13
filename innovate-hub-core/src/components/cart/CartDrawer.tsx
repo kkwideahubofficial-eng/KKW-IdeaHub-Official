@@ -15,6 +15,11 @@ export const CartDrawer = () => {
       navigate('/checkout');
   };
 
+  const handleMyOrders = () => {
+      setIsOpen(false);
+      navigate('/my-orders');
+  };
+
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
@@ -36,7 +41,10 @@ export const CartDrawer = () => {
             <div className="flex flex-1 flex-col items-center justify-center space-y-4">
                 <ShoppingCart className="h-16 w-16 text-gray-300" />
                 <p className="text-muted-foreground text-center">Your cart is empty.</p>
-                <Button variant="outline" onClick={() => setIsOpen(false)}>Continue Shopping</Button>
+                <div className="flex flex-col gap-2 w-full px-8">
+                    <Button variant="outline" className="w-full" onClick={() => setIsOpen(false)}>Continue Shopping</Button>
+                    <Button variant="ghost" className="w-full" onClick={handleMyOrders}>View My Orders</Button>
+                </div>
             </div>
         ) : (
              <>
@@ -60,6 +68,9 @@ export const CartDrawer = () => {
                         </Button>
                         <Button variant="outline" className="w-full" onClick={() => setIsOpen(false)}>
                             Continue Shopping
+                        </Button>
+                        <Button variant="ghost" className="w-full" onClick={handleMyOrders}>
+                            My Orders
                         </Button>
                     </div>
                 </div>

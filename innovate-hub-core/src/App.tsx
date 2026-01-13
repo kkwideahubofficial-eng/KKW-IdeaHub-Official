@@ -41,6 +41,9 @@ import MachineryRequestForm from "./pages/machinery/MachineryRequestForm";
 
 
 import Profile from "./pages/Profile";
+import DriverDashboard from "./pages/driver/Dashboard";
+import DriverLogin from "./pages/driver/Login";
+import DriverSignup from "./pages/driver/Signup";
 
 const queryClient = new QueryClient();
 
@@ -266,6 +269,12 @@ const App = () => (
                   </RequireAuth>
                 }
               />
+
+              {/* Driver Routes */}
+              <Route path="/driver/login" element={<DriverLogin />} />
+              <Route path="/driver/signup" element={<DriverSignup />} />
+              <Route path="/driver/dashboard" element={<DriverDashboard />} />
+
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>

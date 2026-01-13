@@ -7,6 +7,7 @@ import path from 'path';
 import healthRouter from './routes/health.route.js';
 import authRouter from './routes/auth.routes.js';
 import bookingRouter from './routes/booking.routes.js';
+import orderRouter from './routes/order.routes.js';
 import roomRouter from './routes/room.routes.js';
 import timeSlotRouter from './routes/timeSlot.routes.js';
 import eventRouter from './routes/event.routes.js';
@@ -16,7 +17,8 @@ import machineRouter from './routes/machine.routes.js';
 import productRouter from './routes/product.routes.js';
 import heroRouter from './routes/heroRoutes.js';
 import cartRouter from './routes/cart.routes.js';
-import orderRouter from './routes/order.routes.js';
+import deliveryRouter from './routes/delivery.routes.js';
+
 
 dotenv.config();
 
@@ -67,6 +69,7 @@ app.use('/api/products', productRouter);
 app.use('/api/hero', heroRouter);
 app.use('/api/cart', cartRouter);
 app.use('/api/orders', orderRouter);
+app.use('/api/delivery', deliveryRouter);
 // Static uploads
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
@@ -90,16 +93,88 @@ app.use((err, _req, res, _next) => {
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || '';
 
+// Socket.io Integration
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+
 async function start() {
   if (!MONGO_URI) {
-    // eslint-disable-next-line no-console
     console.error('MONGO_URI not set. Please configure it in .env');
     process.exit(1);
   }
   await connectToDatabase(MONGO_URI);
-  app.listen(PORT, () => {
-    // eslint-disable-next-line no-console
-    console.log(`Server listening on port ${PORT}`);
+
+  const httpServer = createServer(app);
+  const io = new Server(httpServer, {
+    cors: {
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        const isLocalhost = /^http:\/\/localhost:\d+$/.test(origin);
+        if (isLocalhost || allowlist.includes(origin)) {
+          return callback(null, true);
+        }
+        return callback(new Error('Not allowed by CORS'));
+      },
+      methods: ["GET", "POST"],
+      credentials: true
+    }
+  });
+
+  // Make io available in routes
+  app.set('io', io);
+
+  // Socket Logic
+  const onlineDrivers = new Map(); // userId -> socketId
+
+  io.on('connection', (socket) => {
+      console.log('Socket Connected:', socket.id);
+
+      socket.on('identity', (userId) => {
+          if (userId) {
+              onlineDrivers.set(userId, socket.id);
+              socket.join(userId); // Join personal room
+              console.log(`Driver ${userId} mapped to ${socket.id}`);
+          }
+      });
+
+      socket.on('update-location', (data) => {
+          // data: { userId, latitude, longitude }
+          // Broadcast to anyone tracking this driver or order ?
+          // Ideally, we broadcast to a room associated with the active order.
+          // But for now, let's just emit to a generic "tracking" or if we knew the orderId.
+          // The frontend TrackingPage likely joins 'orderId'.
+          // Driver doesn't send orderId here? Dashboard sends { userId, lat, lng }
+          // We can't know which order is active easily without querying DB or storing in Map.
+          // BUT, if the Customer joins room `driver-${userId}`, it works.
+          // Let's assume TrackingPage joins `driver-${driverId}`.
+          
+          if(data.userId) {
+              io.to(`driver-${data.userId}`).emit('driver-location-updated', {
+                  lat: data.latitude,
+                  lng: data.longitude
+              });
+          }
+      });
+      
+      socket.on('join-tracking', (driverId) => {
+           socket.join(`driver-${driverId}`);
+           console.log(`Socket ${socket.id} started tracking driver ${driverId}`);
+      });
+
+      socket.on('disconnect', () => {
+           // efficient cleanup
+           for (const [uid, sid] of onlineDrivers.entries()) {
+               if (sid === socket.id) {
+                   onlineDrivers.delete(uid);
+                   break;
+               }
+           }
+           console.log('Socket Disconnected:', socket.id);
+      });
+  });
+
+  httpServer.listen(PORT, () => {
+    console.log(`Server (HTTP+Socket) listening on port ${PORT}`);
   });
 }
 

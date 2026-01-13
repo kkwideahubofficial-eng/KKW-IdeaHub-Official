@@ -12,7 +12,7 @@ const validateSignup = [
   body('name').isString().isLength({ min: 2 }).withMessage('Name is required'),
   body('email').isEmail().withMessage('Valid email required'),
   body('password').isLength({ min: 6 }).withMessage('Password min length 6'),
-  body('role').optional().isIn(['team', 'coordinator', 'head']).withMessage('Invalid role'),
+  body('role').optional().isIn(['team', 'coordinator', 'head', 'delivery_boy']).withMessage('Invalid role'),
   body('teamName').optional().isString(),
 ];
 
@@ -57,6 +57,7 @@ router.post('/login', validateLogin, validate, login);
 
 // Protected routes
 router.get('/profile', requireAuth, getProfile);
+router.get('/me', requireAuth, getProfile); // Alias for session check
 router.put('/profile', requireAuth, validateProfileUpdate, validate, updateProfile);
 router.post('/change-password', requireAuth, validatePasswordChange, validate, changePassword);
 

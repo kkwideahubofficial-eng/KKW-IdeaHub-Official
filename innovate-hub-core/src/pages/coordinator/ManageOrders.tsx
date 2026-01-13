@@ -14,10 +14,11 @@ interface Order {
   _id: string;
   userId: string;
   items: {
-    product: {
+    productId: {
         name: string;
         image: string;
     };
+    name: string;
     quantity: number;
     price: number;
   }[];
@@ -45,14 +46,16 @@ const ManageOrders = () => {
             
             // Only fetch driver details if status warrants it
             const currentOrder = orders.find(o => o._id === orderId);
-            if(currentOrder && ['PROCESSING', 'SHIPPED', 'out of delivery', 'processing'].includes(currentOrder.status)) {
+            if(currentOrder && ['PROCESSING', 'SHIPPED', 'out of delivery', 'processing', 'OUT_OF_DELIVERY'].includes(currentOrder.status)) {
                  try {
-                   const SNAPCART_URL = import.meta.env.VITE_SNAPCART_URL || 'http://localhost:3000';
-                   const url = `${SNAPCART_URL}/api/delivery/public/status/${orderId}`;
-                   console.log("Fetching driver info from:", url);
-                   const res = await axios.get(url);
-                   if(res.data) {
-                     setDriverDetails(res.data);
+                   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+                   // We need an endpoint to get assignment details for an order.
+                   // Ideally, getOrderById should return 'assignment' populated.
+                   // But let's assume we can query current-order or a status endpoint.
+                   // For now, let's just use the order's populated data if available, or fetch fresh order.
+                   const res = await api.get(`/orders/${orderId}`);
+                   if(res.data && res.data.assignedDeliveryBoy) {
+                     setDriverDetails({ assignedDriver: res.data.assignedDeliveryBoy });
                    }
                 } catch(e) {
                     console.log("No driver attached or fetch failed");
@@ -238,14 +241,14 @@ const ManageOrders = () => {
                                                                 {order.items?.map((item, idx) => (
                                                                     <div key={idx} className="flex items-center gap-3 py-2 border-b border-dashed last:border-0 hover:bg-gray-50 p-2 rounded-lg transition">
                                                                         <div className="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden shrink-0 border">
-                                                                             {item.product?.image ? (
-                                                                                 <img src={item.product.image} alt="product" className="w-full h-full object-cover" />
+                                                                             {item.productId?.image ? (
+                                                                                 <img src={item.productId.image} alt="product" className="w-full h-full object-cover" />
                                                                              ): (
                                                                                  <div className="w-full h-full flex items-center justify-center text-gray-400"><Package size={20}/></div>
                                                                              )}
                                                                         </div>
                                                                         <div className="flex-1">
-                                                                            <p className="text-sm font-medium text-gray-900 line-clamp-1">{item.product?.name || "Product Name"}</p>
+                                                                            <p className="text-sm font-medium text-gray-900 line-clamp-1">{item.productId?.name || item.name || "Product Name"}</p>
                                                                             <p className="text-xs text-gray-500">Qty: {item.quantity} × ₹{item.price}</p>
                                                                         </div>
                                                                         <div className="font-semibold text-sm">₹{item.quantity * item.price}</div>
@@ -307,11 +310,26 @@ const ManageOrders = () => {
                                                                     </Button>
                                                                 </div>
                                                              ) : (
-                                                                 <div className="text-center py-6 bg-gray-50/50 rounded-lg border border-dashed">
+                                                                 <div className="text-center py-6 bg-gray-50/50 rounded-lg border border-dashed flex flex-col items-center gap-3">
                                                                      {['PROCESSING', 'SHIPPED', 'out of delivery'].includes(order.status) ? (
                                                                           <>
-                                                                             <Loader2 className="w-5 h-5 text-gray-400 animate-spin mx-auto mb-2" />
-                                                                             <p className="text-sm text-gray-500">Searching for delivery partner...</p>
+                                                                             <p className="text-sm text-gray-500">No driver assigned.</p>
+                                                                             <Button 
+                                                                                size="sm" 
+                                                                                className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2"
+                                                                                onClick={async () => {
+                                                                                    try {
+                                                                                        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+                                                                                        const res = await axios.post(`${API_BASE_URL}/api/delivery/create-assignment`, { orderId: order._id });
+                                                                                        toast.success(`Broadcasted to ${res.data.count} drivers!`);
+                                                                                        toggleExpand(order._id); // Refresh
+                                                                                    } catch (err: any) {
+                                                                                        toast.error(err.response?.data?.message || "Failed to assign");
+                                                                                    }
+                                                                                }}
+                                                                             >
+                                                                                <Truck size={14} /> Assign Delivery
+                                                                             </Button>
                                                                           </>
                                                                      ) : order.status === 'DELIVERED' ? (
                                                                          <div className="flex flex-col items-center">
