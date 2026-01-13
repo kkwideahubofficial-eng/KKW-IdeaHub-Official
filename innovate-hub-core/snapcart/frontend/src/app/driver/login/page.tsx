@@ -15,6 +15,7 @@ export default function DriverLogin() {
     setTimeout(() => {
         // Store mock session
         localStorage.setItem("driver_token", "mock_token_123");
+        localStorage.setItem("driver_id", "mock_driver_123"); // Required for dashboard check
         // Removed legacy driver_001 setting;
         router.push("/driver/dashboard");
     }, 1000);

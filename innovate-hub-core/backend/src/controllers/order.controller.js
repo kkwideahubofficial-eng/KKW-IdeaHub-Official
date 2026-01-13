@@ -117,17 +117,18 @@ export const updateOrderStatus = async (req, res) => {
         if (status === 'PROCESSING' && order.method === 'DELIVERY') {
              console.log(`[DEBUG] Triggering SnapCart Sync for Order ${order._id}`);
              try {
-                 const coords = getMockCoordinates(); // Simulate Customer Location
+                 const coords = getMockCoordinates(); // Fallback
+                 const realLocation = order.shippingAddress.latitude && order.shippingAddress.longitude 
+                    ? { lat: order.shippingAddress.latitude, lng: order.shippingAddress.longitude }
+                    : { lat: coords.latitude, lng: coords.longitude };
+
                  await axios.post('http://localhost:4000/api/internal/create-delivery', {
                      orderId: order._id,
                      customerName: order.shippingAddress.fullName,
                      address: `${order.shippingAddress.addressLine1}, ${order.shippingAddress.city}`,
                      phone: order.shippingAddress.phone,
                      items: order.items,
-                     location: { // 2-Way Location Support
-                         lat: coords.latitude,
-                         lng: coords.longitude
-                     }
+                     location: realLocation
                  });
                  console.log(`Delivery Task Created for Order #${order._id} with coords`, coords);
              } catch (syncError) {

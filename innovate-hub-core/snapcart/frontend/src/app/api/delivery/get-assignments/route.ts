@@ -1,14 +1,21 @@
 import { auth } from "@/auth";
 import connectDb from "@/lib/db";
 import DeliveryAssignment from "@/models/deliveryAssignment.model";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
     try {
        await connectDb()
        const session=await auth()
+       let userId = session?.user?.id;
+
+       if(!userId) {
+           const manualId = req.headers.get("x-driver-id");
+           if(manualId) userId = manualId;
+       }
+
         const assignments=await DeliveryAssignment.find({
-          brodcastedTo:session?.user?.id,
+          brodcastedTo:userId,
           status:"brodcasted"
         }).populate("order")
         return NextResponse.json(

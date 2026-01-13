@@ -22,32 +22,41 @@ export async function POST(req:NextRequest, context: { params: Promise<{ orderId
         let deliveryBoysPayload:any=[]
         if((status==="out of delivery" || status === "Processing" || status === "processing") && !order.assignment){
             const {latitude,longitude}=order.address
-            console.log(`[DEBUG] Finding delivery boys near ${latitude}, ${longitude}`);
+            const lat = Number(latitude);
+            const lng = Number(longitude);
+            console.log(`[DEBUG] Finding delivery boys near Lat: ${lat}, Lng: ${lng}`);
+
+            if(isNaN(lat) || isNaN(lng)) {
+                console.error("[DEBUG] Invalid coordinates for order address:", order.address);
+                return NextResponse.json({message: "Invalid order coordinates"}, {status: 400});
+            }
+
             const nearByDeliveryBoys=await User.find({
                 role:"deliveryBoy",
                 location:{
                     $near:{
-                        $geometry:{type:"Point",coordinates:[Number(longitude),Number(latitude)]},
-                        $maxDistance:10000
+                        $geometry:{type:"Point",coordinates:[lng, lat]}, // MongoDB expects [lng, lat]
+                        $maxDistance:500000 // Increased range to 500km for testing purposes
                     }
                 }
             })
-            console.log(`[DEBUG] Found ${nearByDeliveryBoys.length} nearby delivery boys:`, nearByDeliveryBoys.map(b => b.name));
+            console.log(`[DEBUG] Found ${nearByDeliveryBoys.length} nearby delivery boys:`, nearByDeliveryBoys.map(b => `${b.name} (${b.location.coordinates})`));
 
             const nearByIds=nearByDeliveryBoys.map((b)=>b._id)
             const busyIds=await DeliveryAssignment.find({
                 assignedTo:{$in:nearByIds},
                 status:{$nin:["brodcasted", "completed"]}
             }).distinct("assignedTo")
+            
             const busyIdSet=new Set(busyIds.map(b=>String(b)))
             const availableDeliveryBoys=nearByDeliveryBoys.filter(
                 b=>!busyIdSet.has(String(b._id))
             )
              const candidates=availableDeliveryBoys.map(b=>b._id)
-             console.log(`[DEBUG] ${candidates.length} candidates available for broadcast`);
+             console.log(`[DEBUG] ${candidates.length} candidates available for broadcast (after filtering busy)`);
 
              if(candidates.length==0){
-                console.log("[DEBUG] No candidates found, saving order status only.");
+                console.log("[DEBUG] No candidates found. Saving order status only.");
                 await order.save()
             
                 await emitEventHandler("order-status-update",{orderId:order._id,status:order.status})

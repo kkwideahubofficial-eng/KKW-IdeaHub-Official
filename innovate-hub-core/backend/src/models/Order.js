@@ -19,6 +19,8 @@ const orderSchema = new mongoose.Schema({
     state: { type: String, required: true },
     postalCode: { type: String, required: true },
     phone: { type: String, required: true },
+    latitude: { type: Number }, 
+    longitude: { type: Number }
   },
   method: { type: String, enum: ['DELIVERY', 'PICKUP'], default: 'DELIVERY' },
   paymentInfo: {

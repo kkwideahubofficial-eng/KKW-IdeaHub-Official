@@ -6,7 +6,7 @@ export async function proxy(req:NextRequest){
 
     const {pathname}=req.nextUrl
    
-    const publicRoutes=["/login","/register","/api/auth","/unauthorized"]
+    const publicRoutes=["/login","/register","/api/auth","/unauthorized","/driver"]
      if(publicRoutes.some((path)=>pathname.startsWith(path))){
         return NextResponse.next()
      }

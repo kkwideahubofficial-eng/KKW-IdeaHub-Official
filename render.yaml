@@ -1,51 +1,94 @@
-version: 1
 services:
+  # 1. Main Backend (Express/Node)
   - type: web
-    name: ideahub-backend-service
-    runtime: node
+    name: innovate-hub-backend
+    env: node
+    region: singapore
+    plan: free
     rootDir: innovate-hub-core/backend
     buildCommand: npm install
     startCommand: npm start
     envVars:
       - key: MONGO_URI
         sync: false
-      - key: CLIENT_URL
+      - key: JWT_SECRET
         sync: false
-      - key: PORT
-        value: "10000"
-      - key: NODE_VERSION
-        value: "20"
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: FRONTEND_ORIGIN
+        sync: false # Set to Main Frontend URL
 
+  # 2. Socket Server (Node/Socket.io)
   - type: web
-    name: snapcart-socket-service
-    runtime: node
+    name: snapcart-socket
+    env: node
+    region: singapore
+    plan: free
     rootDir: innovate-hub-core/snapcart/socket
     buildCommand: npm install
     startCommand: npm start
     envVars:
-      - key: NEXT_BASE_URL
-        sync: false
       - key: PORT
-        value: "10000"
-      - key: NODE_VERSION
-        value: "20"
+        value: 10000
+      - key: NEXT_BASE_URL
+        sync: false # Point to Driver App URL
 
+  # 3. Driver App & SnapCart Frontend (Next.js)
   - type: web
-    name: snapcart-driver-service
-    runtime: node
+    name: snapcart-frontend
+    env: node
+    region: singapore
+    plan: free
     rootDir: innovate-hub-core/snapcart/frontend
     buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
-      - key: MONGODB_URI
+      - key: MONGODB_URL
         sync: false
-      - key: NEXTAUTH_SECRET
+      - key: AUTH_SECRET
         sync: false
-      - key: NEXTAUTH_URL
+      - key: GOOGLE_CLIENT_ID
         sync: false
-      - key: NEXT_PUBLIC_SOCKET_URL
+      - key: GOOGLE_CLIENT_SECRET
         sync: false
-      - key: PORT
-        value: "10000"
-      - key: NODE_VERSION
-        value: "20"
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: NEXT_PUBLIC_SOCKET_SERVER
+        fromService:
+            type: web
+            name: snapcart-socket
+            property: url
+      - key: EMAIL
+        sync: false
+      - key: PASS
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+
+  # 4. Main Website (Static Site)
+  - type: static
+    name: innovate-hub-frontend
+    env: static
+    region: singapore
+    plan: free
+    rootDir: innovate-hub-core
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist

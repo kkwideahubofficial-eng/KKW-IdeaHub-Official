@@ -12,11 +12,14 @@ import api from '@/lib/axios';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 
+import { LocationPicker } from '@/components/checkout/LocationPicker';
+
 const Checkout = () => {
     const { items, getCartTotal } = useCartStore();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [deliveryMethod, setDeliveryMethod] = useState<'DELIVERY' | 'PICKUP'>('DELIVERY');
+    const [pinnedLocation, setPinnedLocation] = useState<{lat: number, lng: number} | undefined>();
     
     // Form State
     const [address, setAddress] = useState({
@@ -59,7 +62,10 @@ const Checkout = () => {
                     name: i.name,
                     image: i.image 
                 })),
-                shippingAddress: address,
+                shippingAddress: {
+                    ...address,
+                    ...(pinnedLocation ? { latitude: pinnedLocation.lat, longitude: pinnedLocation.lng } : {})
+                },
                 method: deliveryMethod,
                 amounts: {
                     subtotal: cartTotal,
@@ -113,8 +119,16 @@ const Checkout = () => {
                 <div className="lg:col-span-2 space-y-8">
                     {/* Shipping Address */}
                     <Card>
-                        <CardContent className="pt-6">
+                        <CardContent className="pt-6 space-y-4">
                             <AddressForm value={address} onChange={setAddress} />
+                            
+                            <div className="pt-2">
+                                <Label className="mb-2 block">Precise Location (Optional but Recommended)</Label>
+                                <LocationPicker 
+                                    onLocationSelect={(lat, lng) => setPinnedLocation({ lat, lng })}
+                                    currentLocation={pinnedLocation}
+                                />
+                            </div>
                         </CardContent>
                     </Card>
                     

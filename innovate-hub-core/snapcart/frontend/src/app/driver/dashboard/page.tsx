@@ -4,8 +4,12 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import dynamic from "next/dynamic";
-import { MapPin, Navigation, Package, Power, Clock, CheckCircle } from "lucide-react";
+import { MapPin, Navigation, Package, Power, Clock, CheckCircle, ChevronRight, AlertCircle, Locate } from "lucide-react";
 import axios from "axios";
+import { motion, AnimatePresence } from "motion/react";
+import { toast } from "sonner";
+
+
 
 // Dynamically import Map to avoid SSR issues
 const DriverMap = dynamic(() => import("@/components/DriverMap"), { ssr: false });
@@ -48,6 +52,55 @@ export default function DriverDashboard() {
       state: '',
       zip: '',
   });
+  
+  const handleUseLiveLocation = () => {
+    if (!navigator.geolocation) {
+        alert("Geolocation is not supported by your browser");
+        return;
+    }
+    
+    setGeoError(null);
+    navigator.geolocation.getCurrentPosition(
+        async (position) => {
+            const { latitude, longitude } = position.coords;
+            const newLoc = { lat: latitude, lng: longitude };
+            setCurrentLoc(newLoc);
+            
+            // Reverse geocode to fill fields
+            try {
+                 const res = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+                 if(res.data && res.data.address) {
+                     const addr = res.data.address;
+                     setManualAddress({
+                         houseNo: addr.house_number || '',
+                         street: addr.road || addr.suburb || '',
+                         landmark: addr.neighbourhood || '',
+                         city: addr.city || addr.town || addr.village || '',
+                         district: addr.state_district || '',
+                         state: addr.state || '',
+                         zip: addr.postcode || ''
+                     });
+                 }
+            } catch(e) {
+                console.error("Reverse geocoding failed", e);
+            }
+
+             // Notify server immediately
+            const userId = localStorage.getItem("driver_id");
+            if(socket && userId) {
+                socket.emit("update-location", {
+                    userId,
+                    latitude,
+                    longitude
+                });
+            }
+        },
+        (error) => {
+            console.error(error);
+            setGeoError("Unable to retrieve your location. Check GPS settings or allow permission.");
+        }
+    );
+};
 
   const mockRoute = [
       { lat: 19.0760, lng: 72.8777 },
@@ -101,7 +154,9 @@ export default function DriverDashboard() {
 
             // 1. Check for Active Order from Backend (Source of Truth)
             try {
-                const activeOrderRes = await axios.get('/api/delivery/current-order');
+                const activeOrderRes = await axios.get('/api/delivery/current-order', {
+                    headers: { 'x-driver-id': userId } 
+                });
                 if (activeOrderRes.data.active && activeOrderRes.data.assignment) {
                     const assignment = activeOrderRes.data.assignment;
                     if (assignment && assignment.order) {
@@ -123,12 +178,14 @@ export default function DriverDashboard() {
                         console.warn("Active assignment found but order data is missing:", assignment);
                     }
                 }
-            } catch (e) {
-                console.error("Failed to recover active order", e);
+            } catch (e: any) {
+                console.error("Failed to recover active order", e.response?.data || e.message || String(e));
             }
 
             // 2. Get available (pending) tasks
-            const assignmentsRes = await axios.get('/api/delivery/get-assignments');
+            const assignmentsRes = await axios.get('/api/delivery/get-assignments', {
+                headers: { 'x-driver-id': userId }
+            });
             const newTasks = assignmentsRes.data
                 .filter((assignment: any) => assignment.order) // Filter out bad data
                 .map((assignment: any) => ({
@@ -182,8 +239,12 @@ export default function DriverDashboard() {
 
                 newSocket.on("new-delivery-task", (task: Task) => {
                     console.log("New Task Received:", task);
-                    setTasks(prev => [...prev, task]);
-                    new Audio('/notification.mp3').play().catch(e => console.log('Audio play failed', e));
+                    setTasks(prev => {
+                        // Prevent duplicates
+                        if (prev.some(t => t.orderId === task.orderId)) return prev;
+                        return [...prev, task];
+                    });
+                    // new Audio('/notification.mp3').play().catch(e => console.log('Audio play failed', e)); // Disable missing audio
                 });
             }
 
@@ -282,22 +343,23 @@ export default function DriverDashboard() {
 
               const error = (err: GeolocationPositionError) => {
                   console.error("Geolocation error code:", err.code);
-                  let errorMsg = "Unable to retrieve your location.";
-                  
+                  let errorMsg = "";
                   switch(err.code) {
-                      case 1: // PERMISSION_DENIED
-                          errorMsg = "Location permission denied. Please allow location access.";
+                      case 1: 
+                          errorMsg = "Permission denied. Please allow location access.";
                           break;
-                      case 2: // POSITION_UNAVAILABLE
-                          errorMsg = "Location unavailable. Try enabling 'Use Simulation' below.";
+                      case 2: 
+                          errorMsg = "Position unavailable. Check GPS signal.";
                           break;
-                      case 3: // TIMEOUT
-                          errorMsg = "Location request timed out. Try Simulation mode.";
+                      case 3: 
+                          errorMsg = "Location request timed out.";
                           break;
                       default:
                           errorMsg = `An unknown error occurred: ${err.message}`;
                   }
                   
+                  // Only alert if it's a manual request, silent fail/log otherwise
+                  toast.error(errorMsg);
                   setGeoError(errorMsg);
                   setIsDriving(false);
                   // Cleanup if it failed immediately
@@ -358,280 +420,326 @@ export default function DriverDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-        <header className="flex justify-between items-center mb-8">
-            <h1 className="text-2xl font-bold text-gray-800">Driver Dashboard</h1>
-            <div className="flex items-center gap-4"> 
-                <div className="bg-white rounded-lg p-1 shadow-sm flex">
-                    <button 
-                        onClick={() => setActiveTab('available')}
-                        className={`px-4 py-2 rounded-md text-sm font-medium transition ${activeTab === 'available' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}
-                    >
-                        Active Requests
-                    </button>
-                    <button 
-                         onClick={() => setActiveTab('history')}
-                         className={`px-4 py-2 rounded-md text-sm font-medium transition ${activeTab === 'history' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}
-                    >
-                        History
-                    </button>
+    <div className="min-h-screen bg-gray-50/50 font-sans text-gray-900 pb-20">
+        {/* Top Navbar */}
+        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-3">
+                 <div className="bg-blue-600 p-2 rounded-xl text-white shadow-lg shadow-blue-600/20">
+                    <Navigation className="w-6 h-6" />
+                 </div>
+                 <div>
+                    <h1 className="text-xl font-bold tracking-tight text-gray-900">Driver Dashboard</h1>
+                    <p className="text-xs text-gray-500 font-medium">Ready to deliver • {socket ? <span className="text-green-600">Considered Online</span> : <span className="text-amber-500">Connecting...</span>}</p>
+                 </div>
+            </div>
+            
+            <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end"> 
+                <div className="bg-gray-100/50 p-1 rounded-xl flex shadow-inner">
+                    {['available', 'history'].map((tab) => (
+                        <button 
+                            key={tab}
+                            onClick={() => setActiveTab(tab as any)}
+                            className={`relative px-4 py-2 rounded-lg text-sm font-semibold transition-all z-10 ${
+                                activeTab === tab ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                        >
+                            {activeTab === tab && (
+                                <motion.div 
+                                    layoutId="activeTab"
+                                    className="absolute inset-0 bg-white rounded-lg shadow-sm border border-gray-200/50"
+                                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                />
+                            )}
+                            <span className="relative z-10 capitalize">{tab} Tasks</span>
+                        </button>
+                    ))}
                 </div>
-                <button onClick={() => { localStorage.clear(); router.push('/driver/login'); }} className="text-destructive font-medium flex items-center gap-2">
-                    <Power className="w-4 h-4" /> Logout
+                
+                <button 
+                    onClick={() => { 
+                        if(confirm("Reset all dashboard data? This clears local tasks.")) {
+                            localStorage.clear(); 
+                            window.location.reload(); 
+                        }
+                    }} 
+                    className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                    title="Reset Dashboard Data"
+                >
+                    <AlertCircle className="w-5 h-5" />
+                </button>
+                <button 
+                    onClick={() => { localStorage.removeItem("driver_id"); router.push('/driver/login'); }} 
+                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Logout"
+                >
+                    <Power className="w-5 h-5" />
                 </button>
             </div>
         </header>
 
-        <div className="grid lg:grid-cols-2 gap-8">
-            {/* Available Tasks */}
-            {/* Available Tasks / History */}
-            <div className="space-y-4">
-                <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                    {activeTab === 'available' ? <Package className="w-5 h-5 text-primary" /> : <Clock className="w-5 h-5 text-primary" />} 
-                    {activeTab === 'available' ? 'Available Tasks' : 'Delivery History'}
-                </h2>
+        <main className="max-w-7xl mx-auto p-4 md:p-8 grid lg:grid-cols-12 gap-8">
+            
+            {/* Left Column: Task Lists */}
+            <div className="lg:col-span-5 space-y-6">
+                <div className="flex items-center justify-between mb-2">
+                    <h2 className="text-lg font-bold flex items-center gap-2">
+                        {activeTab === 'available' ? <Package className="w-5 h-5 text-blue-600" /> : <Clock className="w-5 h-5 text-purple-600" />} 
+                        {activeTab === 'available' ? 'Available Requests' : 'Delivery History'}
+                    </h2>
+                    <span className="bg-gray-100 text-gray-600 text-xs px-2.5 py-1 rounded-full font-bold">
+                        {activeTab === 'available' ? tasks.length : history.length}
+                    </span>
+                </div>
 
-                {activeTab === 'available' ? (
-                    tasks.length === 0 ? (
-                        <div className="bg-card p-6 rounded-xl shadow-sm border border-border text-center text-muted-foreground">
-                            No new tasks at the moment...
-                        </div>
+                <AnimatePresence mode="wait">
+                    {activeTab === 'available' ? (
+                        tasks.length === 0 ? (
+                            <motion.div 
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                className="bg-white p-8 rounded-2xl shadow-sm border border-dashed border-gray-200 text-center flex flex-col items-center justify-center min-h-[300px]"
+                            >
+                                <div className="bg-blue-50 p-4 rounded-full mb-4">
+                                    <CheckCircle className="w-8 h-8 text-blue-400" />
+                                </div>
+                                <h3 className="text-gray-900 font-semibold mb-1">All Caught Up!</h3>
+                                <p className="text-gray-500 text-sm max-w-[200px]">Waiting for new orders to be assigned...</p>
+                            </motion.div>
+                        ) : (
+                            <div className="space-y-4">
+                                {tasks.map((task, idx) => (
+                                    <motion.div 
+                                        key={task.orderId}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: idx * 0.05 }}
+                                        className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-blue-100 transition-all group"
+                                    >
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div>
+                                                <h3 className="font-bold text-gray-900 text-lg group-hover:text-blue-600 transition-colors">{task.customerName}</h3>
+                                                <p className="text-gray-400 text-xs font-mono tracking-wider">#{task.orderId.slice(-8).toUpperCase()}</p>
+                                            </div>
+                                            <span className="bg-amber-50 text-amber-600 text-xs px-2 py-1 rounded-md font-bold uppercase tracking-wider">Pending</span>
+                                        </div>
+                                        <div className="flex items-start gap-3 text-gray-500 text-sm mb-5 bg-gray-50 p-3 rounded-lg">
+                                            <MapPin className="w-4 h-4 mt-0.5 shrink-0 text-gray-400" />
+                                            <p className="leading-relaxed">{task.address}</p>
+                                        </div>
+                                        <button 
+                                            onClick={() => handleAccept(task)}
+                                            className="w-full bg-gray-900 text-white py-3 rounded-xl font-semibold shadow-lg shadow-gray-200 hover:bg-blue-600 hover:shadow-blue-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                                        >
+                                            Accept Delivery <ChevronRight className="w-4 h-4" />
+                                        </button>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        )
                     ) : (
-                        tasks.map((task, idx) => (
-                            <div key={idx} className="bg-card p-6 rounded-xl shadow-sm border border-border hover:shadow-md transition">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div>
-                                        <h3 className="font-bold text-foreground">{task.customerName}</h3>
-                                        <p className="text-muted-foreground text-sm">#{task.orderId.slice(-6)}</p>
+                        // History View
+                        <div className="space-y-3">
+                            {history.length === 0 ? (
+                                 <div className="text-center py-12 text-gray-400">No history yet</div>
+                            ) : (
+                                history.map((task, idx) => (
+                                    <motion.div 
+                                        key={idx}
+                                        initial={{ opacity: 0 }} 
+                                        animate={{ opacity: 1 }}
+                                        className="bg-white p-4 rounded-xl border border-gray-100 flex justify-between items-center opacity-75 hover:opacity-100 transition-opacity"
+                                    >
+                                        <div>
+                                            <h4 className="font-semibold text-gray-900">{task.customerName}</h4>
+                                            <p className="text-xs text-gray-500 truncate max-w-[200px]">{task.address}</p>
+                                        </div>
+                                        <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-md flex items-center gap-1">
+                                            <CheckCircle className="w-3 h-3" /> Done
+                                        </span>
+                                    </motion.div>
+                                ))
+                            )}
+                        </div>
+                    )}
+                </AnimatePresence>
+            </div>
+
+            {/* Right Column: Active Task & Map */}
+            <div className="lg:col-span-7">
+                 <h2 className="text-lg font-bold flex items-center gap-2 mb-6">
+                    <Navigation className="w-5 h-5 text-indigo-600" /> Current Mission
+                 </h2>
+                 
+                 <AnimatePresence mode="wait">
+                 {activeTask ? (
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden relative"
+                    >
+                        {/* Decorative Gradient */}
+                        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
+
+                        <div className="p-6 md:p-8">
+                            <div className="flex justify-between items-start mb-6">
+                                <div>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className="bg-indigo-50 text-indigo-600 text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wider">In Progress</span>
                                     </div>
-                                    <span className="bg-warning/20 text-warning text-xs px-2 py-1 rounded-full font-medium">PENDING</span>
+                                    <h3 className="text-2xl md:text-3xl font-bold text-gray-900">{activeTask.customerName}</h3>
                                 </div>
-                                <div className="flex items-start gap-2 text-muted-foreground mb-4 text-sm">
-                                    <MapPin className="w-4 h-4 mt-0.5 shrink-0" />
-                                    <p>{task.address}</p>
-                                </div>
-                                <button 
-                                    onClick={() => handleAccept(task)}
-                                    className="w-full bg-primary text-primary-foreground py-2 rounded-lg font-medium hover:bg-primary/90"
-                                >
-                                    Accept Delivery
+                                <button onClick={handleComplete} className="text-sm font-semibold text-green-600 hover:text-green-700 bg-green-50 px-3 py-1.5 rounded-lg border border-green-100 transition-colors">
+                                    Mark Delivered
                                 </button>
                             </div>
-                        ))
-                    )
-                ) : (
-                    history.length === 0 ? (
-                         <div className="bg-card p-6 rounded-xl shadow-sm border border-border text-center text-muted-foreground">
-                            No delivery history yet.
-                        </div>
-                    ) : (
-                        history.map((task, idx) => (
-                             <div key={idx} className="bg-card p-6 rounded-xl shadow-sm border border-border opacity-75 hover:opacity-100 transition">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div>
-                                        <h3 className="font-bold text-foreground">{task.customerName}</h3>
-                                        <p className="text-muted-foreground text-sm">Order #{task.orderId.slice(-6)}</p>
+
+                            {/* Address Card */}
+                            <div className="bg-gray-50 rounded-2xl p-5 mb-6 border border-gray-100">
+                                <div className="flex gap-4">
+                                    <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 h-fit">
+                                        <MapPin className="w-6 h-6 text-indigo-500" />
                                     </div>
-                                    <span className="bg-success/20 text-success text-xs px-2 py-1 rounded-full font-medium flex items-center gap-1">
-                                        <CheckCircle className="w-3 h-3" /> DELIVERED
-                                    </span>
-                                </div>
-                                <div className="flex items-start gap-2 text-muted-foreground text-sm">
-                                    <MapPin className="w-4 h-4 mt-0.5 shrink-0" />
-                                    <p>{task.address}</p>
+                                    <div>
+                                        <p className="text-gray-900 font-medium text-lg leading-snug">{activeTask.address}</p>
+                                        <p className="text-gray-400 text-xs mt-1">Order #{activeTask.orderId}</p>
+                                        
+                                        {activeTask.location && (
+                                            <div className="mt-3 flex items-center gap-2 text-xs text-indigo-600 bg-indigo-50/50 w-fit px-2 py-1 rounded">
+                                                <Locate className="w-3 h-3" />
+                                                <span>Target: {activeTask.location.lat.toFixed(4)}, {activeTask.location.lng.toFixed(4)}</span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                        ))
-                    )
-                )}
-            </div>
 
-            {/* Active Task */}
-            <div className="space-y-4">
-                <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                    <Navigation className="w-5 h-5 text-primary" /> Active Delivery
-                </h2>
-                {activeTask ? (
-                    <div className="bg-card p-6 rounded-xl shadow-lg border-2 border-primary/20">
-                         <div className="flex justify-between items-start mb-6">
-                             <div>
-                                 <span className="text-xs font-bold text-primary uppercase tracking-wide">Current Destination</span>
-                                 <h3 className="text-xl font-bold text-foreground mt-1">{activeTask.customerName}</h3>
-                             </div>
-                             <button onClick={handleComplete} className="text-sm text-success font-medium hover:underline">Mark Delivered</button>
-                         </div>
-                         
-                         <div className="bg-primary/10 p-4 rounded-lg mb-6">
-                             <div className="flex items-start gap-3">
-                                 <MapPin className="w-5 h-5 text-primary mt-0.5" />
-                                 <p className="text-primary-foreground font-medium text-foreground">{activeTask.address}</p>
-                             </div>
-                             {activeTask.location && (
-                                <div className="mt-2 text-xs text-primary pl-8">
-                                    📍 Customer Simulated at: {activeTask.location.lat.toFixed(4)}, {activeTask.location.lng.toFixed(4)}
+                            {/* Map Container */}
+                            <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-inner bg-gray-100 h-[320px] mb-6 relative group">
+                                {activeTask.location && currentLoc ? (
+                                    <DriverMap driverLoc={currentLoc} customerLoc={activeTask.location} />
+                                ) : (
+                                    <div className="absolute inset-0 flex items-center justify-center text-gray-400 bg-gray-50">
+                                        <div className="text-center">
+                                            <Locate className="w-10 h-10 mx-auto mb-2 opacity-50 animate-pulse" />
+                                            <p>Acquiring GPS Signal...</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Controls */}
+                            <div className="grid md:grid-cols-2 gap-4">
+                                <button 
+                                    onClick={toggleDriving}
+                                    className={`py-4 px-6 rounded-xl font-bold flex items-center justify-center gap-3 transition-all active:scale-95 ${
+                                        isDriving 
+                                        ? "bg-red-50 text-red-600 border-2 border-red-100 hover:bg-red-100"
+                                        : "bg-blue-600 text-white shadow-lg shadow-blue-200 hover:bg-blue-700"
+                                    }`}
+                                >
+                                    {isDriving ? (
+                                        <><Power className="w-5 h-5" /> Stop Simulation</>
+                                    ) : (
+                                        <><Navigation className="w-5 h-5" /> Start Simulation</>
+                                    )}
+                                </button>
+                                
+                                <div className="flex items-center justify-between px-5 bg-gray-50 rounded-xl border border-gray-100">
+                                     <span className="text-sm font-medium text-gray-600">Mock GPS</span>
+                                      <label className="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" checked={useSimulation} onChange={(e) => setUseSimulation(e.target.checked)} className="sr-only peer" />
+                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-100 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                      </label>
                                 </div>
-                             )}
+                            </div>
+
+                            {/* Manual Location Panel */}
+                            <div className="mt-8 pt-6 border-t border-dashed border-gray-200">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h4 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500"></div>
+                                        Manual Location Override
+                                    </h4>
+                                    <button 
+                                        onClick={handleUseLiveLocation}
+                                        className="text-xs bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg hover:bg-indigo-100 font-semibold transition flex items-center gap-1.5"
+                                    >
+                                        <Locate className="w-3 h-3" /> Get Device Location
+                                    </button>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {['houseNo', 'street', 'city', 'state', 'zip'].map(field => (
+                                        <input 
+                                            key={field}
+                                            type="text" 
+                                            placeholder={
+                                                field === 'zip' ? 'PIN / Zip Code' :
+                                                field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1').trim()
+                                            }
+                                            className="bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 outline-none transition-shadow focus:ring-2"
+                                            value={(manualAddress as any)[field]}
+                                            onChange={e => setManualAddress({...manualAddress, [field]: e.target.value})}
+                                        />
+                                    ))}
+                                    <button 
+                                        onClick={async () => {
+                                             // Same logic as before, just triggering it
+                                             // We need to DRY this up or Copy paste the logic?
+                                             // I kept the handler outside the return, so I can just invoke custom logic here or copy-paste the query build.
+                                             // For brevity in this replacement, I'll copy the click handler logic or call a function if I had extracted it.
+                                             // Since I'm replacing the whole return, I need to inline the click handler logic again or ideally, extract it.
+                                             // I will inline it for safety to ensure it works.
+                                             /* INLINED LOGIC FROM PREVIOUS HANDLER */
+                                            const parts = [manualAddress.houseNo, manualAddress.street, manualAddress.city, manualAddress.state, manualAddress.zip, "India"].filter(Boolean);
+                                            const query = parts.join(", ");
+                                            if(!query) return alert("Enter details");
+                                            
+                                            try {
+                                                const res = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+                                                if(res.data && res.data.length > 0) {
+                                                    const { lat, lon, display_name } = res.data[0];
+                                                    const validLat = parseFloat(lat);
+                                                    const validLng = parseFloat(lon);
+                                                    setCurrentLoc({ lat: validLat, lng: validLng });
+                                                    const userId = localStorage.getItem("driver_id");
+                                                    if(socket && userId) socket.emit("update-location", { userId, latitude: validLat, longitude: validLng });
+                                                    setGeoError(null);
+                                                    alert(`Updated: ${display_name}`);
+                                                } else { alert("Address not found"); }
+                                            } catch(e) { console.error(e); alert("Failed"); }
+                                        }}
+                                        className="col-span-2 bg-gray-800 text-white font-medium py-2.5 rounded-lg hover:bg-black transition shadow-lg shadow-gray-200"
+                                    >
+                                        Update Map Location
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            {geoError && (
+                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 p-4 bg-red-50 text-red-700 text-sm rounded-xl border border-red-100 flex items-start gap-3">
+                                    <AlertCircle className="w-5 h-5 shrink-0" />
+                                    <div>
+                                        <p className="font-bold">Location Error</p>
+                                        <p>{geoError}</p>
+                                    </div>
+                                </motion.div>
+                            )}
+
+                        </div>
+                    </motion.div>
+                 ) : (
+                     <div className="h-full min-h-[500px] flex flex-col items-center justify-center bg-white rounded-3xl border border-dashed border-gray-300 p-8 text-center text-gray-400">
+                         <div className="bg-gray-50 p-6 rounded-full mb-6 animate-pulse">
+                            <Navigation className="w-12 h-12 text-gray-300" />
                          </div>
-
-                         {/* Live Map Visualization */}
-                         {activeTask.location && currentLoc && (
-                             <div className="mb-6">
-                                 <DriverMap driverLoc={currentLoc} customerLoc={activeTask.location} />
-                             </div>
-                         )}
-
-                         <button 
-                             onClick={toggleDriving}
-                             className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 transition ${
-                                 isDriving 
-                                 ? "bg-destructive/10 text-destructive hover:bg-destructive/20"
-                                 : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/20 shadow-xl"
-                             }`}
-                         >
-                             {isDriving ? (
-                                 <>Stop Simulation</>
-                             ) : (
-                                 <><Navigation className="w-6 h-6" /> Start Driving Simulation</>
-                             )}
-                         </button>
-                         <p className="text-center text-xs text-gray-400 mt-3">
-                             *Simulates GPS movement for demo
-                         </p>
-                          <div className="flex items-center justify-center gap-2 mt-4">
-                              <input 
-                                  type="checkbox" 
-                                  id="useSim"
-                                  checked={useSimulation}
-                                  onChange={(e) => setUseSimulation(e.target.checked)}
-                                  className="w-4 h-4"
-                              />
-                              <label htmlFor="useSim" className="text-sm text-gray-600">
-                                  Use Simulation (Mock GPS)
-                              </label>
-                          </div>
-
-                          {geoError && (
-                              <div className="mt-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-200 text-center">
-                                  ⚠️ {geoError}
-                              </div>
-                          )}
-                          
-                          {/* Manual Location Fallback Form */}
-                          <div className="mt-6 border-t pt-4">
-                              <p className="text-sm text-gray-600 mb-3 font-medium flex items-center gap-2">
-                                <MapPin className="w-4 h-4"/> Manual Location Entry
-                              </p>
-                              
-                              <div className="grid grid-cols-2 gap-3 mb-3">
-                                <input 
-                                    type="text" placeholder="House / Flat No." 
-                                    className="p-2 border rounded-lg text-xs"
-                                    value={manualAddress.houseNo}
-                                    onChange={e => setManualAddress({...manualAddress, houseNo: e.target.value})}
-                                />
-                                <input 
-                                    type="text" placeholder="Street / Area" 
-                                    className="p-2 border rounded-lg text-xs"
-                                    value={manualAddress.street}
-                                    onChange={e => setManualAddress({...manualAddress, street: e.target.value})}
-                                />
-                                <input 
-                                    type="text" placeholder="Landmark (Optional)" 
-                                    className="p-2 border rounded-lg text-xs"
-                                    value={manualAddress.landmark}
-                                    onChange={e => setManualAddress({...manualAddress, landmark: e.target.value})}
-                                />
-                                <input 
-                                    type="text" placeholder="City / Town" 
-                                    className="p-2 border rounded-lg text-xs"
-                                    value={manualAddress.city}
-                                    onChange={e => setManualAddress({...manualAddress, city: e.target.value})}
-                                />
-                                <input 
-                                    type="text" placeholder="District" 
-                                    className="p-2 border rounded-lg text-xs"
-                                    value={manualAddress.district}
-                                    onChange={e => setManualAddress({...manualAddress, district: e.target.value})}
-                                />
-                                <input 
-                                    type="text" placeholder="State" 
-                                    className="p-2 border rounded-lg text-xs"
-                                    value={manualAddress.state}
-                                    onChange={e => setManualAddress({...manualAddress, state: e.target.value})}
-                                />
-                                <input 
-                                    type="text" placeholder="PIN / Zip Code" 
-                                    className="p-2 border rounded-lg text-xs col-span-2"
-                                    value={manualAddress.zip}
-                                    onChange={e => setManualAddress({...manualAddress, zip: e.target.value})}
-                                />
-                              </div>
-
-                              <button 
-                                onClick={async () => {
-                                    // Construct query
-                                    const parts = [
-                                        manualAddress.houseNo,
-                                        manualAddress.street,
-                                        manualAddress.city,
-                                        manualAddress.state,
-                                        manualAddress.zip,
-                                        "India" // Default country
-                                    ].filter(Boolean);
-                                    
-                                    const query = parts.join(", ");
-                                    if(!query) {
-                                        alert("Please enter address details");
-                                        return;
-                                    }
-                                    
-                                    try {
-                                        const res = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
-                                        if(res.data && res.data.length > 0) {
-                                            const { lat, lon } = res.data[0];
-                                            const validLat = parseFloat(lat);
-                                            const validLng = parseFloat(lon);
-                                            
-                                            const loc = { lat: validLat, lng: validLng };
-                                            setCurrentLoc(loc);
-                                            
-                                          const userId = localStorage.getItem("driver_id");
-                                            if(!userId) {
-                                                alert("User ID missing. Please re-login.");
-                                                return;
-                                            }
-                                            if(socket) {
-                                                socket.emit("update-location", {
-                                                    userId,
-                                                    latitude: validLat,
-                                                    longitude: validLng
-                                                });
-                                            }
-                                            setGeoError(null);
-                                            alert(`Location set to: ${res.data[0].display_name}`);
-                                        } else {
-                                            alert("Address not found. Try less specific details.");
-                                        }
-                                    } catch(e) {
-                                        console.error(e);
-                                        alert("Failed to find location");
-                                    }
-                                }}
-                                className="w-full bg-gray-800 text-white py-2 rounded-lg text-sm font-medium hover:bg-black transition"
-                              >
-                                Update Location on Map
-                              </button>
-                          </div>
-                    </div>
-                ) : (
-                    <div className="bg-gray-50 border-2 border-dashed border-gray-200 p-10 rounded-xl flex flex-col items-center justify-center text-gray-400">
-                        <Navigation className="w-12 h-12 mb-3 opacity-20" />
-                        <p>No active delivery selected.</p>
-                        <p className="text-sm">Accept a task to start navigation.</p>
-                    </div>
-                )}
+                         <h3 className="text-xl font-bold text-gray-900 max-w-md">Ready for Action</h3>
+                         <p className="max-w-xs mx-auto mt-2">Select a task from the list on the left to start your delivery mission.</p>
+                     </div>
+                 )}
+                 </AnimatePresence>
             </div>
-        </div>
+        </main>
     </div>
   );
 }

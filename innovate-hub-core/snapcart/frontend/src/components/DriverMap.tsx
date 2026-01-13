@@ -1,22 +1,15 @@
 "use client";
 
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { useEffect } from "react";
+import { useEffect, useRef, useMemo } from "react";
 
-// Fix Leaflet icons
-// @ts-ignore
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-});
 
 interface DriverMapProps {
   driverLoc: { lat: number; lng: number };
   customerLoc: { lat: number; lng: number };
+  onDriverMove?: (lat: number, lng: number) => void;
 }
 
 // Component to handle map camera updates
@@ -28,12 +21,59 @@ function RecenterMap({ lat, lng }: { lat: number; lng: number }) {
   return null;
 }
 
-export default function DriverMap({ driverLoc, customerLoc }: DriverMapProps) {
-  // Center map on driver
+// Draggable Marker Component
+function DraggableDriverMarker({ position, onMove }: { position: { lat: number, lng: number }, onMove?: (lat: number, lng: number) => void }) {
+    const markerRef = useRef<L.Marker>(null);
+    const eventHandlers = useMemo(
+      () => ({
+        dragend() {
+          const marker = markerRef.current;
+          if (marker != null && onMove) {
+            const { lat, lng } = marker.getLatLng();
+            onMove(lat, lng);
+          }
+        },
+      }),
+      [onMove],
+    );
+  
+    return (
+      <Marker
+        draggable={!!onMove}
+        eventHandlers={eventHandlers}
+        position={[position.lat, position.lng]}
+        ref={markerRef}
+      >
+         <Popup>You (Driver) - Drag to adjust</Popup>
+      </Marker>
+    )
+}
+
+export default function DriverMap({ driverLoc, customerLoc, onDriverMove }: DriverMapProps) {
+  
+  useEffect(() => {
+    // Fix Leaflet icons only on client side mount
+    // @ts-ignore
+    delete L.Icon.Default.prototype._getIconUrl;
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+      iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+      shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+    });
+  }, []);
+
+  // Ensure locations are valid numbers before rendering
+  if (!driverLoc || !customerLoc || 
+      isNaN(driverLoc.lat) || isNaN(driverLoc.lng) || 
+      isNaN(customerLoc.lat) || isNaN(customerLoc.lng)) {
+      return <div className="h-[300px] w-full bg-slate-100 rounded-lg flex items-center justify-center text-slate-400">Loading Map...</div>;
+  }
+
   return (
-    <div className="h-[300px] w-full rounded-lg overflow-hidden border-2 border-slate-200">
+    <div className="h-[300px] w-full rounded-lg overflow-hidden border-2 border-slate-200 isolate">
       <MapContainer 
-        center={driverLoc} 
+        key={`${JSON.stringify(customerLoc)}`} // Remount if destination (customer) changes radically
+        center={[driverLoc.lat, driverLoc.lng]} 
         zoom={14} 
         scrollWheelZoom={false} 
         style={{ height: "100%", width: "100%" }}
@@ -45,13 +85,23 @@ export default function DriverMap({ driverLoc, customerLoc }: DriverMapProps) {
         
         <RecenterMap lat={driverLoc.lat} lng={driverLoc.lng} />
 
-        {/* Driver Marker */}
-        <Marker position={driverLoc}>
-            <Popup>You (Driver)</Popup>
-        </Marker>
+        {/* Route Line */}
+        {driverLoc && customerLoc && (
+          <Polyline 
+            key={`${driverLoc.lat}-${driverLoc.lng}-${customerLoc.lat}-${customerLoc.lng}`}
+            positions={[
+              [driverLoc.lat, driverLoc.lng], 
+              [customerLoc.lat, customerLoc.lng]
+            ]} 
+            pathOptions={{ color: 'red', weight: 4, opacity: 0.7, dashArray: '10, 10' }} 
+          />
+        )}
+
+        {/* Draggable Driver Marker */}
+        <DraggableDriverMarker position={driverLoc} onMove={onDriverMove} />
 
         {/* Customer Marker */}
-        <Marker position={customerLoc}>
+        <Marker position={[customerLoc.lat, customerLoc.lng]}>
             <Popup>Customer (Destination)</Popup>
         </Marker>
       </MapContainer>
