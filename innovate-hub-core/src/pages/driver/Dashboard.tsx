@@ -121,6 +121,9 @@ export default function DriverDashboard() {
           if (!currentLoc || (currentLoc.lat === 0 && currentLoc.lng === 0)) {
               if (route.length > 0) {
                   setCurrentLoc(route[0]);
+              } else {
+                  // Fallback: If no route, start at customer location (better than 0,0)
+                  setCurrentLoc(activeTask.location);
               }
           }
       }
@@ -258,6 +261,13 @@ export default function DriverDashboard() {
                         setActiveTask(recoverTask);
                         localStorage.setItem("active_delivery_task", JSON.stringify(recoverTask));
                     }
+                } else {
+                     // Sync: If backend says no active order, clear local state
+                     if (activeTask || localStorage.getItem("active_delivery_task")) {
+                         console.log("Syncing: Clearing stale active task");
+                         setActiveTask(null);
+                         localStorage.removeItem("active_delivery_task");
+                     }
                 }
             } catch (e: any) {
                 console.error("Failed active order check");

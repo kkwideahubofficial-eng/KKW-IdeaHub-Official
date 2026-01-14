@@ -28,7 +28,7 @@ router.get('/get-assignments', async (req, res) => {
         }
 
         const assignments = await DeliveryAssignment.find({
-            brodcastedTo: userId,
+            // brodcastedTo: userId,  <-- Removed to allow open pool
             status: "brodcasted"
         }).populate({
             path: 'order',
@@ -79,7 +79,7 @@ router.post('/assignment/:id/accept-assignment', async (req, res) => {
 
         const assignment = await DeliveryAssignment.findOne({
              _id: id, 
-             brodcastedTo: userId, 
+             // brodcastedTo: userId, <-- Removed to allow open pool acceptance
              status: "brodcasted" 
         });
 
@@ -171,7 +171,8 @@ router.post('/create-assignment', async (req, res) => {
         const driverIds = drivers.map(d => d._id);
 
         if (driverIds.length === 0) {
-            return res.status(400).json({ message: "No delivery partners found to broadcast to." });
+            console.log("Warning: No delivery partners found immediately. Task will be in open pool.");
+            // return res.status(400).json({ message: "No delivery partners found to broadcast to." });
         }
 
         // Create Assignment

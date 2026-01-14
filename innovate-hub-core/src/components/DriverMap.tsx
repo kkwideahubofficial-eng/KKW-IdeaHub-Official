@@ -63,9 +63,7 @@ export default function DriverMap({ driverLoc, customerLoc, onDriverMove }: Driv
   // Ensure locations are valid numbers before rendering
   if (!driverLoc || !customerLoc || 
       isNaN(driverLoc.lat) || isNaN(driverLoc.lng) || 
-      isNaN(customerLoc.lat) || isNaN(customerLoc.lng) ||
-      (driverLoc.lat === 0 && driverLoc.lng === 0) ||
-      (customerLoc.lat === 0 && customerLoc.lng === 0)) {
+      isNaN(customerLoc.lat) || isNaN(customerLoc.lng)) {
       return <div className="h-[300px] w-full bg-slate-100 rounded-lg flex items-center justify-center text-slate-400">Loading Map...</div>;
   }
 
