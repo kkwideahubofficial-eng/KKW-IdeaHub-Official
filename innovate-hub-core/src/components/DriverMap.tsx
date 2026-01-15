@@ -7,6 +7,7 @@ import React from 'react';
 interface DriverMapProps {
   driverLoc: { lat: number; lng: number };
   customerLoc: { lat: number; lng: number };
+  address?: string;
   onDriverMove?: (lat: number, lng: number) => void;
 }
 
@@ -47,7 +48,7 @@ function DraggableDriverMarker({ position, onMove }: { position: { lat: number, 
     )
 }
 
-export default function DriverMap({ driverLoc, customerLoc, onDriverMove }: DriverMapProps) {
+export default function DriverMap({ driverLoc, customerLoc, address, onDriverMove }: DriverMapProps) {
   
   useEffect(() => {
     // Fix Leaflet icons only on client side mount
@@ -100,7 +101,10 @@ export default function DriverMap({ driverLoc, customerLoc, onDriverMove }: Driv
 
         {/* Customer Marker */}
         <Marker position={[customerLoc.lat, customerLoc.lng]}>
-            <Popup>Destination</Popup>
+            <Popup>
+              <div className="text-sm font-semibold">Destination</div>
+              <div className="text-xs">{address || "Customer Location"}</div>
+            </Popup>
         </Marker>
       </MapContainer>
     </div>

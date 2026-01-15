@@ -205,7 +205,6 @@ export default function DriverDashboard() {
                         };
 
                         // Fix: If location is 0,0 try to geocode with detailed hierarchy
-                        // Robust Geocoding Fallback
                         const hasValidLocation = recoverTask.location && 
                                                recoverTask.location.lat !== 0 && 
                                                recoverTask.location.lng !== 0 &&
@@ -222,12 +221,11 @@ export default function DriverDashboard() {
                                      `${shipping.addressLine1}, ${shipping.city}, ${shipping.state}, ${shipping.postalCode}`,
                                      `${shipping.city}, ${shipping.state}, ${shipping.postalCode}`,
                                      `${shipping.city}, ${shipping.state}`,
-                                     "Pune, Maharashtra, India" // Absolute fallback for demo
+                                     "Nashik, Maharashtra, India" // Default fallback
                                  ];
 
                                  for (const q of queries) {
                                      if(!q || q.trim() === "") continue;
-                                     console.log("Geocoding attempt:", q);
                                      try {
                                          const res = await axios.get(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`);
                                          if(res.data && res.data.length > 0) {
@@ -237,7 +235,6 @@ export default function DriverDashboard() {
                                      } catch(e) {
                                          console.warn("Geocoding failed for:", q);
                                      }
-                                     // Small delay to be nice to API
                                      await new Promise(r => setTimeout(r, 200)); 
                                  }
 
@@ -246,15 +243,15 @@ export default function DriverDashboard() {
                                          lat: parseFloat(geoRes.lat),
                                          lng: parseFloat(geoRes.lon)
                                      };
-                                     console.log("Fixed Location to:", recoverTask.location);
-                                     
-                                     // Update the task in UI immediately
-                                     // (Optional: Could save this back to DB here if we had an endpoint)
                                  } else {
-                                     console.warn("All geocoding attempts failed. Using default.");
+                                     console.warn("All geocoding attempts failed. Using default Nashik coordinates.");
+                                     // FALLBACK TO NASHIK if everything fails
+                                     recoverTask.location = { lat: 19.9975, lng: 73.7898 };
                                  }
                              } catch(e) {
                                  console.error("Critical geocoding error", e);
+                                 // Fallback on error too
+                                 recoverTask.location = { lat: 19.9975, lng: 73.7898 };
                              }
                         }
 
@@ -288,8 +285,8 @@ export default function DriverDashboard() {
                     address: assignment.order.shippingAddress?.addressLine1 || assignment.order.address?.fullAddress || "Unknown Address",
                     status: 'PENDING' as const,
                     location: { 
-                        lat: assignment.order.shippingAddress?.latitude || assignment.order.address?.latitude || 0, 
-                        lng: assignment.order.shippingAddress?.longitude || assignment.order.address?.longitude || 0 
+                        lat: assignment.order.shippingAddress?.latitude || assignment.order.address?.latitude || 19.9975, 
+                        lng: assignment.order.shippingAddress?.longitude || assignment.order.address?.longitude || 73.7898 
                     }
                 }));
             
@@ -306,6 +303,10 @@ export default function DriverDashboard() {
                 });
 
                 newSocket.on("new-delivery-task", (task: Task) => {
+                    // Sanitize location immediately
+                    if (!task.location || (task.location.lat === 0 && task.location.lng === 0)) {
+                         task.location = { lat: 19.9975, lng: 73.7898 };
+                    }
                     setTasks(prev => {
                         if (prev.some(t => t.orderId === task.orderId)) return prev;
                         return [...prev, task];
@@ -486,7 +487,7 @@ export default function DriverDashboard() {
                         
                         <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-inner bg-gray-100 h-[320px] mb-4 relative">
                             {activeTask.location && currentLoc ? (
-                                <DriverMap driverLoc={currentLoc} customerLoc={activeTask.location} />
+                                <DriverMap driverLoc={currentLoc} customerLoc={activeTask.location} address={activeTask.address} />
                             ) : (
                                 <div className="absolute inset-0 flex items-center justify-center text-gray-400 bg-gray-50">
                                     <p>Waiting for GPS...</p>
