@@ -120,11 +120,11 @@ const MyBookings = () => {
 
       {(['all', 'pending', 'approved', 'rejected'] as const).map((key) => (
         <TabsContent key={key} value={key}>
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {type === 'room' ? (
                      filterData(bookings, key).length === 0 ? <p className="text-muted-foreground p-4">No {key === 'all' ? '' : key} bookings found.</p> :
                      filterData(bookings, key).map((booking) => (
-                        <Card key={booking._id} className="overflow-hidden border-none shadow-sm ring-1 ring-border/50">
+                        <Card key={booking._id} className="overflow-hidden border-none shadow-sm ring-1 ring-border/50 h-full">
                             <CardContent className="p-6">
                                 <div className="flex justify-between items-start mb-4">
                                     <Badge variant={getStatusVariant(booking.status)} className="capitalize px-3 py-1 rounded-full text-[10px] sm:text-xs">
@@ -167,7 +167,7 @@ const MyBookings = () => {
                 ) : (
                     filterData(machineryRequests, key).length === 0 ? <p className="text-muted-foreground p-4">No {key === 'all' ? '' : key} requests found.</p> :
                     filterData(machineryRequests, key).map((req) => (
-                        <Card key={req._id} className="overflow-hidden border-none shadow-sm ring-1 ring-border/50">
+                        <Card key={req._id} className="overflow-hidden border-none shadow-sm ring-1 ring-border/50 h-full">
                             <CardContent className="p-6">
                                 <div className="flex justify-between items-start mb-4">
                                     <Badge variant={getStatusVariant(req.status)} className="capitalize px-3 py-1 rounded-full text-[10px] sm:text-xs">
