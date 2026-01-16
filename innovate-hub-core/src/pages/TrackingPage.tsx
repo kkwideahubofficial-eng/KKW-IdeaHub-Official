@@ -54,7 +54,7 @@ export default function TrackingPage() {
             try {
                 // Use generic 'orders' endpoint or specific 'track' endpoint if created
                 // Assuming standard endpoint for now: /api/orders/:id
-                const res = await axios.get(`http://localhost:5000/api/orders/${orderId}`);
+                const res = await axios.get(`/api/orders/${orderId}`);
                 if (res.data) {
                     setOrder(res.data);
                 }
@@ -119,7 +119,7 @@ export default function TrackingPage() {
 
         // Connect to Socket
         // Connect to Socket
-        const newSocket = io("http://localhost:5000"); // Backend Port
+        const newSocket = io(); // Backend Port
         setSocket(newSocket);
 
         newSocket.on("connect", () => {

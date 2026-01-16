@@ -158,7 +158,7 @@ export default function DriverDashboard() {
                  // Try to recover from auth session via backend if cookie exists or token
                  try {
                      const token = localStorage.getItem("token");
-                     const meRes = await axios.get('http://localhost:5000/api/auth/me', {
+                     const meRes = await axios.get('/api/auth/me', {
                         headers: token ? { Authorization: `Bearer ${token}` } : {}
                      });
                      if (meRes.data && meRes.data.user && meRes.data.user._id) {
@@ -176,7 +176,7 @@ export default function DriverDashboard() {
 
             // 1. Check for Active Order
             try {
-                const activeOrderRes = await axios.get('http://localhost:5000/api/delivery/current-order', {
+                const activeOrderRes = await axios.get('/api/delivery/current-order', {
                     headers: { 'x-driver-id': userId } 
                 });
                 if (activeOrderRes.data.active && activeOrderRes.data.assignment) {
@@ -271,7 +271,7 @@ export default function DriverDashboard() {
             }
 
             // 2. Get available tasks
-            const assignmentsRes = await axios.get('http://localhost:5000/api/delivery/get-assignments', {
+            const assignmentsRes = await axios.get('/api/delivery/get-assignments', {
                 headers: { 'x-driver-id': userId }
             });
             
@@ -294,7 +294,7 @@ export default function DriverDashboard() {
 
              // Connect Socket
             if (!socket) {
-                const newSocket = io("http://localhost:5000"); // Standard Backend Port
+                const newSocket = io(); // Standard Backend Port (auto-detects origin)
                 setSocket(newSocket);
 
                 newSocket.on("connect", () => {
@@ -332,7 +332,7 @@ export default function DriverDashboard() {
       try {
           if(task.assignmentId) {
              const userId = localStorage.getItem("driver_id");
-             await axios.post(`http://localhost:5000/api/delivery/assignment/${task.assignmentId}/accept-assignment`, {}, {
+             await axios.post(`/api/delivery/assignment/${task.assignmentId}/accept-assignment`, {}, {
                  headers: { 'x-driver-id': userId }
              });
           }
@@ -410,7 +410,7 @@ export default function DriverDashboard() {
       try {
           if(activeTask.assignmentId) {
              const userId = localStorage.getItem("driver_id");
-             await axios.post(`http://localhost:5000/api/delivery/assignment/${activeTask.assignmentId}/complete-assignment`, {}, {
+             await axios.post(`/api/delivery/assignment/${activeTask.assignmentId}/complete-assignment`, {}, {
                  headers: { 'x-driver-id': userId }
              });
           }
