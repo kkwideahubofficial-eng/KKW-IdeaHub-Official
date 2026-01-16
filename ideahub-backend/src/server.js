@@ -74,8 +74,12 @@ app.use('/api/delivery', deliveryRouter);
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Root route for sanity check
-app.get('/', (_req, res) => {
-  res.status(200).send('IDEA HUB backend is running');
+// Serve static files from the React frontend app
+app.use(express.static(path.join(process.cwd(), 'public')));
+
+// SPA Fallback: ANYTHING that isn't matched by an API route or static asset should return the React app
+app.get(/.*/, (_req, res) => {
+  res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
 });
 
 // Global Error Handler
