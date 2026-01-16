@@ -44,6 +44,7 @@ import Profile from "./pages/Profile";
 import DriverDashboard from "./pages/driver/Dashboard";
 import DriverLogin from "./pages/driver/Login";
 import DriverSignup from "./pages/driver/Signup";
+import InstallPWA from "./components/InstallPWA";
 
 const queryClient = new QueryClient();
 
@@ -279,6 +280,7 @@ const App = () => (
             </Routes>
           </main>
           <Footer />
+          <InstallPWA />
         </div>
       </BrowserRouter>
     </TooltipProvider>
