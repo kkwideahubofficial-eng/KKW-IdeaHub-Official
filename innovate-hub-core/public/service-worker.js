@@ -2,10 +2,6 @@ const CACHE_NAME = "pwa-cache-v1";
 const urlsToCache = [
   "/",
   "/index.html",
-//   "/style.css", // Vite usually embeds css or hashes it, so explicit caching might be tricky without dynamic injection, but keeping as user requested for now.
-//   "/app.js" // Vite main entry is not app.js, but let's keep the structure the user asked for generally. 
-  // Ideally for Vite we cache the build output, but this static list is what was requested. 
-  // I will add a few common things that might exist or just keep it simple to avoid errors if 404.
 ];
 
 // Install
@@ -38,5 +34,34 @@ self.addEventListener("activate", (event) => {
         })
       );
     })
+  );
+});
+
+// Push Event
+self.addEventListener('push', function(event) {
+  if (event.data) {
+    const data = event.data.json();
+    const options = {
+      body: data.body,
+      icon: data.icon || '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      vibrate: [100, 50, 100],
+      data: {
+        dateOfArrival: Date.now(),
+        primaryKey: '2'
+      }
+    };
+    event.waitUntil(
+      self.registration.showNotification(data.title, options)
+    );
+  }
+});
+
+// Notification Click
+self.addEventListener('notificationclick', function(event) {
+  console.log('Notification click received.');
+  event.notification.close();
+  event.waitUntil(
+    clients.openWindow('https://ideahub.com') // Update with your actual URL or logic
   );
 });

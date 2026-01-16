@@ -77,7 +77,10 @@ app.use('/api/products', productRouter);
 app.use('/api/hero', heroRouter);
 app.use('/api/cart', cartRouter);
 app.use('/api/orders', orderRouter);
+app.use('/api/orders', orderRouter);
 app.use('/api/delivery', deliveryRouter);
+import notificationRouter from './routes/notification.routes.js';
+app.use('/api/notifications', notificationRouter);
 // Static uploads
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 

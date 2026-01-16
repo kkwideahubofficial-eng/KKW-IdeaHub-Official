@@ -3,6 +3,8 @@ import { validationResult } from 'express-validator';
 import Booking from '../models/Booking.js';
 import Room from '../models/Room.js';
 import sendEmail from '../utils/sendEmail.js';
+import PushSubscription from '../models/PushSubscription.js';
+import webpush from '../config/webPush.js';
 
 function timesOverlap(aStart, aEnd, bStart, bEnd) {
   return aStart < bEnd && bStart < aEnd;
@@ -222,14 +224,26 @@ export async function decideBooking(req, res) {
          });
       }
 
+      // QR Code Payload
+      // Check if team exists to avoid crash
+      const teamId = booking.team ? booking.team._id.toString() : 'unknown';
+
       const payload = {
         bookingId: booking._id.toString(),
-        team: booking.team.toString(),
+        team: teamId,
         slotDate: booking.slotDate,
         startTime: booking.startTime,
         endTime: booking.endTime,
       };
-      const qrCode = await QRCode.toDataURL(JSON.stringify(payload));
+      
+      let qrCode = '';
+      try {
+        qrCode = await QRCode.toDataURL(JSON.stringify(payload));
+      } catch (qrErr) {
+        console.error('QR Code generation failed', qrErr);
+        // Don't crash, just continue without QR
+      }
+
       booking.status = 'approved';
       booking.reason = reason || '';
       booking.qrCode = qrCode;
@@ -237,28 +251,85 @@ export async function decideBooking(req, res) {
       await booking.save();
 
       // Send Email Notification
-      console.log('Checking email condition. Team:', booking.team ? 'Present' : 'Missing', 'Email:', booking.team?.email);
-      
+      // Wrapped in try/catch to prevent crashing the response
       if (booking.team && booking.team.email) {
         console.log('Attempting to send email to:', booking.team.email);
-        await sendEmail(
-          booking.team.email,
-          'Booking Approved - Idea Lab',
-          `<h2>Good news, ${booking.team.name}!</h2>
-           <p>Your booking for <b>${room.name}</b> on ${booking.slotDate} (${booking.startTime} - ${booking.endTime}) has been approved.</p>
-           <p><b>Reason/Note:</b> ${booking.reason || 'None'}</p>
-           <p>Please present the QR code in your dashboard upon entry.</p>
-           <br/>
-           <p>Regards,<br/>Idea Lab Team</p>`
-        );
+        try {
+            await sendEmail(
+              booking.team.email,
+              'Booking Approved - Idea Lab',
+              `<h2>Good news, ${booking.team.name}!</h2>
+               <p>Your booking for <b>${room.name}</b> on ${booking.slotDate} (${booking.startTime} - ${booking.endTime}) has been approved.</p>
+               <p><b>Reason/Note:</b> ${booking.reason || 'None'}</p>
+               <p>Please present the QR code in your dashboard upon entry.</p>
+               <br/>
+               <p>Regards,<br/>Idea Lab Team</p>`
+            );
+        } catch (emailErr) {
+            console.error('Failed to send email:', emailErr);
+        }
       } else {
-        console.warn('Skipping email: User email not found.');
+        console.warn('Skipping email: User email not found or Team deleted.');
       }
+
+      // --- Push Notification (Approved) ---
+      try {
+        if (booking.team && booking.team._id) {
+            const subscriptions = await PushSubscription.find({ user: booking.team._id });
+            if (subscriptions.length > 0) {
+              const payload = JSON.stringify({
+                title: 'Booking Approved!',
+                body: `Your booking for ${room.name} on ${booking.slotDate} is confirmed.`,
+                icon: '/icons/icon-192.png',
+              });
+              
+              // Use Promise.allSettled to handle all sends without crashing
+              const pushPromises = subscriptions.map(sub => 
+                 webpush.sendNotification(sub.subscription, payload)
+              );
+              
+              Promise.allSettled(pushPromises).then(results => {
+                  const rejected = results.filter(r => r.status === 'rejected');
+                  if (rejected.length > 0) console.error('Some push notifications failed:', rejected.length);
+              });
+            }
+        } else {
+            console.warn('Cannot send push: Booking has no team associated.');
+        }
+      } catch (err) {
+        console.error('Failed to send push notification (Approved)', err);
+      }
+
     } else if (decision === 'rejected') {
       booking.status = 'rejected';
       booking.reason = reason || '';
       booking.history.push({ status: 'rejected', reason: booking.reason, by: req.user._id, at: new Date() });
       await booking.save();
+
+       // --- Push Notification (Rejected) ---
+       try {
+        if (booking.team && booking.team._id) {
+            const subscriptions = await PushSubscription.find({ user: booking.team._id });
+            if (subscriptions.length > 0) {
+              const payload = JSON.stringify({
+                title: 'Booking Rejected',
+                body: `Your booking for ${booking.slotDate} was rejected. Reason: ${reason || 'N/A'}`,
+                icon: '/icons/icon-192.png',
+              });
+              
+              const pushPromises = subscriptions.map(sub => 
+                 webpush.sendNotification(sub.subscription, payload)
+              );
+              
+              Promise.allSettled(pushPromises).then(results => {
+                  const rejected = results.filter(r => r.status === 'rejected');
+                  if (rejected.length > 0) console.error('Some push notifications failed:', rejected.length);
+              });
+            }
+        }
+      } catch (err) {
+        console.error('Failed to send push notification (Rejected)', err);
+      }
     } else {
       return res.status(400).json({ message: 'Invalid decision' });
     }
