@@ -252,10 +252,11 @@ export async function decideBooking(req, res) {
 
       // Send Email Notification
       // Wrapped in try/catch to prevent crashing the response
+      let emailSent = false;
       if (booking.team && booking.team.email) {
-        console.log('Attempting to send email to:', booking.team.email);
+        console.log(`[Email] Attempting to send approval email to: ${booking.team.email}`);
         try {
-            await sendEmail(
+            const emailResult = await sendEmail(
               booking.team.email,
               'Booking Approved - Idea Lab',
               `<h2>Good news, ${booking.team.name}!</h2>
@@ -265,11 +266,19 @@ export async function decideBooking(req, res) {
                <br/>
                <p>Regards,<br/>Idea Lab Team</p>`
             );
+            if (emailResult) {
+                console.log(`[Email] Successfully sent to ${booking.team.email}. MessageID: ${emailResult.messageId}`);
+                emailSent = true;
+            } else {
+                console.error(`[Email] Failed: sendEmail returned null/false for ${booking.team.email}`);
+            }
         } catch (emailErr) {
-            console.error('Failed to send email:', emailErr);
+            console.error('[Email] Exception during send:', emailErr);
         }
       } else {
-        console.warn('Skipping email: User email not found or Team deleted.');
+        console.warn('[Email] Skipping: User email not found or Team object is missing on booking.');
+        if (!booking.team) console.warn('[Email] Debug: booking.team is null/undefined');
+        else console.warn(`[Email] Debug: booking.team.email is missing. Team Ref: ${JSON.stringify(booking.team)}`);
       }
 
       // --- Push Notification (Approved) ---
