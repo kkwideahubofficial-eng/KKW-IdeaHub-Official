@@ -4,11 +4,16 @@ import "./index.css";
 
 createRoot(document.getElementById("root")!).render(<App />);
 
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker
-      .register("/service-worker.js")
-      .then((reg) => console.log("Service Worker Registered", reg))
-      .catch((err) => console.log("Service Worker Failed", err));
-  });
-}
+import { registerSW } from 'virtual:pwa-register';
+
+const updateSW = registerSW({
+  onNeedRefresh() {
+    // Prompt user to update or auto-update
+    if (confirm("New content available. Reload?")) {
+      updateSW(true);
+    }
+  },
+  onOfflineReady() {
+    console.log("App is ready to work offline.");
+  },
+});
