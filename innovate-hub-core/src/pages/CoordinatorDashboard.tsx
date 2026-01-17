@@ -40,7 +40,7 @@ interface BookingListProps {
   showActions?: boolean;
   onApprove?: (id: string) => void;
   onReject?: (id: string) => void;
-  isProcessing?: boolean;
+  processingId?: string | null;
 }
 
 const BookingList: React.FC<BookingListProps> = ({ 
@@ -48,7 +48,7 @@ const BookingList: React.FC<BookingListProps> = ({
   showActions = false, 
   onApprove = () => {},
   onReject = () => {},
-  isProcessing = false 
+  processingId = null 
 }) => {
   if (bookings.length === 0) {
     return (
@@ -64,7 +64,10 @@ const BookingList: React.FC<BookingListProps> = ({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {bookings.map((request) => (
+      {bookings.map((request) => {
+        const isActionProcessing = processingId === request._id;
+        
+        return (
         <Card key={request._id} className="flex flex-col h-full border rounded-xl shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="pb-3">
              <div className="flex justify-between items-start mb-2">
@@ -111,23 +114,23 @@ const BookingList: React.FC<BookingListProps> = ({
                     variant="outline"
                     className="flex-1 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground transition-all"
                     onClick={() => onReject(request._id)}
-                    disabled={isProcessing}
+                    disabled={isActionProcessing || (processingId !== null && processingId !== request._id)}
                   >
-                    {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4 mr-1" />}
+                    {isActionProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4 mr-1" />}
                     Reject
                   </Button>
                   <Button
                     className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground transition-all"
                     onClick={() => onApprove(request._id)}
-                    disabled={isProcessing}
+                    disabled={isActionProcessing || (processingId !== null && processingId !== request._id)} 
                   >
-                    {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
+                    {isActionProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
                     Approve
                   </Button>
              </div>
           )}
         </Card>
-      ))}
+      )})}
     </div>
   );
 };
@@ -151,7 +154,7 @@ const CoordinatorDashboard = () => {
   });
   
   const [isLoading, setIsLoading] = useState(true);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingId, setProcessingId] = useState<string | null>(null);
   const [initialLoad, setInitialLoad] = useState(true);
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -202,7 +205,7 @@ const CoordinatorDashboard = () => {
     if (!id) return;
     
     try {
-      setIsProcessing(true);
+      setProcessingId(id);
       await axios.patch(`/bookings/${id}/decision`, { 
         decision: 'approved',
         reason: 'Approved by coordinator'
@@ -226,7 +229,7 @@ const CoordinatorDashboard = () => {
       console.error('Error approving booking:', error);
       toast.error('Failed to approve booking');
     } finally {
-      setIsProcessing(false);
+      setProcessingId(null);
     }
   };
 
@@ -234,7 +237,7 @@ const CoordinatorDashboard = () => {
     if (!id) return;
     
     try {
-      setIsProcessing(true);
+      setProcessingId(id);
       await axios.patch(`/bookings/${id}/decision`, { 
         decision: 'rejected',
         reason: 'Rejected by coordinator'
@@ -258,7 +261,7 @@ const CoordinatorDashboard = () => {
       console.error('Error rejecting booking:', error);
       toast.error('Failed to reject booking');
     } finally {
-      setIsProcessing(false);
+      setProcessingId(null);
     }
   };
 
@@ -296,7 +299,7 @@ const CoordinatorDashboard = () => {
       </div>
     );
   }
-
+  
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
@@ -344,7 +347,7 @@ const CoordinatorDashboard = () => {
                 showActions={true} 
                 onApprove={handleApprove} 
                 onReject={handleReject} 
-                isProcessing={isProcessing} 
+                processingId={processingId} 
               />
             </CardContent>
           </Card>

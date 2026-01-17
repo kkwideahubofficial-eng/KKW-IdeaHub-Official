@@ -1,5 +1,6 @@
 import MachineryRequest from '../models/MachineryRequest.js';
 import '../models/Machinery.js'; // Ensure Machinery model is registered for populate
+import sendEmail from '../utils/sendEmail.js';
 
 // Create a new request (Student)
 export const createRequest = async (req, res) => {
@@ -109,10 +110,53 @@ export const updateRequestStatus = async (req, res) => {
         id, 
         updateData, 
         { new: true }
-    );
+    )
+    .populate('studentId', 'name email')
+    .populate('machineryId', 'name');
 
     if (!updatedRequest) {
       return res.status(404).json({ message: 'Request not found' });
+    }
+
+    // Send Email Notification
+    if (updatedRequest.studentId && updatedRequest.studentId.email) {
+        try {
+            const student = updatedRequest.studentId;
+            const machineName = updatedRequest.machineryId ? updatedRequest.machineryId.name : 'Machinery';
+            
+            let subject = '';
+            let htmlContent = '';
+
+            if (status === 'approved') {
+                subject = 'Machinery Request Approved - Idea Lab';
+                htmlContent = `
+                    <h2>Great news, ${student.name}!</h2>
+                    <p>Your request for <b>${machineName}</b> has been approved.</p>
+                    <p><b>Date:</b> ${new Date(updatedRequest.usageDate).toLocaleDateString()}</p>
+                    <p><b>Time:</b> ${updatedRequest.startTime} - ${updatedRequest.endTime}</p>
+                    <br/>
+                    <p>Please follow all safety guidelines while using the machinery.</p>
+                    <p>Regards,<br/>Idea Lab Team</p>
+                `;
+            } else if (status === 'rejected') {
+                subject = 'Machinery Request Rejected - Idea Lab';
+                htmlContent = `
+                    <h2>Hello ${student.name},</h2>
+                    <p>Your request for <b>${machineName}</b> has been rejected.</p>
+                    <p><b>Reason:</b> ${rejectionReason || 'No reason provided'}</p>
+                    <br/>
+                    <p>You can submit a new request or contact the coordinator for more details.</p>
+                    <p>Regards,<br/>Idea Lab Team</p>
+                `;
+            }
+
+            if (subject) {
+                await sendEmail(student.email, subject, htmlContent);
+            }
+        } catch (emailErr) {
+            console.error('Failed to send machinery request email:', emailErr);
+            // Non-blocking error
+        }
     }
 
     res.status(200).json(updatedRequest);
