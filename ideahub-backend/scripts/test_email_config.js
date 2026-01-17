@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer';
+// import nodemailer from 'nodemailer'; // Unused
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -20,36 +20,25 @@ if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
   process.exit(1);
 }
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+import sendEmail from '../src/utils/sendEmail.js';
 
 const testEmail = async () => {
   try {
-    console.log('Attempting to send test email to yourself...');
-    const info = await transporter.sendMail({
-      from: `"Test Script" <${process.env.EMAIL_USER}>`,
-      to: process.env.EMAIL_USER, // Send to self
-      subject: 'Idea Lab: Test Email',
-      text: 'If you receive this, your email configuration is correct!',
-    });
-    console.log('✅ Success! Message sent:', info.messageId);
+    console.log('Attempting to send test email to yourself via sendEmail utility...');
+    // sendEmail(to, subject, htmlContent)
+    const info = await sendEmail(
+      process.env.EMAIL_USER, 
+      'Idea Lab: Test Email (New Config)', 
+      '<h3>If you receive this, your new SMTP configuration is correct!</h3><p>Sent via port 587.</p>'
+    );
+    
+    if (info) {
+        console.log('✅ Success! Message sent:', info.messageId);
+    } else {
+        console.log('❌ Failed: sendEmail returned null.');
+    }
   } catch (error) {
     console.error('❌ Authentication Failed:', error.message);
-    if (error.responseCode === 535) {
-      console.log('\n--- HOW TO FIX ---');
-      console.log('1. Your password is likely incorrect or you are using your login password.');
-      console.log('2. You MUST use a "App Password" if 2-Step Verification is on.');
-      console.log('3. Go to: https://myaccount.google.com/security');
-      console.log('4. Enable 2-Step Verification.');
-      console.log('5. Search for "App Passwords".');
-      console.log('6. Create one named "IdeaLab" and copy the 16-character code.');
-      console.log('7. Update EMAIL_PASS in backend/.env with this code (no spaces).');
-    }
   }
 };
 
