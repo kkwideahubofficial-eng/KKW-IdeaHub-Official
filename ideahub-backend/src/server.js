@@ -18,6 +18,7 @@ import productRouter from './routes/product.routes.js';
 import heroRouter from './routes/heroRoutes.js';
 import cartRouter from './routes/cart.routes.js';
 import deliveryRouter from './routes/delivery.routes.js';
+import scheduler from './scheduler.js';
 
 
 dotenv.config();
@@ -139,6 +140,9 @@ async function start() {
   app.set('io', io);
 
   // Socket Logic
+  // eslint-disable-next-line no-undef
+  scheduler();
+
   const onlineDrivers = new Map(); // userId -> socketId
 
   io.on('connection', (socket) => {

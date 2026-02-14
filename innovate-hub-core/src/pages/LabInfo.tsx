@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Lightbulb, Target, Eye, Cpu, Printer, Microscope, Zap, Wifi, Image as ImageIcon } from "lucide-react";
+import { Lightbulb, Target, Eye, Cpu, Printer, Microscope, Zap, Wifi, Users, ArrowRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import api from "@/lib/axios";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { ReadMore } from "@/components/ReadMore";
+import { Link } from "react-router-dom";
 
 const LabInfo = () => {
   const facilities = [
@@ -38,7 +39,7 @@ const LabInfo = () => {
       description: "Gigabit internet and dedicated network infrastructure",
     },
     {
-      icon: Lightbulb,
+      icon: Users,
       name: "Collaboration Spaces",
       description: "Meeting rooms and brainstorming areas for team work",
     },
@@ -118,202 +119,238 @@ const LabInfo = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-background font-sans">
       {/* Hero Section */}
-      <div className="mb-12 text-center">
-        <h1 className="text-4xl font-bold text-foreground mb-4">About IDEA Hub</h1>
-        <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-          A state-of-the-art innovation laboratory dedicated to fostering creativity, 
-          collaboration, and cutting-edge research
-        </p>
-      </div>
-
-      {/* Vision & Mission */}
-      <div className="grid md:grid-cols-2 gap-6 mb-12">
-        <Card className="bg-gradient-to-br from-primary/5 to-accent/5">
-          <CardHeader>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                <Eye className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <CardTitle>Our Vision</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground leading-relaxed">
-              To be a leading innovation hub that empowers students, researchers, and entrepreneurs 
-              to transform groundbreaking ideas into impactful solutions that address real-world challenges 
-              and drive technological advancement.
+      <section className="relative py-24 sm:py-32 bg-gradient-to-b from-blue-50/50 via-white to-white overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-[0.03]"></div>
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="text-center max-w-4xl mx-auto">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-foreground tracking-tight mb-6 leading-tight">
+              About <span className="text-primary">IDEA Hub</span>
+            </h1>
+            <p className="text-lg sm:text-xl text-muted-foreground font-light leading-relaxed max-w-2xl mx-auto">
+              A state-of-the-art innovation laboratory dedicated to fostering creativity, 
+              collaboration, and cutting-edge research.
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+      </section>
 
-        <Card className="bg-gradient-to-br from-secondary/5 to-accent/5">
-          <CardHeader>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-secondary rounded-lg flex items-center justify-center">
-                <Target className="w-5 h-5 text-secondary-foreground" />
+      <div className="container mx-auto px-4 pb-20 space-y-24">
+        {/* Vision & Mission */}
+        <section className="grid md:grid-cols-2 gap-8 lg:gap-12">
+          <Card className="h-full border-none shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition-all duration-300 rounded-2xl bg-white overflow-hidden group">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-4 mb-2">
+                <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                  <Eye className="w-6 h-6 text-primary" />
+                </div>
+                <CardTitle className="text-2xl font-bold text-foreground">Our Vision</CardTitle>
               </div>
-              <CardTitle>Our Mission</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground leading-relaxed">
-              To provide world-class facilities, mentorship, and resources that enable innovators 
-              to experiment, prototype, and launch their ideas. We foster a collaborative ecosystem 
-              where creativity meets technology to solve tomorrow's problems today.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground leading-relaxed text-base">
+                To be a leading innovation hub that empowers students, researchers, and entrepreneurs 
+                to transform groundbreaking ideas into impactful solutions that address real-world challenges 
+                and drive technological advancement.
+              </p>
+            </CardContent>
+          </Card>
 
-      {/* Facilities Section */}
-      <div className="mb-12">
-        <h2 className="text-3xl font-bold text-foreground mb-6 text-center">Our Facilities</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {facilities.map((facility, index) => (
-            <Card key={index} className="hover:shadow-lg transition-all duration-300">
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-accent rounded-lg flex items-center justify-center flex-shrink-0">
+          <Card className="h-full border-none shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition-all duration-300 rounded-2xl bg-white overflow-hidden group">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-4 mb-2">
+                <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                  <Target className="w-6 h-6 text-primary" />
+                </div>
+                <CardTitle className="text-2xl font-bold text-foreground">Our Mission</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground leading-relaxed text-base">
+                To provide world-class facilities, mentorship, and resources that enable innovators 
+                to experiment, prototype, and launch their ideas. We foster a collaborative ecosystem 
+                where creativity meets technology to solve tomorrow's problems today.
+              </p>
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Facilities Section */}
+        <section>
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-foreground mb-4">World-Class Facilities</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Access the tools and spaces you need to bring your innovations to life.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+            {facilities.map((facility, index) => (
+              <Card key={index} className="border border-border/40 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 rounded-xl bg-card overflow-hidden group">
+                <CardContent className="p-6 sm:p-8 flex flex-col items-start h-full">
+                  <div className="w-12 h-12 bg-primary/5 rounded-lg flex items-center justify-center mb-6 group-hover:bg-primary/10 transition-colors">
                     <facility.icon className="w-6 h-6 text-primary" />
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-1">{facility.name}</h3>
-                    <p className="text-sm text-muted-foreground">{facility.description}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-
-      {/* Machines Section */}
-      <div className="mb-12">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-3xl font-bold text-foreground">Machines</h2>
-          {isCoordinator && (
-            <Button onClick={() => { setEditingId(null); setForm({ name: '', summary: '', details: '', imageUrl: '' }); setOpenAdd(true); }}>Add Machine</Button>
-          )}
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {loadingMachines ? (<div>Loading...</div>) : machines.length === 0 ? (
-            <p className="text-muted-foreground">No machines yet.{isCoordinator ? ' Add one.' : ''}</p>
-          ) : machines.map((m) => (
-            <Card key={m._id} className="hover:shadow-lg transition-all duration-300 flex flex-col h-full">
-              <CardHeader>
-                <CardTitle>{m.name}</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col flex-1">
-                {m.imageUrl ? (
-                  <img
-                    src={m.imageUrl}
-                    alt={m.name}
-                    className="w-full h-44 object-cover rounded mb-3 cursor-pointer"
-                    onClick={() => handlePreview(m.imageUrl!)}
-                  />
-                ) : null}
-                <p className="text-sm text-muted-foreground mb-2">{m.summary}</p>
-                <div className="flex-1 text-sm">
-                   <ReadMore text={m.details || ''} limit={30} />
-                </div>
-                {isCoordinator && (
-                  <div className="mt-3 flex justify-end gap-2">
-                     <Button variant="outline" size="sm" onClick={() => startEdit(m)}>Edit</Button>
-                    <Button variant="destructive" size="sm" onClick={async () => {
-                      if (!confirm('Delete this machine?')) return;
-                      try {
-                        await api.delete(`/machines/${m._id}`);
-                        setMachines(machines.filter((x) => x._id !== m._id));
-                        toast.success('Machine deleted');
-                      } catch { toast.error('Failed to delete'); }
-                    }}>Delete</Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-
-      {/* About Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">About the Lab</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 text-muted-foreground">
-          <p>
-            IDEA Hub is a premier innovation laboratory established to bridge the gap between 
-            theoretical knowledge and practical application. Our 5,000 square foot facility houses 
-            cutting-edge equipment and technology that enables students, faculty, and external 
-            collaborators to bring their innovative concepts to life.
-          </p>
-          <p>
-            Since our inception, we have supported over 500 projects across diverse domains including 
-            artificial intelligence, robotics, IoT, sustainable technology, healthcare innovation, 
-            and social entrepreneurship. Our lab operates on the principle that innovation flourishes 
-            in an environment that combines excellent infrastructure with collaborative spirit.
-          </p>
-          <p>
-            We offer not just physical resources but also mentorship from industry experts, 
-            workshops on emerging technologies, networking opportunities with potential investors, 
-            and a supportive community of like-minded innovators. Whether you're a student with 
-            your first idea or an experienced researcher, IDEA Hub provides the platform to 
-            experiment, fail, learn, and succeed.
-          </p>
-          <div className="grid md:grid-cols-3 gap-6 mt-6 pt-6 border-t">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-primary mb-1">24/7</div>
-              <div className="text-sm">Access Available</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-primary mb-1">500+</div>
-              <div className="text-sm">Projects Supported</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-primary mb-1">50+</div>
-              <div className="text-sm">Expert Mentors</div>
-            </div>
+                  <h3 className="text-xl font-bold text-foreground mb-3 group-hover:text-primary transition-colors">
+                    {facility.name}
+                  </h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed line-clamp-3">
+                    {facility.description}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </CardContent>
-      </Card>
+          
+          {/* CTA Button */}
+          <div className="mt-12 text-center">
+            <Link to="/book-slots">
+               <Button size="lg" className="rounded-full px-8 shadow-lg hover:shadow-xl transition-all">
+                  Explore & Book Facilities
+                  <ArrowRight className="ml-2 w-4 h-4" />
+               </Button>
+            </Link>
+          </div>
+        </section>
+
+        {/* Machines Section */}
+        <section>
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-3xl font-bold text-foreground">Featured Equipment</h2>
+            {isCoordinator && (
+              <Button onClick={() => { setEditingId(null); setForm({ name: '', summary: '', details: '', imageUrl: '' }); setOpenAdd(true); }}>
+                Add Machine
+              </Button>
+            )}
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {loadingMachines ? (
+              <div className="col-span-full py-12 text-center text-muted-foreground">Loading equipment data...</div>
+            ) : machines.length === 0 ? (
+              <div className="col-span-full py-12 text-center bg-muted/30 rounded-xl border border-dashed border-muted-foreground/20">
+                <p className="text-muted-foreground">No machines listed yet.</p>
+                {isCoordinator && <Button variant="link" className="mt-2" onClick={() => setOpenAdd(true)}>Add your first machine</Button>}
+              </div>
+            ) : machines.map((m) => (
+              <Card key={m._id} className="border border-border/50 shadow-sm hover:shadow-lg transition-all duration-300 rounded-xl overflow-hidden flex flex-col h-full bg-card">
+                <div className="relative aspect-video overflow-hidden">
+                   {m.imageUrl ? (
+                    <img
+                      src={m.imageUrl}
+                      alt={m.name}
+                      className="w-full h-full object-cover transition-transform duration-500 hover:scale-105 cursor-pointer"
+                      onClick={() => handlePreview(m.imageUrl!)}
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-muted flex items-center justify-center text-muted-foreground">
+                      <Cpu className="w-12 h-12 opacity-20" />
+                    </div>
+                  )}
+                </div>
+                
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg font-bold">{m.name}</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col flex-1 pt-0">
+                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2 min-h-[2.5rem]">{m.summary}</p>
+                  
+                  <div className="flex-1 mt-auto">
+                     <ReadMore text={m.details || ''} limit={60} />
+                  </div>
+
+                  {isCoordinator && (
+                    <div className="mt-4 pt-4 border-t flex justify-end gap-2">
+                       <Button variant="outline" size="sm" onClick={() => startEdit(m)}>Edit</Button>
+                      <Button variant="destructive" size="sm" onClick={async () => {
+                        if (!confirm('Delete this machine?')) return;
+                        try {
+                          await api.delete(`/machines/${m._id}`);
+                          setMachines(machines.filter((x) => x._id !== m._id));
+                          toast.success('Machine deleted');
+                        } catch { toast.error('Failed to delete'); }
+                      }}>Delete</Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+
+        {/* About the Lab Text Content */}
+        <section className="max-w-4xl mx-auto">
+          <Card className="border-none shadow-none bg-transparent">
+             <div className="space-y-6 text-lg text-muted-foreground leading-relaxed text-center">
+              <p>
+                <strong className="text-foreground">IDEA Hub</strong> is a premier innovation laboratory established to bridge the gap between 
+                theoretical knowledge and practical application. Our 5,000 square foot facility houses 
+                cutting-edge equipment and technology that enables students, faculty, and external 
+                collaborators to bring their innovative concepts to life.
+              </p>
+              <p>
+                Since our inception, we have supported over <strong className="text-primary">500+ projects</strong> across diverse domains including 
+                artificial intelligence, robotics, IoT, sustainable technology, healthcare innovation, 
+                and social entrepreneurship.
+              </p>
+             </div>
+             
+             <div className="grid grid-cols-3 gap-8 mt-12 border-t border-border/40 pt-12">
+                <div className="text-center">
+                  <div className="text-4xl font-extrabold text-primary mb-2">24/7</div>
+                  <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Access Available</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-4xl font-extrabold text-primary mb-2">500+</div>
+                  <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Projects Supported</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-4xl font-extrabold text-primary mb-2">50+</div>
+                  <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Expert Mentors</div>
+                </div>
+             </div>
+          </Card>
+        </section>
+      </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="p-0">
-          {preview ? <img src={preview} alt="Preview" className="w-full h-auto" /> : null}
+        <DialogContent className="p-0 max-w-3xl bg-transparent border-none shadow-none">
+          {preview ? <img src={preview} alt="Preview" className="w-full h-auto rounded-lg shadow-2xl" /> : null}
         </DialogContent>
       </Dialog>
 
       <Dialog open={openAdd} onOpenChange={(val) => { if (!val) { setEditingId(null); setForm({ name: '', summary: '', details: '', imageUrl: '' }); } setOpenAdd(val); }}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <CardTitle>{editingId ? "Edit Machine" : "Add Machine"}</CardTitle>
           </DialogHeader>
-          <form onSubmit={handleFormSubmit} className="space-y-4">
-            <div>
+          <form onSubmit={handleFormSubmit} className="space-y-4 py-4">
+            <div className="space-y-2">
               <Label htmlFor="mname">Name</Label>
-              <Input id="mname" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+              <Input id="mname" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required placeholder="e.g. 3D Printer" />
             </div>
-            <div>
-              <Label htmlFor="msummary">Summary</Label>
-              <Input id="msummary" value={form.summary} onChange={(e) => setForm({ ...form, summary: e.target.value })} />
+            <div className="space-y-2">
+              <Label htmlFor="msummary">Summary (Short Description)</Label>
+              <Input id="msummary" value={form.summary} onChange={(e) => setForm({ ...form, summary: e.target.value })} placeholder="Brief overview..." />
             </div>
-            <div>
-              <Label htmlFor="mdetails">Details</Label>
-              <Textarea id="mdetails" value={form.details} onChange={(e) => setForm({ ...form, details: e.target.value })} />
+            <div className="space-y-2">
+              <Label htmlFor="mdetails">Full Details</Label>
+              <Textarea id="mdetails" value={form.details} onChange={(e) => setForm({ ...form, details: e.target.value })} placeholder="Detailed specifications..." className="min-h-[100px]" />
             </div>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="machine-image">Upload Image (optional)</Label>
-                <Input id="machine-image" type="file" accept="image/*" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="machine-image">Upload Image</Label>
+                <Input id="machine-image" type="file" accept="image/*" className="cursor-pointer" />
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="mimageUrl">Or Image URL</Label>
                 <Input id="mimageUrl" value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} placeholder="https://..." />
               </div>
             </div>
-            <Button type="submit">{editingId ? "Update" : "Create"}</Button>
+            <div className="flex justify-end gap-3 pt-4">
+               <Button type="button" variant="ghost" onClick={() => setOpenAdd(false)}>Cancel</Button>
+               <Button type="submit">{editingId ? "Update Machine" : "Add Machine"}</Button>
+            </div>
           </form>
         </DialogContent>
       </Dialog>
