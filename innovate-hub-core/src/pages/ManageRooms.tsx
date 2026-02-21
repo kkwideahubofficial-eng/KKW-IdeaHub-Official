@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import axios from "../lib/axios";
-import { Plus, Trash2, Edit2 } from "lucide-react";
+import { Plus, Trash2, Edit2, Users, Clock, CalendarRange, LayoutGrid, CheckCircle2, XCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -264,98 +264,115 @@ const ManageRooms = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b pb-6 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Manage Rooms & Slots</h1>
-          <p className="text-muted-foreground">Configure labs and booking time slots</p>
+          <h1 className="text-3xl font-bold text-foreground flex items-center gap-3 tracking-tight">
+             <LayoutGrid className="h-8 w-8 text-primary" /> Manage Rooms & Slots
+          </h1>
+          <p className="text-muted-foreground mt-2 text-base">Configure labs and booking time slots</p>
         </div>
+        <Dialog open={isRoomDialogOpen} onOpenChange={setIsRoomDialogOpen}>
+            <DialogTrigger asChild>
+                <Button className="shadow-sm hover:shadow-md transition-all">
+                    <Plus className="mr-2 h-4 w-4" /> Add Room
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Add New Room</DialogTitle>
+                    <DialogDescription>Create a new innovation lab/room workspace</DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleCreateRoom} className="space-y-5 mt-2">
+                    <div className="space-y-2">
+                        <Label htmlFor="roomName">Room Name</Label>
+                        <Input 
+                            id="roomName" 
+                            value={roomForm.name}
+                            onChange={e => setRoomForm({...roomForm, name: e.target.value})}
+                            required 
+                            placeholder="e.g. Innovation Lab A"
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="capacity">Capacity (Students)</Label>
+                        <Input 
+                            id="capacity" 
+                            type="number"
+                            min="1"
+                            value={roomForm.capacity}
+                            onChange={e => setRoomForm({...roomForm, capacity: parseInt(e.target.value)})}
+                            required 
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="features">Features (comma separated)</Label>
+                        <Input 
+                            id="features" 
+                            placeholder="e.g. Projector, Whiteboard, High-Speed PCs"
+                            value={roomForm.features}
+                            onChange={e => setRoomForm({...roomForm, features: e.target.value})}
+                        />
+                    </div>
+                    <DialogFooter className="pt-4">
+                        <Button type="submit" className="w-full sm:w-auto">Create Room</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
       </div>
 
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-semibold">Rooms</h2>
-            <Dialog open={isRoomDialogOpen} onOpenChange={setIsRoomDialogOpen}>
-                <DialogTrigger asChild>
-                    <Button><Plus className="mr-2 h-4 w-4" /> Add Room</Button>
-                </DialogTrigger>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Add New Room</DialogTitle>
-                        <DialogDescription>Create a new innovation lab/room</DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleCreateRoom} className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="roomName">Room Name</Label>
-                            <Input 
-                                id="roomName" 
-                                value={roomForm.name}
-                                onChange={e => setRoomForm({...roomForm, name: e.target.value})}
-                                required 
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="capacity">Capacity</Label>
-                            <Input 
-                                id="capacity" 
-                                type="number"
-                                min="1"
-                                value={roomForm.capacity}
-                                onChange={e => setRoomForm({...roomForm, capacity: parseInt(e.target.value)})}
-                                required 
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="features">Features (comma separated)</Label>
-                            <Input 
-                                id="features" 
-                                placeholder="Projector, Whiteboard, PCs"
-                                value={roomForm.features}
-                                onChange={e => setRoomForm({...roomForm, features: e.target.value})}
-                            />
-                        </div>
-                        <DialogFooter>
-                            <Button type="submit">Create Room</Button>
-                        </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
-        </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {rooms.map(room => (
-                <Card key={room._id} className={!room.isActive ? "opacity-75 border-dashed" : ""}>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <div>
-                           <CardTitle className="text-lg font-medium flex items-center gap-2">
+                <Card 
+                  key={room._id} 
+                  className={`flex flex-col overflow-hidden transition-all duration-200 border-border/50 shadow-sm hover:shadow-md ${!room.isActive ? "bg-muted/30 border-dashed" : "bg-card"}`}
+                >
+                    <CardHeader className="flex flex-row items-start justify-between pb-3 bg-muted/10 border-b border-border/50">
+                        <div className="space-y-1.5 flex-1 pr-4">
+                           <CardTitle className="text-xl font-semibold flex flex-wrap items-center gap-2 leading-tight">
                              {room.name}
-                             <span className={`text-xs px-2 py-0.5 rounded-full ${room.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                               {room.isActive ? 'ACTIVE' : 'DEACTIVE'}
+                             <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full flex items-center gap-1 ${room.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                               {room.isActive ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                               {room.isActive ? 'Active' : 'Deactivated'}
                              </span>
                            </CardTitle>
+                           <div className="flex items-center text-sm text-muted-foreground gap-1.5">
+                               <Users className="w-4 h-4 text-primary/70" />
+                               Capacity: <span className="font-medium text-foreground">{room.capacity}</span>
+                           </div>
                         </div>
-                        <Button variant="ghost" size="icon" onClick={() => handleDeleteRoom(room._id)} className="text-destructive hover:bg-destructive/10">
+                        <Button variant="ghost" size="icon" onClick={() => handleDeleteRoom(room._id)} className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 -mt-1 -mr-2 flex-shrink-0">
                             <Trash2 className="h-4 w-4" />
                         </Button>
                     </CardHeader>
-                    <CardContent>
-                        <div className="text-sm text-muted-foreground mb-2">Capacity: {room.capacity} students</div>
-                        <div className="flex flex-wrap gap-2 mb-4">
-                            {room.features.map((f, i) => (
-                                <span key={i} className="px-2 py-1 bg-secondary text-secondary-foreground rounded-md text-xs">
-                                    {f}
-                                </span>
-                            ))}
-                        </div>
+                    
+                    <CardContent className="pt-4 flex-1 flex flex-col">
+                        {room.features && room.features.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5 mb-5">
+                              {room.features.map((f, i) => (
+                                  <span key={i} className="px-2.5 py-1 bg-secondary text-secondary-foreground rounded-md text-xs font-medium border border-border/30">
+                                      {f}
+                                  </span>
+                              ))}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-muted-foreground italic mb-5">No specific features listed.</div>
+                        )}
                         
-                        <div className="flex gap-2 mb-4">
+                        <div className="flex-1"></div>
+
+                        <div className="pt-2">
                            {!room.isActive ? (
-                               <div className="w-full space-y-2">
-                                   <div className="p-2 bg-red-50 border border-red-100 rounded text-xs text-red-800">
-                                       <strong>Inactive:</strong> {room.deactivationReason || "No reason provided"}
+                               <div className="w-full space-y-3">
+                                   <div className="p-3 bg-rose-50/50 border border-rose-100/80 rounded-lg text-sm text-rose-800">
+                                       <strong className="block mb-1 text-rose-900">Reason for deactivation:</strong> 
+                                       {room.deactivationReason || "No reason provided"}
                                    </div>
                                    <Button 
                                      size="sm" 
-                                     className="w-full bg-green-600 hover:bg-green-700 text-white"
+                                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-colors"
                                      onClick={async () => {
                                           try {
                                             await axios.put(`/rooms/${room._id}`, { ...room, isActive: true });
@@ -364,98 +381,119 @@ const ManageRooms = () => {
                                           } catch { toast.error("Failed to activate"); }
                                      }}
                                    >
-                                     Activate Room
+                                     <CheckCircle2 className="w-4 h-4 mr-2" /> Activate Room
                                    </Button>
                                </div>
                            ) : (
                                <Button 
                                  size="sm" 
                                  variant="outline"
-                                 className="w-full text-red-600 border-red-200 hover:bg-red-50"
+                                 className="w-full text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300 transition-colors"
                                  onClick={() => {
                                       setRoomToDeactivate(room);
                                       setIsDeactivateDialogOpen(true);
                                  }}
                                >
-                                 Deactivate
+                                 <XCircle className="w-4 h-4 mr-2" /> Deactivate Temporarily
                                </Button>
                            )}
                         </div>
+                    </CardContent>
 
-                        <div className="mt-4 border-t pt-4">
-                            <h4 className="text-sm font-semibold mb-2">Schedule ({room.timeSlots?.length || 0} slots)</h4>
-                            <div className="space-y-1 mb-3">
-                                {room.timeSlots?.slice(0, 3).map((slot, i) => (
-                                    <div key={i} className="text-xs text-muted-foreground">
-                                       {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
-                                    </div>
-                                ))}
-                                {(room.timeSlots?.length || 0) > 3 && <div className="text-xs text-muted-foreground italic">...and more</div>}
-                            </div>
+                    <CardFooter className="bg-muted/10 border-t border-border/50 p-4 flex flex-col items-start gap-4">
+                        <div className="w-full">
+                            <h4 className="text-sm font-semibold mb-2.5 flex items-center gap-1.5 text-foreground/80">
+                                <Clock className="w-4 h-4" /> 
+                                Schedule <span className="text-muted-foreground font-normal">({room.timeSlots?.length || 0} slots)</span>
+                            </h4>
+                            {room.timeSlots && room.timeSlots.length > 0 ? (
+                                <div className="flex flex-wrap gap-2 mb-1">
+                                    {room.timeSlots?.slice(0, 3).map((slot, i) => (
+                                        <div key={i} className="text-xs font-medium bg-background border border-border px-2 py-1 rounded shadow-sm text-muted-foreground flex items-center gap-1">
+                                           {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
+                                        </div>
+                                    ))}
+                                    {(room.timeSlots?.length || 0) > 3 && (
+                                        <div className="text-xs font-medium bg-secondary/50 border border-transparent px-2 py-1 rounded text-muted-foreground flex items-center">
+                                            +{(room.timeSlots?.length || 0) - 3} more
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="text-xs text-muted-foreground/70 italic flex items-center gap-1 mb-1">
+                                    <CalendarRange className="w-3.5 h-3.5" /> No time slots arranged yet.
+                                </div>
+                            )}
+                        </div>
 
+                        <div className="w-full mt-auto">
                             <Dialog open={isManageSlotsOpen && selectedRoom?._id === room._id} onOpenChange={(open) => {
                                 setIsManageSlotsOpen(open);
                                 if (open) {
-                                    // Always set from the latest 'room' object in the map iteration
                                     setSelectedRoom(room);
                                 } else {
                                     setSelectedRoom(null);
                                 }
                             }}>
                                 <DialogTrigger asChild>
-                                    <Button variant="outline" size="sm" className="w-full" onClick={() => setSelectedRoom(room)}>
-                                        <Edit2 className="mr-2 h-3 w-3" /> Manage Schedule
+                                    <Button variant="default" size="sm" className="w-full shadow-sm hover:shadow transition-all" onClick={() => setSelectedRoom(room)}>
+                                        <Edit2 className="mr-2 h-4 w-4" /> Manage Schedule
                                     </Button>
                                 </DialogTrigger>
                                 <DialogContent className="max-w-md">
                                     <DialogHeader>
-                                        <DialogTitle>Manage Schedule: {selectedRoom?.name}</DialogTitle>
-                                        <DialogDescription>Add or remove time slots for this room</DialogDescription>
+                                        <DialogTitle className="text-xl">Manage Schedule</DialogTitle>
+                                        <DialogDescription>
+                                            Adding or removing time slots for <strong className="text-foreground font-semibold">{selectedRoom?.name}</strong>
+                                        </DialogDescription>
                                     </DialogHeader>
                                     
-                                    <div className="space-y-6 py-4">
-                                        <div className="space-y-4">
-                                        <div className="space-y-4">
-                                            <h4 className="font-medium text-sm">Add New Slot</h4>
+                                    <div className="space-y-6 mt-2">
+                                        <div className="bg-muted/30 p-4 rounded-lg border border-border">
+                                            <h4 className="font-semibold text-sm mb-3 flex items-center gap-2"><Plus className="w-4 h-4 text-primary" /> Add New Slot</h4>
                                             
                                             <form onSubmit={handleAddSlotToRoom} className="space-y-4">
                                                <div className="grid grid-cols-2 gap-4">
-                                                   <div className="space-y-2">
-                                                      <Label className="text-xs">Start Time</Label>
+                                                   <div className="space-y-1.5">
+                                                      <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Start Time</Label>
                                                       <TimePicker 
                                                         value={slotForm.startTime} 
                                                         onChange={(t) => setSlotForm(prev => ({ ...prev, startTime: t }))} 
                                                       />
                                                    </div>
-                                                   <div className="space-y-2">
-                                                      <Label className="text-xs">End Time</Label>
+                                                   <div className="space-y-1.5">
+                                                      <Label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">End Time</Label>
                                                       <TimePicker 
                                                         value={slotForm.endTime} 
                                                         onChange={(t) => setSlotForm(prev => ({ ...prev, endTime: t }))} 
                                                       />
                                                    </div>
                                                </div>
-                                               <Button type="submit" size="sm" className="w-full"><Plus className="h-4 w-4 mr-2" /> Add Slot</Button>
+                                               <Button type="submit" size="sm" className="w-full mt-2"><Plus className="h-4 w-4 mr-2" /> Add Slot</Button>
                                             </form>
                                         </div>
-                                        </div>
 
-                                        <div className="space-y-2">
-                                            <h4 className="font-medium text-sm">Existing Slots</h4>
+                                        <div className="space-y-3">
+                                            <h4 className="font-semibold text-sm flex items-center gap-2"><Clock className="w-4 h-4 text-primary" /> Existing Slots</h4>
                                             {selectedRoom?.timeSlots?.length === 0 ? (
-                                                <p className="text-sm text-muted-foreground italic">No slots defined</p>
+                                                <div className="text-sm text-muted-foreground italic text-center py-6 bg-muted/20 rounded-lg border border-dashed border-border">
+                                                    No slots currently defined for this room.
+                                                </div>
                                             ) : (
-                                                <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                                                <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
                                                     {selectedRoom?.timeSlots?.map((slot, idx) => (
-                                                        <div key={idx} className="flex items-center justify-between p-2 rounded-md border bg-muted/50">
-                                                            <span className="text-sm">{formatTime(slot.startTime)} - {formatTime(slot.endTime)}</span>
+                                                        <div key={idx} className="flex items-center justify-between p-3 rounded-lg border border-border/60 bg-card shadow-sm hover:border-border transition-colors group">
+                                                            <div className="flex items-center gap-2 text-sm font-medium">
+                                                                <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                                                                {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
+                                                            </div>
                                                             <Button 
                                                               variant="ghost" 
-                                                              size="sm" 
-                                                              className="h-6 w-6 p-0 text-destructive"
+                                                              size="icon" 
+                                                              className="h-7 w-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors opacity-70 group-hover:opacity-100"
                                                               onClick={() => handleRemoveSlotFromRoom(selectedRoom, idx)}
                                                             >
-                                                                <Trash2 className="h-3 w-3" />
+                                                                <Trash2 className="h-4 w-4" />
                                                             </Button>
                                                         </div>
                                                     ))}
@@ -466,10 +504,16 @@ const ManageRooms = () => {
                                 </DialogContent>
                             </Dialog>
                         </div>
-                    </CardContent>
+                    </CardFooter>
                 </Card>
             ))}
-            {rooms.length === 0 && <p className="text-muted-foreground col-span-full text-center py-8">No rooms configured.</p>}
+            {rooms.length === 0 && (
+                <div className="col-span-full py-16 flex flex-col items-center justify-center text-center bg-muted/20 border border-dashed border-border rounded-xl">
+                    <LayoutGrid className="h-12 w-12 text-muted-foreground/30 mb-4" />
+                    <h3 className="text-lg font-medium text-foreground mb-1">No rooms configured</h3>
+                    <p className="text-muted-foreground text-sm max-w-sm">You haven't added any innovation labs or rooms yet. Click "Add Room" to get started.</p>
+                </div>
+            )}
         </div>
       </div>
 

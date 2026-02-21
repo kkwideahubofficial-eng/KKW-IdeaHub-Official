@@ -119,11 +119,15 @@ export const updateRequestStatus = async (req, res) => {
     }
 
     // Send Email Notification
+    console.log(`[Machinery] updateRequestStatus: Attempting to send email. Status: ${status}`);
+    
     if (updatedRequest.studentId && updatedRequest.studentId.email) {
         try {
             const student = updatedRequest.studentId;
             const machineName = updatedRequest.machineryId ? updatedRequest.machineryId.name : 'Machinery';
             
+            console.log(`[Machinery] Sending email to: ${student.email} for machine: ${machineName}`);
+
             let subject = '';
             let htmlContent = '';
 
@@ -151,12 +155,16 @@ export const updateRequestStatus = async (req, res) => {
             }
 
             if (subject) {
-                await sendEmail(student.email, subject, htmlContent);
+                const mailResult = await sendEmail(student.email, subject, htmlContent);
+                console.log(`[Machinery] Email result: ${mailResult ? 'Date: ' + new Date() : 'Failed (null)'}`);
             }
         } catch (emailErr) {
-            console.error('Failed to send machinery request email:', emailErr);
+            console.error('[Machinery] Failed to send machinery request email:', emailErr);
             // Non-blocking error
         }
+    } else {
+        console.warn(`[Machinery] EMAIL NOT SENT: Student ID or Email missing. RequestID: ${id}`);
+        console.warn('Student Object:', updatedRequest.studentId);
     }
 
     res.status(200).json(updatedRequest);

@@ -253,8 +253,10 @@ export async function decideBooking(req, res) {
       // Send Email Notification
       // Wrapped in try/catch to prevent crashing the response
       let emailSent = false;
+      console.log(`[Booking] decideBooking: Attempting to send approval email. BookingID: ${booking._id}`);
+
       if (booking.team && booking.team.email) {
-        console.log(`[Email] Attempting to send approval email to: ${booking.team.email}`);
+        console.log(`[Booking] Sending approval email to: ${booking.team.email} for room: ${room.name}`);
         try {
             const emailResult = await sendEmail(
               booking.team.email,
@@ -267,18 +269,18 @@ export async function decideBooking(req, res) {
                <p>Regards,<br/>Idea Lab Team</p>`
             );
             if (emailResult) {
-                console.log(`[Email] Successfully sent to ${booking.team.email}. MessageID: ${emailResult.messageId}`);
+                console.log(`[Booking] Successfully sent to ${booking.team.email}. MessageID: ${emailResult.messageId}`);
                 emailSent = true;
             } else {
-                console.error(`[Email] Failed: sendEmail returned null/false for ${booking.team.email}`);
+                console.error(`[Booking] Failed: sendEmail returned null/false for ${booking.team.email}`);
             }
         } catch (emailErr) {
-            console.error('[Email] Exception during send:', emailErr);
+            console.error('[Booking] Exception during send:', emailErr);
         }
       } else {
-        console.warn('[Email] Skipping: User email not found or Team object is missing on booking.');
-        if (!booking.team) console.warn('[Email] Debug: booking.team is null/undefined');
-        else console.warn(`[Email] Debug: booking.team.email is missing. Team Ref: ${JSON.stringify(booking.team)}`);
+        console.warn('[Booking] Skipping Email: User email not found or Team object is missing on booking.');
+        if (!booking.team) console.warn('[Booking] Debug: booking.team is null/undefined');
+        else console.warn(`[Booking] Debug: booking.team object present but email missing. ID: ${booking.team._id}`);
       }
 
       // --- Push Notification (Approved) ---
