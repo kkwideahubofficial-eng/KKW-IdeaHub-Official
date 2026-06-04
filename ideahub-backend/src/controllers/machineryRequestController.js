@@ -1,4 +1,5 @@
 import MachineryRequest from '../models/MachineryRequest.js';
+import User from '../models/User.js';
 import '../models/Machinery.js'; // Ensure Machinery model is registered for populate
 import sendEmail from '../utils/sendEmail.js';
 
@@ -33,6 +34,27 @@ export const createRequest = async (req, res) => {
     });
 
     const savedRequest = await newRequest.save();
+
+    // Update requester user profile with their latest branch, year, mobile from teamMembers[0] if available
+    if (teamMembers && teamMembers.length > 0) {
+      const firstMember = teamMembers[0];
+      const updates = {};
+      if (firstMember.mobile) updates.mobile = firstMember.mobile;
+      if (firstMember.branch) updates.branch = firstMember.branch;
+      if (firstMember.year) {
+        let mappedYear = firstMember.year;
+        if (firstMember.year === '1st Year') mappedYear = 'FE';
+        else if (firstMember.year === '2nd Year') mappedYear = 'SE';
+        else if (firstMember.year === '3rd Year') mappedYear = 'TE';
+        else if (firstMember.year === '4th Year') mappedYear = 'BE';
+        updates.year = mappedYear;
+      }
+      
+      if (Object.keys(updates).length > 0) {
+        await User.findByIdAndUpdate(req.user._id, updates);
+      }
+    }
+
     res.status(201).json(savedRequest);
   } catch (error) {
     console.error('Error creating request:', error);

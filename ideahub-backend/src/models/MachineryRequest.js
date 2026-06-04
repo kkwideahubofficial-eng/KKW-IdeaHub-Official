@@ -18,6 +18,8 @@ const machineryRequestSchema = new Schema(
       name: { type: String, required: true },
       branch: { type: String },
       year: { type: String },
+      mobile: { type: String },
+      email: { type: String },
     }],
     usageDate: {
       type: Date,
