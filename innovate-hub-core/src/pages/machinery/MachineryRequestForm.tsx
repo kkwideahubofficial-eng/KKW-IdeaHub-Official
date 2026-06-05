@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
@@ -37,7 +38,7 @@ const MachineryRequestForm = () => {
     selectedSlots: [] as string[]
   });
 
-  const [teamMembers, setTeamMembers] = useState([{ name: "", branch: "", year: "" }]);
+  const [teamMembers, setTeamMembers] = useState([{ name: "", branch: "", year: "", mobile: "", email: "" }]);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -80,7 +81,7 @@ const MachineryRequestForm = () => {
        if (count > newMembers.length) {
          // Add blank rows
          for(let i=newMembers.length; i<count; i++) {
-            newMembers.push({ name: "", branch: "", year: "" });
+             newMembers.push({ name: "", branch: "", year: "", mobile: "", email: "" });
          }
        } else {
          // Trim rows
@@ -403,16 +404,49 @@ const MachineryRequestForm = () => {
                 
                 <div className="space-y-2">
                     {teamMembers.map((member, i) => (
-                        <div key={i} className="grid grid-cols-1 md:grid-cols-7 gap-2 items-center bg-secondary/20 p-2 rounded">
-                            <span className="text-xs font-bold md:col-span-1 text-center bg-secondary rounded-full w-6 h-6 flex items-center justify-center">{i+1}</span>
-                            <div className="md:col-span-2">
+                        <div key={i} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-center bg-secondary/20 p-2 rounded">
+                            <div className="md:col-span-1 flex items-center justify-center">
+                                <span className="text-xs font-bold text-center bg-secondary rounded-full w-6 h-6 flex items-center justify-center">{i+1}</span>
+                            </div>
+                            <div className="md:col-span-3">
                                 <Input placeholder="Name" value={member.name} onChange={(e) => handleMemberChange(i, 'name', e.target.value)} required className="h-8 text-sm" />
                             </div>
-                            <div className="md:col-span-2">
-                                 <Input placeholder="Branch" value={member.branch} onChange={(e) => handleMemberChange(i, 'branch', e.target.value)} required className="h-8 text-sm" />
+                            <div className="md:col-span-3">
+                                 <Input type="email" placeholder="Email" value={member.email || ""} onChange={(e) => handleMemberChange(i, 'email', e.target.value)} required className="h-8 text-sm" />
                             </div>
                             <div className="md:col-span-2">
-                                 <Input placeholder="Year" value={member.year} onChange={(e) => handleMemberChange(i, 'year', e.target.value)} required className="h-8 text-sm" />
+                                 <Input type="tel" placeholder="Mobile" value={member.mobile || ""} onChange={(e) => handleMemberChange(i, 'mobile', e.target.value)} required className="h-8 text-sm" />
+                            </div>
+                            <div className="md:col-span-2">
+                                 <Select value={member.branch} onValueChange={(val) => handleMemberChange(i, 'branch', val)}>
+                                     <SelectTrigger className="h-8 text-sm bg-background">
+                                         <SelectValue placeholder="Branch" />
+                                     </SelectTrigger>
+                                     <SelectContent>
+                                         <SelectItem value="Computer Engineering">Computer Engineering</SelectItem>
+                                         <SelectItem value="Mechanical Engineering">Mechanical Engineering</SelectItem>
+                                         <SelectItem value="CSD">CSD</SelectItem>
+                                         <SelectItem value="AIDS">AIDS</SelectItem>
+                                         <SelectItem value="Robotics">Robotics</SelectItem>
+                                         <SelectItem value="Chemical Engineering">Chemical Engineering</SelectItem>
+                                         <SelectItem value="Electrical Engineering">Electrical Engineering</SelectItem>
+                                         <SelectItem value="Civil Engineering">Civil Engineering</SelectItem>
+                                         <SelectItem value="ENTC">ENTC</SelectItem>
+                                     </SelectContent>
+                                 </Select>
+                            </div>
+                            <div className="md:col-span-1">
+                                 <Select value={member.year} onValueChange={(val) => handleMemberChange(i, 'year', val)}>
+                                     <SelectTrigger className="h-8 text-sm bg-background">
+                                         <SelectValue placeholder="Year" />
+                                     </SelectTrigger>
+                                     <SelectContent>
+                                         <SelectItem value="1st Year">1st Year</SelectItem>
+                                         <SelectItem value="2nd Year">2nd Year</SelectItem>
+                                         <SelectItem value="3rd Year">3rd Year</SelectItem>
+                                         <SelectItem value="4th Year">4th Year</SelectItem>
+                                     </SelectContent>
+                                 </Select>
                             </div>
                         </div>
                     ))}

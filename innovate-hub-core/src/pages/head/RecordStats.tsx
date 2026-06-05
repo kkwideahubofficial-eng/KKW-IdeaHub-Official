@@ -21,7 +21,7 @@ interface MachineryRecord {
     email: string;
     teamName?: string;
   };
-  teamMembers: { name: string; branch: string; year: string }[];
+  teamMembers: { name: string; branch: string; year: string; mobile?: string; email?: string }[];
   usageDate: string;
   startTime: string;
   endTime: string;

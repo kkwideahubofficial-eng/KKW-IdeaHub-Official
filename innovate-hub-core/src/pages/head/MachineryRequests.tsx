@@ -20,7 +20,7 @@ interface Request {
   _id: string;
   machineryId: { name: string; imageUrl: string };
   studentId: { name: string; branch: string; year: string; email: string; mobile: string };
-  teamMembers: { name: string; branch?: string; year?: string }[];
+  teamMembers: { name: string; branch?: string; year?: string; mobile?: string; email?: string }[];
   usageDate: string;
   startTime: string;
   endTime: string;
@@ -153,10 +153,10 @@ const MachineryRequests = () => {
                 <div>
                    <h3 className="font-semibold mb-2">Requester Info</h3>
                    <div className="p-3 bg-muted rounded-md text-sm">
-                     <p><strong>Name:</strong> {viewDialog.request.studentId?.name}</p>
-                     <p><strong>Email:</strong> {viewDialog.request.studentId?.email}</p>
-                     <p><strong>Mobile:</strong> {viewDialog.request.studentId?.mobile}</p>
-                     <p><strong>Branch/Year:</strong> {viewDialog.request.studentId?.branch} / {viewDialog.request.studentId?.year}</p>
+                     <p><strong>Name:</strong> {viewDialog.request.studentId?.name || viewDialog.request.teamMembers[0]?.name || '-'}</p>
+                     <p><strong>Email:</strong> {viewDialog.request.studentId?.email || viewDialog.request.teamMembers[0]?.email || '-'}</p>
+                     <p><strong>Mobile:</strong> {viewDialog.request.studentId?.mobile || viewDialog.request.teamMembers[0]?.mobile || '-'}</p>
+                     <p><strong>Branch/Year:</strong> {(viewDialog.request.studentId?.branch || viewDialog.request.teamMembers[0]?.branch || '-')} / {(viewDialog.request.studentId?.year || viewDialog.request.teamMembers[0]?.year || '-')}</p>
                    </div>
                 </div>
               </div>
@@ -168,11 +168,20 @@ const MachineryRequests = () => {
 
               <div>
                 <h3 className="font-semibold mb-2">Team Members ({viewDialog.request.teamMembers.length})</h3>
-                <ul className="list-disc pl-5 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                   {viewDialog.request.teamMembers.map((m, i) => (
-                    <li key={i}>{m.name} {m.branch ? `- ${m.branch}` : ''}</li>
+                    <div key={i} className="p-3 bg-muted rounded-md border">
+                      <p className="font-semibold mb-1 text-foreground">Student {i + 1}: {m.name}</p>
+                      {m.email && <p className="text-xs text-muted-foreground"><strong>Email:</strong> {m.email}</p>}
+                      {m.mobile && <p className="text-xs text-muted-foreground"><strong>Mobile:</strong> {m.mobile}</p>}
+                      {(m.branch || m.year) && (
+                        <p className="text-xs text-muted-foreground">
+                          <strong>Branch/Year:</strong> {m.branch || '-'} / {m.year || '-'}
+                        </p>
+                      )}
+                    </div>
                   ))}
-                </ul>
+                </div>
               </div>
 
               <div>

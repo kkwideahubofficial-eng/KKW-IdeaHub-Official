@@ -310,11 +310,37 @@ const ManageMachinery = () => {
                         value={slot.day}
                         onChange={(e) => handleSlotChange(index, 'day', e.target.value)}
                       >
-                         {daysOfWeek.map(day => (
-                           <option key={day} value={day}>
-                           {day} ({getNextAvailableDate(day)})
-                           </option>
-                         ))}
+                         {(() => {
+                           const getLocalDateString = (d: Date) => {
+                             const year = d.getFullYear();
+                             const month = String(d.getMonth() + 1).padStart(2, '0');
+                             const day = String(d.getDate()).padStart(2, '0');
+                             return `${year}-${month}-${day}`;
+                           };
+                           const start = getLocalDateString(new Date());
+                           const end = getLocalDateString(new Date(new Date().setDate(new Date().getDate() + 6)));
+                           
+                           const dates = [];
+                           const current = new Date(start);
+                           const endDateObj = new Date(end);
+
+                           while (current <= endDateObj) {
+                             const dayName = current.toLocaleDateString('en-US', { weekday: 'long' });
+                             const dayNum = current.getDate();
+                             const monthStr = current.toLocaleDateString('en-US', { month: 'short' });
+                             dates.push({
+                               dayName,
+                               displayText: `${dayName} (${dayNum} ${monthStr})`
+                             });
+                             current.setDate(current.getDate() + 1);
+                           }
+                           
+                           return dates.map(opt => (
+                             <option key={opt.dayName} value={opt.dayName}>
+                               {opt.displayText}
+                             </option>
+                           ));
+                         })()}
                       </select>
                       
                       <div className="flex items-center gap-2">
