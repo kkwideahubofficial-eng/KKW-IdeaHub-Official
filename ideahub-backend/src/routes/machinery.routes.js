@@ -32,6 +32,9 @@ router.get('/requests', requireAuth, requestController.getRequests);
 // Update request status (Head or Coordinator)
 router.patch('/requests/:id/status', requireAuth, requireCoordinator, requestController.updateRequestStatus);
 
+// Download machinery request PDF
+router.get('/requests/:id/pdf', requireAuth, requestController.downloadMachineryPdf);
+
 
 // --- Machinery Management Routes ---
 

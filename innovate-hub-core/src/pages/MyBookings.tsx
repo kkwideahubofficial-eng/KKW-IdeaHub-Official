@@ -3,9 +3,10 @@ import api from "@/lib/axios";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
-import { Loader2 } from "lucide-react";
+import { Loader2, FileDown } from "lucide-react";
 
 interface BookingHistoryEntry {
   status: 'pending' | 'approved' | 'rejected';
@@ -44,6 +45,28 @@ const MyBookings = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [machineryRequests, setMachineryRequests] = useState<MachineryRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  const downloadPdf = async (type: 'room' | 'machinery', id: string, name: string) => {
+    setDownloadingId(id);
+    try {
+      const endpoint = type === 'room' ? `/bookings/${id}/pdf` : `/machinery/requests/${id}/pdf`;
+      const response = await api.get(endpoint, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${name}_${id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('PDF downloaded successfully!');
+    } catch {
+      toast.error('Failed to download PDF. Please try again.');
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -161,6 +184,23 @@ const MyBookings = () => {
                                         <strong>Rejection Reason:</strong> {booking.reason}
                                     </div>
                                 )}
+
+                                <div className="mt-4 pt-4 border-t">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full gap-2"
+                                    disabled={downloadingId === booking._id}
+                                    onClick={() => downloadPdf('room', booking._id, 'RoomBooking')}
+                                  >
+                                    {downloadingId === booking._id ? (
+                                      <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                      <FileDown className="w-4 h-4" />
+                                    )}
+                                    Download Application PDF
+                                  </Button>
+                                </div>
                             </CardContent>
                         </Card>
                      ))
@@ -204,6 +244,23 @@ const MyBookings = () => {
                                         <strong>Rejection Reason:</strong> {req.rejectionReason}
                                     </div>
                                 )}
+
+                                <div className="mt-4 pt-4 border-t">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full gap-2"
+                                    disabled={downloadingId === req._id}
+                                    onClick={() => downloadPdf('machinery', req._id, req.machineryId?.name || 'MachineryRequest')}
+                                  >
+                                    {downloadingId === req._id ? (
+                                      <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                      <FileDown className="w-4 h-4" />
+                                    )}
+                                    Download Application PDF
+                                  </Button>
+                                </div>
                             </CardContent>
                         </Card>
                     ))

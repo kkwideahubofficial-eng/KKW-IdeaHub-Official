@@ -2,6 +2,7 @@ import MachineryRequest from '../models/MachineryRequest.js';
 import User from '../models/User.js';
 import '../models/Machinery.js'; // Ensure Machinery model is registered for populate
 import sendEmail from '../utils/sendEmail.js';
+import generatePdf from '../utils/pdfGenerator.js';
 
 // Create a new request (Student)
 export const createRequest = async (req, res) => {
@@ -186,11 +187,80 @@ export const updateRequestStatus = async (req, res) => {
         }
     } else {
         console.warn(`[Machinery] EMAIL NOT SENT: Student ID or Email missing. RequestID: ${id}`);
-        console.warn('Student Object:', updatedRequest.studentId);
     }
 
     res.status(200).json(updatedRequest);
   } catch (error) {
     res.status(500).json({ message: 'Error regarding request', error: error.message });
+  }
+};
+
+// Download Machinery Request PDF
+export const downloadMachineryPdf = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const request = await MachineryRequest.findById(id)
+      .populate('machineryId', 'name')
+      .populate('studentId', 'name email mobile branch year prn');
+    if (!request) {
+      return res.status(404).json({ message: 'Machinery request not found' });
+    }
+
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const qrData = JSON.stringify({
+      id: request._id,
+      name: request.studentId?.name || '',
+      status: request.status,
+      url: `${baseUrl}/api/machinery/requests/${request._id}`,
+    });
+
+    // Prepare data for PDF
+    const data = {
+      header: {
+        labName: request.machineryId?.name || 'Innovation Lab / Maker Space',
+        application: 'Machinery Request Application',
+        applicationId: request._id,
+        requestDate: request.createdAt ? new Date(request.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : ''
+      },
+      student: {
+        name: request.studentId?.name,
+        email: request.studentId?.email,
+        mobile: request.studentId?.mobile,
+        branch: request.studentId?.branch,
+        year: request.studentId?.year,
+        prn: request.studentId?.prn || ''
+      },
+      machinery: {
+        name: request.machineryId?.name,
+        usageDate: request.usageDate ? new Date(request.usageDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '',
+        timeSlot: `${request.startTime} - ${request.endTime}`,
+        purpose: request.purpose,
+        numberOfStudents: request.teamMembers?.length || 1,
+        teamMembers: request.teamMembers || []
+      },
+      status: request.status,
+      approvedBy: request.approvedBy || '',
+      approvalDate: request.approvedAt ? new Date(request.approvedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '',
+      remarks: request.rejectionReason || '',
+      documents: {
+        groupPhoto: !!request.groupPhotoUrl,
+        supportingDocument: false
+      },
+      qrData: qrData
+    };
+
+    // Generate PDF using utility
+    const pdfPath = `uploads/pdfs/Machinery_${request._id}_${request.status}_${new Date().toISOString().split('T')[0]}.pdf`;
+    await generatePdf('machinery', data, pdfPath);
+
+    res.download(pdfPath, (err) => {
+      if (err) {
+        console.error('Error sending PDF:', err);
+        res.status(500).end();
+      }
+    });
+  } catch (err) {
+    console.error('Error generating PDF:', err);
+    res.status(500).json({ message: 'Error generating PDF', error: err.message });
   }
 };

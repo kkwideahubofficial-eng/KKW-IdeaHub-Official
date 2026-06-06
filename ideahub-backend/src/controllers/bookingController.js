@@ -5,6 +5,7 @@ import Room from '../models/Room.js';
 import sendEmail from '../utils/sendEmail.js';
 import PushSubscription from '../models/PushSubscription.js';
 import webpush from '../config/webPush.js';
+import generatePdf from '../utils/pdfGenerator.js';
 
 function timesOverlap(aStart, aEnd, bStart, bEnd) {
   return aStart < bEnd && bStart < aEnd;
@@ -475,6 +476,69 @@ export async function getBookingRecords(req, res) {
   }
 }
 
+export async function downloadRoomBookingPdf(req, res) {
+  try {
+    const { id } = req.params;
+    const booking = await Booking.findById(id)
+      .populate('team', 'name email mobile branch year teamName teamMembers teamSize')
+      .populate('room', 'name');
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Room booking not found' });
+    }
+
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const leaderName = booking.team?.name || '';
+    const qrData = JSON.stringify({
+      id: booking._id,
+      name: leaderName,
+      status: booking.status,
+      url: `${baseUrl}/api/bookings/${booking._id}`,
+    });
+
+    const data = {
+      header: {
+        bookingId: booking._id,
+        bookingDate: booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : ''
+      },
+      team: {
+        teamName: booking.teamName || booking.team?.teamName || '',
+        teamSize: booking.teamSize || booking.team?.teamSize || 1,
+        teamLeaderName: leaderName,
+        email: booking.team?.email || '',
+        mobile: booking.team?.mobile || '',
+        teamMembers: booking.team?.teamMembers || []
+      },
+      booking: {
+        roomName: booking.room?.name || '',
+        date: booking.slotDate ? new Date(booking.slotDate + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '',
+        timeSlot: `${booking.startTime} - ${booking.endTime}`,
+        projectTitle: booking.purpose || '',
+        projectDescription: booking.description || ''
+      },
+      status: booking.status,
+      approvedBy: booking.history && booking.history.length > 0 ? booking.history[booking.history.length - 1].by : '',
+      approvalDate: booking.updatedAt ? new Date(booking.updatedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '',
+      remarks: booking.reason || '',
+      qrData: qrData
+    };
+
+    const pdfPath = `uploads/pdfs/RoomBooking_${booking._id}_${booking.status}_${new Date().toISOString().split('T')[0]}.pdf`;
+    await generatePdf('room', data, pdfPath);
+
+    res.download(pdfPath, (err) => {
+      if (err) {
+        console.error('Error sending PDF:', err);
+        res.status(500).end();
+      }
+    });
+
+  } catch (err) {
+    console.error('Error generating PDF:', err);
+    res.status(500).json({ message: 'Error generating PDF', error: err.message });
+  }
+}
+
 export default { 
   getRoomAvailability, 
   createBooking, 
@@ -485,6 +549,6 @@ export default {
   getAllBookings,
   getMyBookingHistory,
   getAllBookingHistory,
-  getBookingRecords
+  getBookingRecords,
+  downloadRoomBookingPdf
 };
-

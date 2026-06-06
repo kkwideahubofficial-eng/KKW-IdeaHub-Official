@@ -45,7 +45,6 @@ import DriverDashboard from "./pages/driver/Dashboard";
 import DriverLogin from "./pages/driver/Login";
 import DriverSignup from "./pages/driver/Signup";
 import InstallPWA from "./components/InstallPWA";
-import PushNotificationManager from "./components/PushNotificationManager";
 
 const queryClient = new QueryClient();
 
@@ -282,7 +281,6 @@ const App = () => (
           </main>
           <Footer />
           <InstallPWA />
-          <PushNotificationManager />
         </div>
       </BrowserRouter>
     </TooltipProvider>

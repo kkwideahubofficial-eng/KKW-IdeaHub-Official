@@ -11,7 +11,8 @@ import {
   getAllBookings,
   getMyBookingHistory,
   getAllBookingHistory,
-  getBookingRecords
+  getBookingRecords,
+  downloadRoomBookingPdf
 } from '../controllers/bookingController.js';
 
 const router = Router();
@@ -67,5 +68,7 @@ router.get('/dashboard-stats', requireAuth, requireCoordinator, getDashboardStat
 // Booking records with filters (Coordinator only)
 router.get('/records', requireAuth, requireCoordinator, getBookingRecords);
 
-export default router;
+// Route to download room booking PDF
+router.get('/:id/pdf', requireAuth, downloadRoomBookingPdf);
 
+export default router;

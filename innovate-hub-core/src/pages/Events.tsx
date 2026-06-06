@@ -2,23 +2,70 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "@/lib/axios";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { PlusCircle, Calendar, Users } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ReadMore } from "@/components/ReadMore";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar, MapPin, Users, Clock, Search, Filter, BookOpen, Bell, ArrowRight, ShieldCheck, Download, Award, PlayCircle, Layers } from "lucide-react";
+
 
 interface EventItem {
   _id: string;
   title: string;
+  category: string;
   description: string;
   date: string;
+  startTime: string;
+  endTime: string;
+  registrationStartDate: string;
+  registrationEndDate: string;
+  venue: string;
   organizer: string;
+  totalSeats: number;
+  availableSeats?: number;
   imageUrl?: string;
+  status: string;
+}
+
+interface TeamMemberItem {
+  _id: string;
+  fullName: string;
+  prn: string;
+  rollNumber: string;
+  department: string;
+  year: string;
+  division: string;
+  email: string;
+  mobile: string;
+  isTeamLeader: boolean;
+  attendance: 'pending' | 'present' | 'absent';
+  certificateNumber?: string;
+}
+
+interface RegistrationItem {
+  _id: string;
+  event: EventItem;
+  registrationId: string;
+  registrationDate: string;
+  status: 'pending' | 'approved' | 'rejected';
+  teamName: string;
+  teamSize: number;
+  projectTitle?: string;
+  problemStatement?: string;
+  projectDescription?: string;
+  skills?: string;
+  teamMembers: TeamMemberItem[];
+}
+
+interface NotificationItem {
+  _id: string;
+  title: string;
+  body: string;
+  type: string;
+  isRead: boolean;
+  createdAt: string;
 }
 
 function getCurrentUser() {
@@ -32,227 +79,727 @@ function getCurrentUser() {
   }
 }
 
+const getStatusColor = (status: string) => {
+  const s = status ? status.toLowerCase() : '';
+  if (s === 'upcoming') return 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 border-blue-500/30';
+  if (s === 'registration open') return 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border-emerald-500/30';
+  if (s === 'registration closed') return 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border-amber-500/30';
+  if (s === 'ongoing') return 'bg-purple-500/10 text-purple-500 hover:bg-purple-500/20 border-purple-500/30';
+  if (s === 'completed') return 'bg-slate-500/10 text-slate-500 hover:bg-slate-500/20 border-slate-500/30';
+  if (s === 'cancelled') return 'bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 border-rose-500/30';
+  return 'bg-secondary/30 text-secondary-foreground';
+};
+
 const Events = () => {
+  const [activeTab, setActiveTab] = useState("browse");
   const [events, setEvents] = useState<EventItem[]>([]);
+  const [registrations, setRegistrations] = useState<RegistrationItem[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ title: "", description: "", date: "", organizer: "", imageUrl: "" });
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  // Search & Filter state
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("");
 
   const user = useMemo(getCurrentUser, []);
-  const isCoordinator = user?.role === "coordinator";
 
-  useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const res = await api.get("/events");
-        setEvents(res.data);
-      } catch (e) {
-        toast.error("Failed to load events");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchEvents();
-  }, []);
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Fetch all events
+  const fetchEvents = async () => {
     try {
-      const formData = new FormData();
-      formData.append('title', form.title);
-      formData.append('description', form.description);
-      formData.append('date', new Date(form.date).toISOString());
-      formData.append('organizer', form.organizer);
-      if (form.imageUrl) {
-        // Support URL fallback if pasted
-        formData.append('imageUrl', form.imageUrl);
-      }
-      const fileInput = document.getElementById('event-image') as HTMLInputElement | null;
-      if (fileInput?.files && fileInput.files[0]) {
-        formData.append('image', fileInput.files[0]);
-      }
-      const res = await api.post("/events", formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      setEvents([res.data, ...events]);
-      setOpen(false);
-      setForm({ title: "", description: "", date: "", organizer: "", imageUrl: "" });
-      toast.success("Event created");
-    } catch (err) {
-      toast.error("Failed to create event");
+      setLoading(true);
+      // Query parameters
+      const params: any = {};
+      if (category !== "all") params.category = category;
+      if (search) params.search = search;
+      if (dateFilter) params.date = dateFilter;
+      
+      const res = await api.get("/events", { params });
+      setEvents(res.data);
+    } catch (e) {
+      toast.error("Failed to load events");
+    } finally {
+      setLoading(false);
     }
   };
 
+  // Fetch student registrations
+  const fetchRegistrations = async () => {
+    if (!user) return;
+    try {
+      const res = await api.get("/events/student/registrations");
+      setRegistrations(res.data);
+    } catch (e) {
+      console.error("Failed to fetch registrations", e);
+    }
+  };
+
+  // Fetch student notifications
+  const fetchNotifications = async () => {
+    if (!user) return;
+    try {
+      const res = await api.get("/events/student/notifications");
+      setNotifications(res.data);
+    } catch (e) {
+      console.error("Failed to fetch notifications", e);
+    }
+  };
+
+  useEffect(() => {
+    fetchEvents();
+  }, [category, search, dateFilter]);
+
+  useEffect(() => {
+    if (activeTab === "my-events") {
+      fetchRegistrations();
+    } else if (activeTab === "notifications") {
+      fetchNotifications();
+    }
+  }, [activeTab]);
+
+  const markAsRead = async (id: string) => {
+    try {
+      await api.patch(`/events/student/notifications/${id}/read`);
+      setNotifications(notifications.map(n => n._id === id ? { ...n, isRead: true } : n));
+      toast.success("Notification read");
+    } catch (e) {
+      toast.error("Error updating notification");
+    }
+  };
+
+  const handleDownloadCertificate = async (registrationId: string, eventTitle: string, memberId?: string) => {
+    try {
+      toast.loading("Preparing certificate download...");
+      const response = await api.get(`/events/certificate/${registrationId}`, {
+        params: memberId ? { memberId } : {},
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `certificate_${eventTitle.replace(/\s+/g, '_')}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.dismiss();
+      toast.success("Certificate downloaded successfully!");
+    } catch (err) {
+      toast.dismiss();
+      toast.error("Failed to download certificate.");
+    }
+  };
+
+  // Dynamic filter for status tabs under Browse
+  const filteredEvents = useMemo(() => {
+    if (statusFilter === "all") return events;
+    return events.filter(e => {
+      const currentStatus = e.status.toLowerCase();
+      if (statusFilter === "upcoming") return currentStatus === "upcoming" || currentStatus === "registration open";
+      if (statusFilter === "ongoing") return currentStatus === "ongoing";
+      if (statusFilter === "past") return currentStatus === "completed" || currentStatus === "registration closed" || currentStatus === "cancelled";
+      return true;
+    });
+  }, [events, statusFilter]);
+
+  const categories = useMemo(() => {
+    const cats = new Set(events.map(e => e.category));
+    return ["all", ...Array.from(cats)].filter(Boolean);
+  }, [events]);
+
+  // Participation History calculations
+  const historyStats = useMemo(() => {
+    const registered = registrations.length;
+    const attended = registrations.reduce((sum, r) => sum + (r.teamMembers?.filter(m => m.attendance === 'present').length || 0), 0);
+    const completed = registrations.filter(r => r.status === 'approved' && r.event && r.event.status && r.event.status.toLowerCase() === 'completed').length;
+    const certificates = registrations.reduce((sum, r) => sum + (r.teamMembers?.filter(m => m.certificateNumber).length || 0), 0);
+    return { registered, attended, completed, certificates };
+  }, [registrations]);
+
+  // Event Status Overview calculations
+  const overviewStats = useMemo(() => {
+    let upcoming = 0;
+    let ongoing = 0;
+    let past = 0;
+    const total = events.length;
+
+    events.forEach(e => {
+      const s = e.status ? e.status.toLowerCase() : "";
+      if (s === "upcoming" || s === "registration open") {
+        upcoming++;
+      } else if (s === "ongoing") {
+        ongoing++;
+      } else if (
+        s === "completed" ||
+        s === "registration closed" ||
+        s === "cancelled"
+      ) {
+        past++;
+      }
+    });
+
+    return { upcoming, ongoing, past, total };
+  }, [events]);
+
+
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-10 pt-4">
-        <div className="flex items-end justify-between border-b border-border/40 pb-6 mb-8">
-          <div>
-             <h1 className="text-4xl font-extrabold tracking-tight text-foreground/90">Events</h1>
-             <p className="text-lg text-muted-foreground/80 mt-2 font-light">Stay updated with lab happenings & upcoming workshops</p>
-          </div>
-        
-          {isCoordinator && (
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger asChild>
-                <Button className="shadow-lg hover:shadow-primary/20 transition-all">
-                  <PlusCircle className="w-4 h-4 mr-2" /> Add Event
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Add Event</DialogTitle>
-                  <DialogDescription>Fill details to create a new event.</DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleCreate} className="space-y-4">
-                  <div>
-                    <Label htmlFor="title">Title</Label>
-                    <Input id="title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
-                  </div>
-                  <div>
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea id="description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} required />
-                  </div>
-                  <div>
-                    <Label htmlFor="date">Date</Label>
-                    <Input id="date" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
-                  </div>
-                  <div>
-                    <Label htmlFor="organizer">Organizer</Label>
-                    <Input id="organizer" value={form.organizer} onChange={(e) => setForm({ ...form, organizer: e.target.value })} required />
-                  </div>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="event-image">Upload Image (optional)</Label>
-                      <Input id="event-image" type="file" accept="image/*" />
-                    </div>
-                    <div>
-                      <Label htmlFor="imageUrl">Or Image URL</Label>
-                      <Input id="imageUrl" value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} placeholder="https://..." />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button type="submit">Create</Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
-          )}
-        </div>
-
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        ) : events.length === 0 ? (
-          <div className="text-center py-20 bg-muted/20 rounded-3xl border border-dashed border-muted">
-             <Calendar className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-             <p className="text-muted-foreground text-lg">No upcoming events scheduled.</p>
-             {isCoordinator && <p className="text-sm text-primary mt-2 cursor-pointer" onClick={() => setOpen(true)}>Create the first one</p>}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {events.map((event) => (
-              <div 
-                key={event._id} 
-                className="group relative flex flex-col bg-card/50 hover:bg-card border border-black/10 dark:border-white/10 ring-1 ring-inset ring-white/70 dark:ring-white/5 shadow-sm hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] rounded-[24px] overflow-hidden transition-all duration-300 hover:-translate-y-1"
-              >
-                {/* Inset Media Container */}
-                <div className="p-4 pb-0">
-                  <div className="relative aspect-video w-full overflow-hidden rounded-[20px] bg-muted shadow-inner">
-                    {event.imageUrl ? (
-                      <img 
-                        src={event.imageUrl} 
-                        alt={event.title} 
-                        className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 cursor-pointer" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedImage(event.imageUrl || null);
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-secondary/30 text-muted-foreground/20">
-                         <Calendar className="w-16 h-16" />
-                      </div>
-                    )}
-                    
-                    {/* Floating Date Badge */}
-                    <div className="absolute top-4 left-4">
-                       <span className="px-3 py-1.5 bg-background/95 backdrop-blur-md rounded-full shadow-sm text-xs font-bold uppercase tracking-wider text-foreground border border-black/5">
-                          {new Date(event.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                       </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Content Body */}
-                <div className="p-6 flex flex-col flex-1">
-                  <div className="flex items-start justify-between mb-4">
-                     <div>
-                        <h3 className="text-2xl font-bold text-foreground leading-tight mb-1 group-hover:text-primary transition-colors">
-                           {event.title}
-                        </h3>
-                        <div className="flex items-center text-sm text-muted-foreground font-medium">
-                           <Users className="w-4 h-4 mr-1.5 opacity-70" />
-                           {event.organizer}
-                        </div>
-                     </div>
-                  </div>
-
-                  <div className="flex-1 text-muted-foreground leading-relaxed text-sm mb-6 line-clamp-3">
-                     <ReadMore text={event.description} limit={30} />
-                  </div>
-
-                  <div className="flex items-center gap-3 mt-auto pt-4 border-t border-border/40">
-                    <Link to={`/events/${event._id}`} className="flex-1">
-                      <Button variant="outline" className="w-full rounded-xl border-primary/20 hover:bg-primary/5 hover:text-primary hover:border-primary/50 transition-all font-semibold h-11">
-                        View Details
-                      </Button>
-                    </Link>
-                    
-                    {isCoordinator && (
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive h-11 w-11"
-                        onClick={async () => {
-                           if (!confirm('Delete this event?')) return;
-                           try { await api.delete(`/events/${event._id}`); setEvents(events.filter((e) => e._id !== event._id)); toast.success('Deleted'); } catch { toast.error('Error'); }
-                        }}
-                      >
-                         <span className="sr-only">Delete</span>
-                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+      {/* Page Header */}
+      <div className="mb-8 pt-4">
+        <h1 className="text-4xl font-extrabold tracking-tight text-foreground/90">Event Management</h1>
+        <p className="text-lg text-muted-foreground/80 mt-2 font-light">Create, manage and track all lab events in one place</p>
       </div>
 
-      {/* Image Modal */}
-      {selectedImage && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in fade-in duration-200"
-          onClick={() => setSelectedImage(null)}
-        >
-          <div className="relative max-w-5xl w-full h-full flex items-center justify-center p-4">
-            <button 
-              onClick={() => setSelectedImage(null)}
-              className="absolute top-4 right-4 z-50 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors backdrop-blur-md"
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-            </button>
-            <img 
-              src={selectedImage} 
-              alt="Full Preview" 
-              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-              onClick={(e) => e.stopPropagation()} 
-            />
+      {/* Event Status Overview Section */}
+      <div className="bg-[#F8FAFC] border border-slate-200/60 rounded-2xl p-6 mb-8 shadow-sm">
+        <h2 className="text-lg font-bold text-slate-800 mb-4 font-sans">Event Status Overview</h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Card 1 - Upcoming Events */}
+          <div 
+            className="flex flex-col justify-between h-[180px] p-6 rounded-[16px] border bg-[#EFF6FF] border-[#BFDBFE] text-[#2563EB] shadow-sm hover:-translate-y-[2px] hover:shadow-md transition-all duration-300 font-sans cursor-pointer group"
+            onClick={() => {
+              setActiveTab("browse");
+              setStatusFilter("upcoming");
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-[#BFDBFE] shadow-sm">
+                <Calendar className="w-5 h-5 text-[#2563EB]" />
+              </div>
+              <span className="font-semibold text-base text-[#2563EB]">Upcoming Events</span>
+            </div>
+            
+            <div className="flex flex-col items-start mt-2">
+              <span className="text-[36px] font-bold text-slate-900 leading-none">
+                {String(overviewStats.upcoming).padStart(2, '0')}
+              </span>
+              <span className="text-[13px] text-slate-500 mt-1 leading-tight font-medium">Scheduled</span>
+              <span className="text-[13px] text-slate-500 leading-tight">Yet to begin</span>
+            </div>
+            
+            <div className="flex justify-center mt-2">
+              <Button 
+                variant="outline" 
+                className="h-8 px-4 py-1 text-xs border-[#2563EB] text-[#2563EB] bg-white hover:bg-[#2563EB]/10 rounded-lg font-medium shadow-sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveTab("browse");
+                  setStatusFilter("upcoming");
+                }}
+              >
+                View All
+              </Button>
+            </div>
+          </div>
+
+          {/* Card 2 - Ongoing Events */}
+          <div 
+            className="flex flex-col justify-between h-[180px] p-6 rounded-[16px] border bg-[#F0FDF4] border-[#BBF7D0] text-[#22C55E] shadow-sm hover:-translate-y-[2px] hover:shadow-md transition-all duration-300 font-sans cursor-pointer group"
+            onClick={() => {
+              setActiveTab("browse");
+              setStatusFilter("ongoing");
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-[#BBF7D0] shadow-sm">
+                <PlayCircle className="w-5 h-5 text-[#22C55E]" />
+              </div>
+              <span className="font-semibold text-base text-[#22C55E]">Ongoing Events</span>
+            </div>
+            
+            <div className="flex flex-col items-start mt-2">
+              <span className="text-[36px] font-bold text-slate-900 leading-none">
+                {String(overviewStats.ongoing).padStart(2, '0')}
+              </span>
+              <span className="text-[13px] text-slate-500 mt-1 leading-tight font-medium">In Progress</span>
+              <span className="text-[13px] text-slate-500 leading-tight">Currently ongoing</span>
+            </div>
+            
+            <div className="flex justify-center mt-2">
+              <Button 
+                variant="outline" 
+                className="h-8 px-4 py-1 text-xs border-[#22C55E] text-[#22C55E] bg-white hover:bg-[#22C55E]/10 rounded-lg font-medium shadow-sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveTab("browse");
+                  setStatusFilter("ongoing");
+                }}
+              >
+                View All
+              </Button>
+            </div>
+          </div>
+
+          {/* Card 3 - Past Events */}
+          <div 
+            className="flex flex-col justify-between h-[180px] p-6 rounded-[16px] border bg-[#FFFBEB] border-[#FDE68A] text-[#F59E0B] shadow-sm hover:-translate-y-[2px] hover:shadow-md transition-all duration-300 font-sans cursor-pointer group"
+            onClick={() => {
+              setActiveTab("browse");
+              setStatusFilter("past");
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-[#FDE68A] shadow-sm">
+                <Clock className="w-5 h-5 text-[#F59E0B]" />
+              </div>
+              <span className="font-semibold text-base text-[#F59E0B]">Past Events</span>
+            </div>
+            
+            <div className="flex flex-col items-start mt-2">
+              <span className="text-[36px] font-bold text-slate-900 leading-none">
+                {String(overviewStats.past).padStart(2, '0')}
+              </span>
+              <span className="text-[13px] text-slate-500 mt-1 leading-tight font-medium">Completed</span>
+              <span className="text-[13px] text-slate-500 leading-tight">Already finished</span>
+            </div>
+            
+            <div className="flex justify-center mt-2">
+              <Button 
+                variant="outline" 
+                className="h-8 px-4 py-1 text-xs border-[#F59E0B] text-[#F59E0B] bg-white hover:bg-[#F59E0B]/10 rounded-lg font-medium shadow-sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveTab("browse");
+                  setStatusFilter("past");
+                }}
+              >
+                View All
+              </Button>
+            </div>
+          </div>
+
+          {/* Card 4 - Total Events */}
+          <div 
+            className="flex flex-col justify-between h-[180px] p-6 rounded-[16px] border bg-[#FAF5FF] border-[#E9D5FF] text-[#9333EA] shadow-sm hover:-translate-y-[2px] hover:shadow-md transition-all duration-300 font-sans cursor-pointer group"
+            onClick={() => {
+              setActiveTab("browse");
+              setStatusFilter("all");
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-[#E9D5FF] shadow-sm">
+                <Layers className="w-5 h-5 text-[#9333EA]" />
+              </div>
+              <span className="font-semibold text-base text-[#9333EA]">Total Events</span>
+            </div>
+            
+            <div className="flex flex-col items-start mt-2">
+              <span className="text-[36px] font-bold text-slate-900 leading-none">
+                {String(overviewStats.total).padStart(2, '0')}
+              </span>
+              <span className="text-[13px] text-slate-500 mt-1 leading-tight font-medium">All Time</span>
+              <span className="text-[13px] text-slate-500 leading-tight">All events</span>
+            </div>
+            
+            <div className="flex justify-center mt-2">
+              <Button 
+                variant="outline" 
+                className="h-8 px-4 py-1 text-xs border-[#9333EA] text-[#9333EA] bg-white hover:bg-[#9333EA]/10 rounded-lg font-medium shadow-sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveTab("browse");
+                  setStatusFilter("all");
+                }}
+              >
+                View All
+              </Button>
+            </div>
           </div>
         </div>
-      )}
+      </div>
+
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+        <div className="flex justify-between items-center border-b pb-4">
+          <TabsList className="bg-muted/50 p-1 rounded-xl">
+            <TabsTrigger value="browse" className="rounded-lg font-semibold px-6 py-2.5">Browse Events</TabsTrigger>
+            {user && <TabsTrigger value="my-events" className="rounded-lg font-semibold px-6 py-2.5">My Events & History</TabsTrigger>}
+            {user && (
+              <TabsTrigger value="notifications" className="rounded-lg font-semibold px-6 py-2.5 flex items-center gap-1.5">
+                Notifications
+                {notifications.filter(n => !n.isRead).length > 0 && (
+                  <Badge variant="destructive" className="h-5 w-5 p-0 flex items-center justify-center rounded-full text-[10px]">
+                    {notifications.filter(n => !n.isRead).length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            )}
+          </TabsList>
+        </div>
+
+        {/* Tab 1: Browse Events */}
+        <TabsContent value="browse" className="space-y-6">
+          {/* Filters Panel */}
+          <div className="bg-card/30 border p-5 rounded-2xl grid grid-cols-1 md:grid-cols-4 gap-4 items-end shadow-sm">
+            <div className="space-y-2">
+              <Label htmlFor="search" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Search</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input 
+                  id="search"
+                  placeholder="Search events, organizer..." 
+                  className="pl-9 rounded-xl border-border/60 bg-background/50 focus:bg-background transition-all"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="category" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Category</Label>
+              <select 
+                id="category"
+                className="w-full h-10 px-3 rounded-xl border border-border/60 bg-background/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+              >
+                {categories.map(cat => (
+                  <option key={cat} value={cat} className="capitalize">{cat === 'all' ? 'All Categories' : cat}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="date" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Date</Label>
+              <Input 
+                id="date"
+                type="date"
+                className="rounded-xl border-border/60 bg-background/50"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="statusFilter" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status Group</Label>
+              <select 
+                id="statusFilter"
+                className="w-full h-10 px-3 rounded-xl border border-border/60 bg-background/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="all">All Events</option>
+                <option value="upcoming">Upcoming & Open</option>
+                <option value="ongoing">Ongoing</option>
+                <option value="past">Past / Closed</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Events Grid */}
+          {loading ? (
+            <div className="flex items-center justify-center py-24">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+            </div>
+          ) : filteredEvents.length === 0 ? (
+            <div className="text-center py-20 bg-muted/10 rounded-2xl border border-dashed border-muted">
+              <Calendar className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+              <p className="text-muted-foreground text-lg font-medium">No events found matching your criteria.</p>
+              <Button onClick={() => { setSearch(""); setCategory("all"); setDateFilter(""); setStatusFilter("all"); }} variant="link" className="mt-2 text-primary font-semibold">Clear Filters</Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredEvents.map((event) => (
+                <Card 
+                  key={event._id} 
+                  className="group relative flex flex-col bg-card/60 hover:bg-card border border-border/40 shadow-sm hover:shadow-lg rounded-3xl overflow-hidden transition-all duration-300 hover:-translate-y-1"
+                >
+                  {/* Image banner section */}
+                  <div className="p-3 pb-0">
+                    <div className="relative aspect-[16/10] w-full overflow-hidden rounded-[20px] bg-muted shadow-inner">
+                      {event.imageUrl ? (
+                        <img 
+                          src={event.imageUrl} 
+                          alt={event.title} 
+                          className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-secondary/20 text-muted-foreground/30">
+                          <BookOpen className="w-12 h-12" />
+                        </div>
+                      )}
+                      
+                      {/* Floating Status Badge */}
+                      <div className="absolute top-3 right-3">
+                        <Badge variant="outline" className={`font-bold px-3 py-1 text-xs rounded-full border bg-background/90 backdrop-blur ${getStatusColor(event.status)}`}>
+                          {event.status}
+                        </Badge>
+                      </div>
+
+                      {/* Floating Category Badge */}
+                      <div className="absolute bottom-3 left-3">
+                        <span className="px-2.5 py-1 bg-black/60 backdrop-blur-md rounded-lg text-[10px] font-bold uppercase tracking-wider text-white">
+                          {event.category}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Body Content */}
+                  <CardContent className="p-5 flex-grow flex flex-col justify-between">
+                    <div>
+                      <h3 className="text-xl font-bold text-foreground leading-tight group-hover:text-primary transition-colors mb-2">
+                        {event.title}
+                      </h3>
+                      
+                      <p className="text-xs text-muted-foreground font-semibold mb-4 flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5" />
+                        Organized by: {event.organizer}
+                      </p>
+
+                      <div className="space-y-2 text-sm text-muted-foreground bg-muted/30 p-3.5 rounded-xl border border-border/30 mb-5">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-primary/70 shrink-0" />
+                          <span>{new Date(event.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-primary/70 shrink-0" />
+                          <span>{event.startTime} - {event.endTime}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-4 h-4 text-primary/70 shrink-0" />
+                          <span className="truncate">{event.venue}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-border/40">
+                      <div className="flex justify-between items-center text-xs font-semibold mb-4 text-muted-foreground/90">
+                        <span>Seats Available: <strong className="text-foreground">{event.availableSeats ?? event.totalSeats} / {event.totalSeats}</strong></span>
+                        <span className="text-rose-500/80">Deadline: {new Date(event.registrationEndDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                      </div>
+
+                      <div className="flex gap-2.5">
+                        <Link to={`/events/${event._id}`} className="flex-1">
+                          <Button variant="outline" className="w-full rounded-xl border-primary/20 hover:bg-primary/5 hover:text-primary transition-all font-semibold text-xs h-10">
+                            View Details
+                          </Button>
+                        </Link>
+                        {event.status === 'Registration Open' && (
+                          <Link to={`/events/${event._id}?register=true`} className="flex-1">
+                            <Button className="w-full rounded-xl bg-primary hover:bg-primary/95 text-white transition-all font-semibold text-xs h-10">
+                              Register
+                            </Button>
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Tab 2: My Events & Participation History */}
+        <TabsContent value="my-events" className="space-y-8">
+          {/* History Summary Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card className="bg-card/40 border border-border/30 shadow-sm">
+              <CardContent className="p-5 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Registered</p>
+                  <p className="text-3xl font-extrabold text-foreground mt-1">{historyStats.registered}</p>
+                </div>
+                <div className="h-10 w-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary"><BookOpen className="w-5 h-5" /></div>
+              </CardContent>
+            </Card>
+            <Card className="bg-card/40 border border-border/30 shadow-sm">
+              <CardContent className="p-5 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Attended</p>
+                  <p className="text-3xl font-extrabold text-foreground mt-1">{historyStats.attended}</p>
+                </div>
+                <div className="h-10 w-10 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-500"><ShieldCheck className="w-5 h-5" /></div>
+              </CardContent>
+            </Card>
+            <Card className="bg-card/40 border border-border/30 shadow-sm">
+              <CardContent className="p-5 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Completed</p>
+                  <p className="text-3xl font-extrabold text-foreground mt-1">{historyStats.completed}</p>
+                </div>
+                <div className="h-10 w-10 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-500"><Calendar className="w-5 h-5" /></div>
+              </CardContent>
+            </Card>
+            <Card className="bg-card/40 border border-border/30 shadow-sm">
+              <CardContent className="p-5 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Certificates</p>
+                  <p className="text-3xl font-extrabold text-foreground mt-1">{historyStats.certificates}</p>
+                </div>
+                <div className="h-10 w-10 bg-amber-500/10 rounded-xl flex items-center justify-center text-amber-500"><Award className="w-5 h-5" /></div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* My Registrations List */}
+            <div className="lg:col-span-2 space-y-4">
+              <h2 className="text-2xl font-bold text-foreground">Registered Events</h2>
+              
+              {registrations.length === 0 ? (
+                <div className="text-center py-16 bg-muted/10 rounded-2xl border border-dashed border-muted">
+                  <p className="text-muted-foreground">You haven't registered for any events yet.</p>
+                  <Button variant="link" className="text-primary font-bold mt-2" onClick={() => setActiveTab("browse")}>Browse Available Events</Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {registrations.map((reg) => (
+                    <Card key={reg._id} className="bg-card border shadow-sm rounded-2xl overflow-hidden hover:shadow-md transition-shadow">
+                      <CardContent className="p-5 flex flex-col items-start gap-4">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full gap-2">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-bold text-lg text-foreground">{reg.event?.title || 'Unknown Event'}</h3>
+                              <Badge variant="outline" className={`text-[10px] uppercase font-bold ${
+                                reg.status === 'approved' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                                reg.status === 'rejected' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' :
+                                'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                              }`}>
+                                {reg.status}
+                              </Badge>
+                            </div>
+                            
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground font-medium pt-0.5">
+                              <span>Reg ID: <strong className="text-foreground">{reg.registrationId}</strong></span>
+                              <span>Date: {new Date(reg.registrationDate).toLocaleDateString()}</span>
+                              {reg.teamSize > 1 && <span>Team Name: <strong className="text-foreground">{reg.teamName}</strong></span>}
+                            </div>
+                          </div>
+
+                          <div className="shrink-0">
+                            <Link to={`/events/${reg.event?._id}`}>
+                              <Button size="sm" variant="outline" className="rounded-xl text-xs h-9">
+                                View Event
+                              </Button>
+                            </Link>
+                          </div>
+                        </div>
+
+                        {/* Collapsible/Expandable Members list */}
+                        {reg.teamMembers && reg.teamMembers.length > 0 && (
+                          <div className="w-full pt-3 border-t space-y-2">
+                            <p className="text-[10px] font-bold text-primary uppercase tracking-wider">Registered Participants & Certificates:</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {reg.teamMembers.map(m => (
+                                <div key={m._id} className="flex justify-between items-center text-xs bg-muted/40 p-2.5 rounded-lg border">
+                                  <div>
+                                    <span className="font-bold text-foreground block">{m.fullName}</span>
+                                    <span className="text-[10px] text-muted-foreground font-semibold">
+                                      {m.isTeamLeader ? '★ Leader' : 'Member'} • Attendance: <span className="capitalize">{m.attendance}</span>
+                                    </span>
+                                  </div>
+                                  {reg.status === 'approved' && m.attendance === 'present' && m.certificateNumber && (
+                                    <Button 
+                                      size="sm"
+                                      variant="ghost"
+                                      className="rounded-lg h-7 px-2 text-amber-500 hover:text-amber-600 hover:bg-amber-500/10 font-bold text-[10px] flex gap-1 items-center border border-amber-500/20"
+                                      onClick={() => handleDownloadCertificate(reg.registrationId, reg.event.title, m._id)}
+                                    >
+                                      <Download className="w-3.5 h-3.5" /> Certificate
+                                    </Button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Timeline view of activity */}
+            <div className="space-y-4">
+              <h2 className="text-2xl font-bold text-foreground">Participation Timeline</h2>
+              <Card className="p-5 bg-card/40 border border-border/30 shadow-sm rounded-2xl">
+                <div className="relative pl-6 border-l border-border/80 space-y-6">
+                  {registrations.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center pl-0 border-l-0">No timeline milestones available.</p>
+                  ) : (
+                    registrations.map((reg) => (
+                      <div key={reg._id} className="relative">
+                        {/* Dot */}
+                        <div className={`absolute -left-[30px] top-1 h-3 w-3 rounded-full border-2 bg-background ${
+                          reg.attendance === 'present' ? 'border-emerald-500 bg-emerald-500' :
+                          reg.status === 'approved' ? 'border-primary bg-primary' : 'border-amber-500 bg-amber-500'
+                        }`} />
+                        
+                        <div className="space-y-1">
+                          <p className="text-xs font-semibold text-muted-foreground">{new Date(reg.registrationDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                          <h4 className="font-bold text-sm text-foreground line-clamp-1">{reg.event?.title}</h4>
+                          <p className="text-xs text-muted-foreground">
+                            Status: <span className="capitalize font-semibold text-foreground">{reg.status}</span>
+                            {reg.attendance === 'present' && " • Attended"}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Tab 3: Notifications */}
+        <TabsContent value="notifications" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-bold text-foreground">In-App Notifications</h2>
+            {notifications.filter(n => !n.isRead).length > 0 && (
+              <span className="text-xs font-semibold text-muted-foreground">Unread alerts to clear</span>
+            )}
+          </div>
+
+          {notifications.length === 0 ? (
+            <div className="text-center py-20 bg-muted/10 rounded-2xl border border-dashed border-muted">
+              <Bell className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+              <p className="text-muted-foreground">Your notifications inbox is empty.</p>
+            </div>
+          ) : (
+            <div className="space-y-4 max-w-3xl">
+              {notifications.map((notif) => (
+                <Card 
+                  key={notif._id} 
+                  className={`border transition-all rounded-2xl overflow-hidden shadow-sm ${
+                    notif.isRead ? 'bg-card/40 opacity-75' : 'bg-card border-l-4 border-l-primary'
+                  }`}
+                >
+                  <CardContent className="p-5 flex justify-between items-start gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className={`font-bold ${notif.isRead ? 'text-foreground/85' : 'text-foreground'}`}>{notif.title}</h3>
+                        {!notif.isRead && (
+                          <Badge variant="destructive" className="h-2 w-2 p-0 rounded-full" />
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">{notif.body}</p>
+                      <p className="text-[10px] text-muted-foreground font-semibold pt-1">
+                        {new Date(notif.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+
+                    {!notif.isRead && (
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="rounded-xl text-xs hover:bg-primary/5 text-primary"
+                        onClick={() => markAsRead(notif._id)}
+                      >
+                        Mark read
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

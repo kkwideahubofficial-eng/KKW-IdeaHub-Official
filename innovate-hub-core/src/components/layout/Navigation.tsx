@@ -94,8 +94,14 @@ const Navigation = () => {
     }
 
     links.push(
-      { name: "Achievements", path: "/achievements" },
-      { name: "Events", path: "/events" },
+      { name: "Achievements", path: "/achievements" }
+    );
+
+    if (user?.role !== 'coordinator') {
+      links.push({ name: "Events", path: "/events" });
+    }
+
+    links.push(
       { name: "E-commerce", path: "/ecommerce" },
       { name: "Lab Info", path: "/lab-info" }
     );
@@ -103,6 +109,7 @@ const Navigation = () => {
     if (user?.role === 'coordinator') {
       links.push(
         { name: "Dashboard", path: "/coordinator-dashboard" },
+        { name: "Manage Events", path: "/manage-events" },
         { name: "Manage Orders", path: "/manage-orders" },
         { name: "Manage Hero", path: "/manage-hero" },
         { name: "Manage Rooms", path: "/manage-rooms" },

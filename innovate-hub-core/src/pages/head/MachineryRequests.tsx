@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Check, X, Eye } from "lucide-react";
+import { Check, X, Eye, FileDown, Loader2 } from "lucide-react";
 
 // Helper to safely format date avoiding timezone shifts
 const formatDate = (dateStr: string) => {
@@ -37,6 +37,27 @@ const MachineryRequests = () => {
   const [rejectDialog, setRejectDialog] = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
   const [rejectionReason, setRejectionReason] = useState("");
   const [viewDialog, setViewDialog] = useState<{ open: boolean; request: Request | null }>({ open: false, request: null });
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  const downloadPdf = async (id: string) => {
+    setDownloadingId(id);
+    try {
+      const response = await api.get(`/machinery/requests/${id}/pdf`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `MachineryRequest_${id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('PDF downloaded!');
+    } catch {
+      toast.error('Failed to download PDF.');
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   useEffect(() => {
     fetchRequests();
@@ -100,6 +121,20 @@ const MachineryRequests = () => {
                 <div className="flex items-end justify-end gap-2">
                   <Button variant="outline" size="sm" onClick={() => setViewDialog({ open: true, request: req })}>
                     <Eye className="w-4 h-4 mr-2" /> View Details
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={downloadingId === req._id}
+                    onClick={() => downloadPdf(req._id)}
+                  >
+                    {downloadingId === req._id ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <FileDown className="w-4 h-4 mr-2" />
+                    )}
+                    PDF
                   </Button>
                   
                   {req.status === 'pending' && (
@@ -194,6 +229,22 @@ const MachineryRequests = () => {
               </div>
             </div>
           )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="gap-2"
+              disabled={!viewDialog.request || downloadingId === viewDialog.request._id}
+              onClick={() => viewDialog.request && downloadPdf(viewDialog.request._id)}
+            >
+              {viewDialog.request && downloadingId === viewDialog.request._id ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <FileDown className="w-4 h-4" />
+              )}
+              Download Application PDF
+            </Button>
+            <Button variant="outline" onClick={() => setViewDialog({ open: false, request: null })}>Close</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

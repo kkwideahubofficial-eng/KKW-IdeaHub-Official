@@ -8,15 +8,41 @@ import {
   getEventById,
   updateEvent,
   deleteEvent,
+  registerForEvent,
+  getStudentRegistrations,
+  getEventRegistrations,
+  updateRegistrationStatus,
+  markAttendanceBulk,
+  downloadCertificate,
+  getStudentNotifications,
+  markNotificationRead,
+  getEventAnalytics
 } from '../controllers/eventController.js';
 
 const router = Router();
 
-// Public routes
+// Student Notifications (Auth required)
+router.get('/student/notifications', requireAuth, getStudentNotifications);
+router.patch('/student/notifications/:id/read', requireAuth, markNotificationRead);
+
+// Student own registration history (Auth required)
+router.get('/student/registrations', requireAuth, getStudentRegistrations);
+
+// Analytics Dashboard (Coordinator only)
+router.get('/dashboard/analytics', requireAuth, requireCoordinator, getEventAnalytics);
+
+// Download Certificate (Auth required)
+router.get('/certificate/:registrationId', requireAuth, downloadCertificate);
+
+// Coordinator Bulk Actions
+router.patch('/registrations/status', requireAuth, requireCoordinator, updateRegistrationStatus);
+router.patch('/attendance', requireAuth, requireCoordinator, markAttendanceBulk);
+
+// Public get events
 router.get('/', getAllEvents);
 router.get('/:id', param('id').isMongoId(), getEventById);
 
-// Coordinator-only routes
+// Coordinator CRUD Actions
 router.post(
   '/',
   requireAuth,
@@ -47,5 +73,11 @@ router.put(
 );
 
 router.delete('/:id', requireAuth, requireCoordinator, param('id').isMongoId(), deleteEvent);
+
+// Student registration action
+router.post('/:id/register', requireAuth, param('id').isMongoId(), registerForEvent);
+
+// Get registrations for a specific event
+router.get('/:id/registrations', requireAuth, requireCoordinator, param('id').isMongoId(), getEventRegistrations);
 
 export default router;
