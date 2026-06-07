@@ -139,10 +139,10 @@ const TimePicker12Hour = ({
 
   return (
     <div>
-      <Label>{label}</Label>
-      <div className="flex gap-1.5 items-center mt-1">
+      <Label className="text-sm font-medium">{label}</Label>
+      <div className="grid grid-cols-3 gap-2 sm:flex sm:items-center sm:gap-1.5 mt-1">
         <Select value={hour || undefined} onValueChange={handleHourChange}>
-          <SelectTrigger className="w-[75px] h-10 border border-slate-200 rounded-lg text-xs bg-background">
+          <SelectTrigger className="w-full h-11 sm:h-10 sm:w-[75px] border border-slate-200 rounded-lg text-sm sm:text-xs bg-background min-h-[44px]">
             <SelectValue placeholder="Hour" />
           </SelectTrigger>
           <SelectContent className="max-h-[200px]">
@@ -153,9 +153,9 @@ const TimePicker12Hour = ({
             ))}
           </SelectContent>
         </Select>
-        <span className="text-muted-foreground font-semibold">:</span>
+        <span className="hidden sm:inline text-muted-foreground font-semibold text-center">:</span>
         <Select value={minute || undefined} onValueChange={handleMinuteChange}>
-          <SelectTrigger className="w-[75px] h-10 border border-slate-200 rounded-lg text-xs bg-background">
+          <SelectTrigger className="w-full h-11 sm:h-10 sm:w-[75px] border border-slate-200 rounded-lg text-sm sm:text-xs bg-background min-h-[44px]">
             <SelectValue placeholder="Min" />
           </SelectTrigger>
           <SelectContent className="max-h-[200px]">
@@ -167,7 +167,7 @@ const TimePicker12Hour = ({
           </SelectContent>
         </Select>
         <Select value={period || undefined} onValueChange={handlePeriodChange}>
-          <SelectTrigger className="w-[85px] h-10 border border-slate-200 rounded-lg text-xs bg-background">
+          <SelectTrigger className="w-full h-11 sm:h-10 sm:w-[85px] border border-slate-200 rounded-lg text-sm sm:text-xs bg-background min-h-[44px]">
             <SelectValue placeholder="AM/PM" />
           </SelectTrigger>
           <SelectContent>
@@ -577,34 +577,32 @@ const SpecialRoomPermission = () => {
 
 
   return (
-    <div className="w-full min-h-screen bg-[#F8FAFC] py-8">
-      <div className="max-w-[1400px] mx-auto px-4 md:px-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 border-b pb-6 gap-4">
+    <div className="w-full min-h-screen bg-[#F8FAFC] py-4 sm:py-8">
+      <div className="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 border-b pb-6 gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             Room Permission Management
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Request permission for Conference Rooms, Discussion Rooms, and Ideation Rooms.
           </p>
         </div>
         
         {/* Navigation Tabs */}
-        <div className="flex gap-2 bg-muted p-1 rounded-lg self-start">
+        <div className="grid grid-cols-2 gap-2 w-full bg-slate-100/60 p-1.5 rounded-xl sm:flex sm:w-auto sm:gap-2 sm:bg-muted sm:p-1 sm:rounded-lg self-stretch sm:self-start">
           <Button
             variant={activeTab === "book" ? "default" : "ghost"}
-            size="sm"
             onClick={() => { setActiveTab("book"); setFormStep(1); }}
-            className="flex items-center gap-2"
+            className={`flex items-center justify-center gap-2 h-11 sm:h-9 w-full sm:w-auto text-sm ${activeTab === 'book' ? 'bg-white text-slate-900 shadow-sm sm:bg-primary sm:text-primary-foreground font-semibold' : 'text-slate-600 sm:text-slate-600 font-semibold'}`}
           >
             <Users className="w-4 h-4" /> Book Room
           </Button>
 
           <Button
             variant={activeTab === "history" ? "default" : "ghost"}
-            size="sm"
             onClick={() => setActiveTab("history")}
-            className="flex items-center gap-2"
+            className={`flex items-center justify-center gap-2 h-11 sm:h-9 w-full sm:w-auto text-sm ${activeTab === 'history' ? 'bg-white text-slate-900 shadow-sm sm:bg-primary sm:text-primary-foreground font-semibold' : 'text-slate-600 sm:text-slate-600 font-semibold'}`}
           >
             <FileText className="w-4 h-4" /> My Requests
           </Button>
@@ -618,20 +616,20 @@ const SpecialRoomPermission = () => {
           {loadingRooms ? (
             <div className="text-center py-12 text-muted-foreground">Loading special rooms details...</div>
           ) : !selectedRoom ? (
-            <div className="space-y-8 w-full bg-white/50 backdrop-blur-md p-6 md:p-8 rounded-2xl border border-slate-200/60 shadow-xs">
-              <div className="border-b border-slate-200/80 pb-5">
-                <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Select Facility Type</h2>
-                <p className="text-sm text-slate-500 mt-1">Choose the space that best suits your activity</p>
+            <div className="space-y-6 sm:space-y-8 w-full bg-white/50 backdrop-blur-md p-4 sm:p-6 md:p-8 rounded-2xl border border-slate-200/60 shadow-sm">
+              <div className="border-b border-slate-200/80 pb-4 sm:pb-5">
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight">Select Facility Type</h2>
+                <p className="text-xs sm:text-sm text-slate-500 mt-1">Choose the space that best suits your activity</p>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8">
                 {rooms.map(room => {
                   const isDeactivated = room.isActive === false;
                   return (
                     <Card 
                       key={room.name} 
-                      className={`overflow-hidden bg-white border border-slate-200/80 shadow-xs hover:-translate-y-2 hover:shadow-xl transition-all duration-300 rounded-2xl flex flex-col min-h-[520px] ${isDeactivated ? 'opacity-80' : ''}`}
+                      className={`overflow-hidden bg-white border border-slate-200/80 shadow-sm hover:-translate-y-1 sm:hover:-translate-y-2 hover:shadow-lg transition-all duration-300 rounded-2xl flex flex-col min-h-0 md:min-h-[520px] ${isDeactivated ? 'opacity-80' : ''}`}
                     >
-                      <div className="relative h-56 overflow-hidden bg-slate-900 group">
+                      <div className="relative h-48 sm:h-56 overflow-hidden bg-slate-900 group">
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent z-10" />
                         {room.image ? (
                           <img 
@@ -642,30 +640,30 @@ const SpecialRoomPermission = () => {
                         ) : (
                           <div className="w-full h-full bg-slate-200 flex items-center justify-center text-muted-foreground text-xs">No Image</div>
                         )}
-                        <div className="absolute top-4 right-4 z-20 bg-white/95 backdrop-blur-md text-slate-800 text-xs px-3 py-1.5 rounded-full font-bold shadow-sm border border-slate-100 flex items-center gap-1.5">
+                        <div className="absolute top-4 right-4 z-20 bg-white/95 backdrop-blur-md text-slate-800 text-2xs sm:text-xs px-2.5 py-1.5 rounded-full font-bold shadow-sm border border-slate-100 flex items-center gap-1.5">
                           👥 {room.capacity} People
                         </div>
                       </div>
-                      <CardHeader className="p-6 pb-2">
-                        <CardTitle className="text-lg font-extrabold text-slate-900 flex items-center justify-between">
+                      <CardHeader className="p-4 sm:p-6 pb-2">
+                        <CardTitle className="text-base sm:text-lg font-extrabold text-slate-900 flex items-center justify-between">
                           {room.name}
                           {isDeactivated && (
-                            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-rose-100 text-rose-700">Unavailable</span>
+                            <span className="text-[9px] sm:text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-rose-100 text-rose-700">Unavailable</span>
                           )}
                         </CardTitle>
-                        <CardDescription className="line-clamp-3 text-xs text-slate-500 leading-relaxed mt-1">{room.description}</CardDescription>
+                        <CardDescription className="line-clamp-3 text-2xs sm:text-xs text-slate-500 leading-relaxed mt-1">{room.description}</CardDescription>
                       </CardHeader>
-                      <CardContent className="flex-1 flex flex-col justify-between p-6 pt-0 space-y-6">
+                      <CardContent className="flex-1 flex flex-col justify-between p-4 sm:p-6 pt-0 space-y-4 sm:space-y-6">
                         <div>
-                          <div className="text-2xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Available Equipment</div>
+                          <div className="text-[9px] sm:text-2xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Available Equipment</div>
                           <div className="flex flex-wrap gap-1.5">
                             {room.equipment.slice(0, 4).map(eq => (
-                              <span key={eq} className="rounded-full bg-blue-50 text-blue-700 font-semibold px-2.5 py-1 text-2xs flex items-center gap-1">
+                              <span key={eq} className="rounded-full bg-blue-50 text-blue-700 font-semibold px-2.5 py-1 text-[10px] sm:text-2xs flex items-center gap-1">
                                 {getEquipmentEmoji(eq)} {eq}
                               </span>
                             ))}
                             {room.equipment.length > 4 && (
-                              <span className="rounded-full bg-blue-50 text-blue-700 font-semibold px-2.5 py-1 text-2xs">
+                              <span className="rounded-full bg-blue-50 text-blue-700 font-semibold px-2.5 py-1 text-[10px] sm:text-2xs">
                                 +{room.equipment.length - 4} More
                               </span>
                             )}
@@ -674,8 +672,8 @@ const SpecialRoomPermission = () => {
                         
                         {/* Capacity Summary Section or Deactivation message */}
                         {isDeactivated ? (
-                          <div className="p-3 rounded-lg bg-rose-50 border border-rose-100 text-rose-800 text-2xs leading-relaxed">
-                            <span className="font-extrabold uppercase block text-[9px] mb-0.5 text-rose-900">Deactivated:</span>
+                          <div className="p-3 rounded-lg bg-rose-50 border border-rose-100 text-rose-800 text-[10px] sm:text-2xs leading-relaxed">
+                            <span className="font-extrabold uppercase block text-[8px] sm:text-[9px] mb-0.5 text-rose-900">Deactivated:</span>
                             {room.deactivationReason || "This space is temporarily closed for maintenance."}
                           </div>
                         ) : (
@@ -691,7 +689,7 @@ const SpecialRoomPermission = () => {
                             type="button" 
                             variant="outline" 
                             onClick={() => setViewDetailsRoom(room)} 
-                            className="border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition font-semibold px-4 py-2.5 text-xs rounded-lg flex-1 h-10 shadow-xs"
+                            className="border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition font-semibold px-3 sm:px-4 py-2.5 text-xs rounded-lg flex-1 h-11 sm:h-10 min-h-[44px] sm:min-h-0 shadow-sm"
                           >
                             View Details
                           </Button>
@@ -699,7 +697,7 @@ const SpecialRoomPermission = () => {
                             type="button" 
                             disabled={isDeactivated}
                             onClick={() => setSelectedRoom(room)} 
-                            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2.5 text-xs rounded-lg transition flex-1 h-10 shadow-xs disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed disabled:border-transparent"
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-3 sm:px-4 py-2.5 text-xs rounded-lg transition flex-1 h-11 sm:h-10 min-h-[44px] sm:min-h-0 shadow-sm disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed disabled:border-transparent"
                           >
                             {isDeactivated ? "Unavailable" : "Book Room"}
                           </Button>
@@ -714,7 +712,43 @@ const SpecialRoomPermission = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Form Wizard Column */}
               <div className="lg:col-span-2 space-y-6">
-                <div className="flex items-center justify-between border-b pb-4 mb-4">
+                {/* Mobile Stepper */}
+                <div className="block sm:hidden w-full space-y-3 pb-4 border-b mb-4">
+                  <div className="flex items-center justify-between">
+                    <Button variant="ghost" size="sm" onClick={() => { setSelectedRoom(null); setFormStep(1); }} className="p-0 h-9 hover:bg-transparent text-xs font-semibold text-primary">
+                      <ChevronLeft className="w-4 h-4 mr-1" /> Back to Rooms
+                    </Button>
+                    <span className="text-xs font-bold text-slate-500">Step {formStep} of 3</span>
+                  </div>
+                  
+                  {/* Progress Line Indicator */}
+                  <div className="flex items-center justify-center px-8">
+                    <div className="flex items-center w-full max-w-[240px]">
+                      <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center transition-all ${formStep >= 1 ? 'bg-primary border-2 border-primary' : 'bg-white border-2 border-slate-300'}`}>
+                        {formStep > 1 && <Check className="w-2.5 h-2.5 text-white" />}
+                      </div>
+                      <div className={`flex-1 h-0.5 transition-all ${formStep >= 2 ? 'bg-primary' : 'bg-slate-200'}`} />
+                      <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center transition-all ${formStep >= 2 ? 'bg-primary border-2 border-primary' : 'bg-white border-2 border-slate-300'}`}>
+                        {formStep > 2 && <Check className="w-2.5 h-2.5 text-white" />}
+                      </div>
+                      <div className={`flex-1 h-0.5 transition-all ${formStep >= 3 ? 'bg-primary' : 'bg-slate-200'}`} />
+                      <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center transition-all ${formStep >= 3 ? 'bg-primary border-2 border-primary' : 'bg-white border-2 border-slate-300'}`}>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Step Name Labels */}
+                  <div className="flex justify-between items-center text-[10px] font-bold px-2">
+                    <span className={formStep === 1 ? 'text-primary' : 'text-slate-400'}>Details</span>
+                    <span className="text-slate-300">→</span>
+                    <span className={formStep === 2 ? 'text-primary' : 'text-slate-400'}>Applicant</span>
+                    <span className="text-slate-300">→</span>
+                    <span className={formStep === 3 ? 'text-primary' : 'text-slate-400'}>Faculty</span>
+                  </div>
+                </div>
+
+                {/* Desktop Stepper */}
+                <div className="hidden sm:flex items-center justify-between border-b pb-4 mb-4">
                   <Button variant="ghost" size="sm" onClick={() => { setSelectedRoom(null); setFormStep(1); }} className="p-0 hover:bg-transparent">
                     <ChevronLeft className="w-4 h-4 mr-1" /> Back to Rooms
                   </Button>
@@ -730,23 +764,24 @@ const SpecialRoomPermission = () => {
                   </div>
                 </div>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Booking {selectedRoom.name} - Step {formStep} of 3</CardTitle>
-                    <CardDescription>Fill out all required details accurately.</CardDescription>
+                <Card className="rounded-2xl border bg-white shadow-sm">
+                  <CardHeader className="p-4 sm:p-6 pb-2">
+                    <CardTitle className="text-lg font-bold">Booking {selectedRoom.name} - Step {formStep} of 3</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">Fill out all required details accurately.</CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-4 sm:p-6">
                     {/* STEP 1: SCHEDULE & CAPACITY DETAILS */}
                     {formStep === 1 && (
-                      <div className="space-y-6">
+                      <div className="space-y-4 sm:space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div>
-                            <Label>Requested Date</Label>
+                            <Label className="text-sm font-medium text-slate-700">Requested Date</Label>
                             <Input 
                               type="date" 
                               min={new Date().toISOString().split('T')[0]} 
                               value={formData.schedule.requestedDate} 
                               onChange={(e) => setFormData(prev => ({ ...prev, schedule: { ...prev.schedule, requestedDate: e.target.value } }))} 
+                              className="w-full h-11 sm:h-10 text-sm mt-1"
                             />
                           </div>
                           <TimePicker12Hour 
@@ -761,24 +796,31 @@ const SpecialRoomPermission = () => {
                           />
                         </div>
 
-                        <div className="flex gap-4">
-                          <Button variant="secondary" size="sm" onClick={checkAvailability}>Check Slot Availability</Button>
-                          <div className="flex items-center text-sm font-semibold">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 pt-1">
+                          <Button 
+                            type="button"
+                            variant="secondary" 
+                            onClick={checkAvailability}
+                            className="w-full sm:w-auto h-11 sm:h-10 text-sm font-semibold min-h-[44px]"
+                          >
+                            Check Slot Availability
+                          </Button>
+                          <div className="flex items-center justify-center sm:justify-start text-sm font-semibold h-11 sm:h-auto">
                             Duration: <span className="text-primary ml-1">{calculateDuration()}</span>
                           </div>
                         </div>
 
                         {/* Availability Warnings */}
                         {availabilityCheck && (
-                          <div className={`p-4 rounded-md border text-sm flex items-start gap-3 ${availabilityCheck.available ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
-                            {availabilityCheck.available ? <CheckCircle className="w-5 h-5 text-green-600 shrink-0" /> : <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />}
+                          <div className={`p-4 rounded-xl border text-sm flex items-start gap-3 ${availabilityCheck.available ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+                            {availabilityCheck.available ? <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" /> : <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />}
                             <div>
-                              <p className="font-semibold">{availabilityCheck.status}</p>
-                              <p className="text-xs mt-1">{availabilityCheck.message}</p>
+                              <p className="font-semibold text-sm">{availabilityCheck.status}</p>
+                              <p className="text-xs mt-1 leading-relaxed">{availabilityCheck.message}</p>
                               {availabilityCheck.suggestions && availabilityCheck.suggestions.length > 0 && (
                                 <div className="mt-3">
-                                  <p className="font-medium text-xs">Suggested nearest available slots:</p>
-                                  <div className="flex flex-wrap gap-2 mt-1">
+                                  <p className="font-semibold text-xs">Suggested nearest available slots:</p>
+                                  <div className="flex flex-wrap gap-2 mt-1.5">
                                     {availabilityCheck.suggestions.map((s, idx) => (
                                       <Button 
                                         key={idx} 
@@ -789,6 +831,7 @@ const SpecialRoomPermission = () => {
                                           setFormData(prev => ({ ...prev, schedule: { ...prev.schedule, startTime: s.startTime, endTime: s.endTime } }));
                                           setAvailabilityCheck(null);
                                         }}
+                                        className="h-9 text-xs"
                                       >
                                         {s.startTime} - {s.endTime}
                                       </Button>
@@ -802,12 +845,12 @@ const SpecialRoomPermission = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <Label>Activity / Project Category</Label>
+                            <Label className="text-sm font-medium text-slate-700">Activity / Project Category</Label>
                             <Select 
                               value={formData.category} 
                               onValueChange={(val) => setFormData(prev => ({ ...prev, category: val }))}
                             >
-                              <SelectTrigger>
+                              <SelectTrigger className="h-11 sm:h-10 text-sm mt-1 w-full">
                                 <SelectValue placeholder="Category" />
                               </SelectTrigger>
                               <SelectContent>
@@ -818,7 +861,7 @@ const SpecialRoomPermission = () => {
                             </Select>
                           </div>
                           <div>
-                            <Label>Number of Participants</Label>
+                            <Label className="text-sm font-medium text-slate-700">Number of Participants</Label>
                             <Input 
                               type="number" 
                               min={0} 
@@ -833,17 +876,19 @@ const SpecialRoomPermission = () => {
                                   } 
                                 }));
                               }} 
+                              className="h-11 sm:h-10 text-sm mt-1 w-full"
                             />
-                            <p className="text-2xs text-muted-foreground mt-1">Max capacity for {selectedRoom.name} is {selectedRoom.capacity} persons.</p>
+                            <p className="text-2xs text-muted-foreground mt-1.5">Max capacity for {selectedRoom.name} is {selectedRoom.capacity} persons.</p>
                           </div>
                         </div>
 
                         <div>
-                          <Label>Purpose of Request</Label>
+                          <Label className="text-sm font-medium text-slate-700">Purpose of Request</Label>
                           <Textarea 
                             placeholder="Briefly state the purpose of booking..." 
                             value={formData.purpose} 
                             onChange={(e) => setFormData(prev => ({ ...prev, purpose: e.target.value }))}
+                            className="text-sm mt-1 min-h-[100px] w-full"
                           />
                         </div>
                       </div>
@@ -851,31 +896,31 @@ const SpecialRoomPermission = () => {
 
                     {/* STEP 2: APPLICANT DETAILS & TEAM MEMBERS */}
                     {formStep === 2 && (
-                      <div className="space-y-6">
-                        <h3 className="font-semibold text-sm border-b pb-2">Applicant Information</h3>
+                      <div className="space-y-4 sm:space-y-6">
+                        <h3 className="text-lg font-bold border-b pb-2 text-slate-800">Applicant Information</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div>
-                            <Label>Requested By</Label>
-                            <Input value={formData.applicantDetails.applicantName} onChange={(e) => setFormData(prev => ({ ...prev, applicantDetails: { ...prev.applicantDetails, applicantName: e.target.value } }))} required />
+                            <Label className="text-sm font-medium text-slate-700">Requested By</Label>
+                            <Input value={formData.applicantDetails.applicantName} onChange={(e) => setFormData(prev => ({ ...prev, applicantDetails: { ...prev.applicantDetails, applicantName: e.target.value } }))} required className="h-11 sm:h-10 text-sm mt-1 w-full" />
                           </div>
                           <div>
-                            <Label>PRN Number</Label>
-                            <Input value={formData.applicantDetails.prn} onChange={(e) => setFormData(prev => ({ ...prev, applicantDetails: { ...prev.applicantDetails, prn: e.target.value } }))} required />
+                            <Label className="text-sm font-medium text-slate-700">PRN Number</Label>
+                            <Input value={formData.applicantDetails.prn} onChange={(e) => setFormData(prev => ({ ...prev, applicantDetails: { ...prev.applicantDetails, prn: e.target.value } }))} required className="h-11 sm:h-10 text-sm mt-1 w-full" />
                           </div>
                           <div>
-                            <Label>Roll Number</Label>
-                            <Input value={formData.applicantDetails.rollNo} onChange={(e) => setFormData(prev => ({ ...prev, applicantDetails: { ...prev.applicantDetails, rollNo: e.target.value } }))} required />
+                            <Label className="text-sm font-medium text-slate-700">Roll Number</Label>
+                            <Input value={formData.applicantDetails.rollNo} onChange={(e) => setFormData(prev => ({ ...prev, applicantDetails: { ...prev.applicantDetails, rollNo: e.target.value } }))} required className="h-11 sm:h-10 text-sm mt-1 w-full" />
                           </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                           <div className="md:col-span-2">
-                            <Label>Department / Branch</Label>
+                            <Label className="text-sm font-medium text-slate-700">Department / Branch</Label>
                             <Select 
                               value={formData.applicantDetails.department}
                               onValueChange={(val) => setFormData(prev => ({ ...prev, applicantDetails: { ...prev.applicantDetails, department: val } }))}
                             >
-                              <SelectTrigger>
+                              <SelectTrigger className="h-11 sm:h-10 text-sm mt-1 w-full">
                                 <SelectValue placeholder="Select Department" />
                               </SelectTrigger>
                               <SelectContent>
@@ -886,12 +931,12 @@ const SpecialRoomPermission = () => {
                             </Select>
                           </div>
                           <div>
-                            <Label>Year</Label>
+                            <Label className="text-sm font-medium text-slate-700">Year</Label>
                             <Select 
                               value={formData.applicantDetails.year}
                               onValueChange={(val) => setFormData(prev => ({ ...prev, applicantDetails: { ...prev.applicantDetails, year: val } }))}
                             >
-                              <SelectTrigger>
+                              <SelectTrigger className="h-11 sm:h-10 text-sm mt-1 w-full">
                                 <SelectValue placeholder="Year" />
                               </SelectTrigger>
                               <SelectContent>
@@ -903,60 +948,60 @@ const SpecialRoomPermission = () => {
                             </Select>
                           </div>
                           <div>
-                            <Label>Division</Label>
-                            <Input placeholder="A/B/C" value={formData.applicantDetails.division} onChange={(e) => setFormData(prev => ({ ...prev, applicantDetails: { ...prev.applicantDetails, division: e.target.value } }))} required />
+                            <Label className="text-sm font-medium text-slate-700">Division</Label>
+                            <Input placeholder="A/B/C" value={formData.applicantDetails.division} onChange={(e) => setFormData(prev => ({ ...prev, applicantDetails: { ...prev.applicantDetails, division: e.target.value } }))} required className="h-11 sm:h-10 text-sm mt-1 w-full" />
                           </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <Label>Mobile Number</Label>
-                            <Input type="tel" value={formData.applicantDetails.mobile} onChange={(e) => setFormData(prev => ({ ...prev, applicantDetails: { ...prev.applicantDetails, mobile: e.target.value } }))} required />
+                            <Label className="text-sm font-medium text-slate-700">Mobile Number</Label>
+                            <Input type="tel" value={formData.applicantDetails.mobile} onChange={(e) => setFormData(prev => ({ ...prev, applicantDetails: { ...prev.applicantDetails, mobile: e.target.value } }))} required className="h-11 sm:h-10 text-sm mt-1 w-full" />
                           </div>
                           <div>
-                            <Label>Email Address</Label>
-                            <Input type="email" value={formData.applicantDetails.email} onChange={(e) => setFormData(prev => ({ ...prev, applicantDetails: { ...prev.applicantDetails, email: e.target.value } }))} required />
+                            <Label className="text-sm font-medium text-slate-700">Email Address</Label>
+                            <Input type="email" value={formData.applicantDetails.email} onChange={(e) => setFormData(prev => ({ ...prev, applicantDetails: { ...prev.applicantDetails, email: e.target.value } }))} required className="h-11 sm:h-10 text-sm mt-1 w-full" />
                           </div>
                         </div>
 
-                        <h3 className="font-semibold text-sm border-b pb-2 pt-4 flex justify-between items-center">
-                          <span>Team & Project details</span>
-                          <Button type="button" variant="outline" size="sm" onClick={addTeamMember} className="h-8">
+                        <h3 className="text-lg font-bold border-b pb-2 pt-4 flex justify-between items-center text-slate-800">
+                          <span>Team & Project Details</span>
+                          <Button type="button" variant="outline" onClick={addTeamMember} className="h-11 sm:h-8 px-4 text-xs font-semibold min-h-[44px] sm:min-h-0">
                             <Plus className="w-3.5 h-3.5 mr-1" /> Add Member
                           </Button>
                         </h3>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <Label>Team Name</Label>
-                            <Input placeholder="Project / Team Name" value={formData.teamDetails.teamName} onChange={(e) => setFormData(prev => ({ ...prev, teamDetails: { ...prev.teamDetails, teamName: e.target.value } }))} />
+                            <Label className="text-sm font-medium text-slate-700">Team Name</Label>
+                            <Input placeholder="Project / Team Name" value={formData.teamDetails.teamName} onChange={(e) => setFormData(prev => ({ ...prev, teamDetails: { ...prev.teamDetails, teamName: e.target.value } }))} className="h-11 sm:h-10 text-sm mt-1 w-full" />
                           </div>
                           <div>
-                            <Label>Project Name</Label>
-                            <Input placeholder="Core Project Title" value={formData.teamDetails.projectName} onChange={(e) => setFormData(prev => ({ ...prev, teamDetails: { ...prev.teamDetails, projectName: e.target.value } }))} />
+                            <Label className="text-sm font-medium text-slate-700">Project Name</Label>
+                            <Input placeholder="Core Project Title" value={formData.teamDetails.projectName} onChange={(e) => setFormData(prev => ({ ...prev, teamDetails: { ...prev.teamDetails, projectName: e.target.value } }))} className="h-11 sm:h-10 text-sm mt-1 w-full" />
                           </div>
                         </div>
 
                         {teamMembers.length > 0 && (
-                          <div className="space-y-3">
-                            <Label>Dynamic Team Members</Label>
+                          <div className="space-y-3 pt-2">
+                            <Label className="text-sm font-semibold text-slate-700">Dynamic Team Members</Label>
                             {teamMembers.map((member, idx) => (
-                              <div key={idx} className="flex flex-col md:flex-row gap-2 border p-3 rounded bg-secondary/15 relative">
-                                <Button type="button" variant="ghost" size="sm" onClick={() => removeTeamMember(idx)} className="absolute top-2 right-2 text-red-500 hover:text-red-700 md:hidden">
+                              <div key={idx} className="flex flex-col md:flex-row gap-3 border p-4 sm:p-3 rounded-2xl sm:rounded-xl bg-secondary/15 relative pt-10 sm:pt-3">
+                                <Button type="button" variant="ghost" onClick={() => removeTeamMember(idx)} className="absolute top-1.5 right-1.5 w-11 h-11 flex items-center justify-center text-red-500 hover:text-red-700 md:hidden min-h-[44px]">
                                   <Trash className="w-4 h-4" />
                                 </Button>
                                 <div className="flex-1">
-                                  <Input placeholder="Full Name" value={member.fullName} onChange={(e) => handleMemberChange(idx, 'fullName', e.target.value)} className="h-8 text-xs bg-background" />
+                                  <Input placeholder="Full Name" value={member.fullName} onChange={(e) => handleMemberChange(idx, 'fullName', e.target.value)} className="h-11 sm:h-8 text-sm sm:text-xs bg-background w-full" />
                                 </div>
-                                <div className="w-32">
-                                  <Input placeholder="PRN" value={member.prn} onChange={(e) => handleMemberChange(idx, 'prn', e.target.value)} className="h-8 text-xs bg-background" />
+                                <div className="w-full md:w-32">
+                                  <Input placeholder="PRN" value={member.prn} onChange={(e) => handleMemberChange(idx, 'prn', e.target.value)} className="h-11 sm:h-8 text-sm sm:text-xs bg-background w-full" />
                                 </div>
-                                <div className="w-40">
-                                  <Input placeholder="Branch" value={formData.applicantDetails.department} disabled className="h-8 text-xs bg-background/50" />
+                                <div className="w-full md:w-40">
+                                  <Input placeholder="Branch" value={formData.applicantDetails.department} disabled className="h-11 sm:h-8 text-sm sm:text-xs bg-background/50 w-full" />
                                 </div>
-                                <div className="w-28">
+                                <div className="w-full md:w-28">
                                   <Select value={member.year} onValueChange={(val) => handleMemberChange(idx, 'year', val)}>
-                                    <SelectTrigger className="h-8 text-xs bg-background">
+                                    <SelectTrigger className="h-11 sm:h-8 text-sm sm:text-xs bg-background w-full">
                                       <SelectValue placeholder="Year" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -979,24 +1024,24 @@ const SpecialRoomPermission = () => {
 
                     {/* STEP 3: RECOMMENDING FACULTY & RESOURCE REQUIREMENTS */}
                     {formStep === 3 && (
-                      <div className="space-y-6">
-                        <h3 className="font-semibold text-sm border-b pb-2">Recommending Faculty Details</h3>
+                      <div className="space-y-4 sm:space-y-6">
+                        <h3 className="text-lg font-bold border-b pb-2 text-slate-800">Recommending Faculty Details</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div>
-                            <Label>Faculty Name</Label>
-                            <Input value={formData.facultyRecommendation.facultyName} onChange={(e) => setFormData(prev => ({ ...prev, facultyRecommendation: { ...prev.facultyRecommendation, facultyName: e.target.value } }))} required />
+                            <Label className="text-sm font-medium text-slate-700">Faculty Name</Label>
+                            <Input value={formData.facultyRecommendation.facultyName} onChange={(e) => setFormData(prev => ({ ...prev, facultyRecommendation: { ...prev.facultyRecommendation, facultyName: e.target.value } }))} required className="h-11 sm:h-10 text-sm mt-1 w-full" />
                           </div>
                           <div>
-                            <Label>Faculty Department</Label>
-                            <Input value={formData.facultyRecommendation.facultyDepartment} onChange={(e) => setFormData(prev => ({ ...prev, facultyRecommendation: { ...prev.facultyRecommendation, facultyDepartment: e.target.value } }))} required />
+                            <Label className="text-sm font-medium text-slate-700">Faculty Department</Label>
+                            <Input value={formData.facultyRecommendation.facultyDepartment} onChange={(e) => setFormData(prev => ({ ...prev, facultyRecommendation: { ...prev.facultyRecommendation, facultyDepartment: e.target.value } }))} required className="h-11 sm:h-10 text-sm mt-1 w-full" />
                           </div>
                           <div>
-                            <Label>Faculty Designation</Label>
+                            <Label className="text-sm font-medium text-slate-700">Faculty Designation</Label>
                             <Select 
                               value={formData.facultyRecommendation.facultyDesignation}
                               onValueChange={(val) => setFormData(prev => ({ ...prev, facultyRecommendation: { ...prev.facultyRecommendation, facultyDesignation: val } }))}
                             >
-                              <SelectTrigger>
+                              <SelectTrigger className="h-11 sm:h-10 text-sm mt-1 w-full">
                                 <SelectValue placeholder="Designation" />
                               </SelectTrigger>
                               <SelectContent>
@@ -1011,27 +1056,28 @@ const SpecialRoomPermission = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <Label>Faculty Mobile Number</Label>
-                            <Input type="tel" value={formData.facultyRecommendation.facultyMobile} onChange={(e) => setFormData(prev => ({ ...prev, facultyRecommendation: { ...prev.facultyRecommendation, facultyMobile: e.target.value } }))} required />
+                            <Label className="text-sm font-medium text-slate-700">Faculty Mobile Number</Label>
+                            <Input type="tel" value={formData.facultyRecommendation.facultyMobile} onChange={(e) => setFormData(prev => ({ ...prev, facultyRecommendation: { ...prev.facultyRecommendation, facultyMobile: e.target.value } }))} required className="h-11 sm:h-10 text-sm mt-1 w-full" />
                           </div>
                           <div>
-                            <Label>Faculty Email Address</Label>
-                            <Input type="email" value={formData.facultyRecommendation.facultyEmail} onChange={(e) => setFormData(prev => ({ ...prev, facultyRecommendation: { ...prev.facultyRecommendation, facultyEmail: e.target.value } }))} required />
+                            <Label className="text-sm font-medium text-slate-700">Faculty Email Address</Label>
+                            <Input type="email" value={formData.facultyRecommendation.facultyEmail} onChange={(e) => setFormData(prev => ({ ...prev, facultyRecommendation: { ...prev.facultyRecommendation, facultyEmail: e.target.value } }))} required className="h-11 sm:h-10 text-sm mt-1 w-full" />
                           </div>
                         </div>
 
-                        <h3 className="font-semibold text-sm border-b pb-2 pt-4">Resource & Equipment Requirements</h3>
+                        <h3 className="text-lg font-bold border-b pb-2 pt-4 text-slate-800">Resource & Equipment Requirements</h3>
                         <div>
-                          <Label className="mb-2 block">Select Required Equipment</Label>
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          <Label className="mb-2 block text-sm font-semibold text-slate-700">Select Required Equipment</Label>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                             {selectedRoom.equipment.map(eq => (
-                              <div key={eq} className="flex items-center space-x-2 border p-2 rounded hover:bg-secondary/10 cursor-pointer">
+                              <div key={eq} className="flex items-center space-x-3 border p-3 rounded-xl hover:bg-slate-50 cursor-pointer min-h-[44px]">
                                 <Checkbox 
                                   id={`eq-${eq}`} 
                                   checked={formData.resourceRequirements.requiredEquipment.includes(eq)} 
                                   onCheckedChange={() => handleEquipmentToggle(eq)}
+                                  className="h-5 w-5"
                                 />
-                                <label htmlFor={`eq-${eq}`} className="text-xs leading-none cursor-pointer">{eq}</label>
+                                <label htmlFor={`eq-${eq}`} className="text-sm font-medium leading-none cursor-pointer">{eq}</label>
                               </div>
                             ))}
                           </div>
@@ -1039,17 +1085,17 @@ const SpecialRoomPermission = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                           <div>
-                            <Label>Other Equipment Required</Label>
-                            <Input placeholder="Laptop adapters, prototypes display area..." value={formData.resourceRequirements.otherEquipment} onChange={(e) => setFormData(prev => ({ ...prev, resourceRequirements: { ...prev.resourceRequirements, otherEquipment: e.target.value } }))} />
+                            <Label className="text-sm font-medium text-slate-700">Other Equipment Required</Label>
+                            <Input placeholder="Laptop adapters, prototypes display area..." value={formData.resourceRequirements.otherEquipment} onChange={(e) => setFormData(prev => ({ ...prev, resourceRequirements: { ...prev.resourceRequirements, otherEquipment: e.target.value } }))} className="h-11 sm:h-10 text-sm mt-1 w-full" />
                           </div>
                           <div>
-                            <Label>Special Requirements</Label>
-                            <Input placeholder="Extended seating, specific audio setups..." value={formData.specialRequirements} onChange={(e) => setFormData(prev => ({ ...prev, specialRequirements: e.target.value }))} />
+                            <Label className="text-sm font-medium text-slate-700">Special Requirements</Label>
+                            <Input placeholder="Extended seating, specific audio setups..." value={formData.specialRequirements} onChange={(e) => setFormData(prev => ({ ...prev, specialRequirements: e.target.value }))} className="h-11 sm:h-10 text-sm mt-1 w-full" />
                           </div>
                         </div>
 
-                        <h3 className="font-semibold text-sm border-b pb-2 pt-4">Room Usage Rules & Guidelines</h3>
-                        <div className="space-y-3 bg-secondary/10 p-4 border rounded">
+                        <h3 className="text-lg font-bold border-b pb-2 pt-4 text-slate-800">Room Usage Rules & Guidelines</h3>
+                        <div className="space-y-1 bg-slate-50 p-4 border rounded-xl">
                           {[
                             { key: 'cleanliness', text: "I agree to maintain complete cleanliness inside the facility." },
                             { key: 'noDamage', text: "I agree to not damage any equipment or furniture inside the room." },
@@ -1057,7 +1103,7 @@ const SpecialRoomPermission = () => {
                             { key: 'returnEquipment', text: "I agree to return all borrowed markers, connection cables, or equipment." },
                             { key: 'policies', text: "I agree to follow all official IDEA Hub guidelines and policies." }
                           ].map(rule => (
-                            <div key={rule.key} className="flex items-start space-x-2">
+                            <div key={rule.key} className="flex items-start space-x-3 py-2 cursor-pointer">
                               <Checkbox 
                                 id={`rule-${rule.key}`}
                                 // @ts-ignore
@@ -1066,8 +1112,9 @@ const SpecialRoomPermission = () => {
                                   ...prev,
                                   guidelinesChecked: { ...prev.guidelinesChecked, [rule.key]: val }
                                 }))}
+                                className="mt-0.5 h-5 w-5"
                               />
-                              <label htmlFor={`rule-${rule.key}`} className="text-xs cursor-pointer select-none leading-tight">{rule.text}</label>
+                              <label htmlFor={`rule-${rule.key}`} className="text-sm cursor-pointer select-none leading-snug text-slate-700">{rule.text}</label>
                             </div>
                           ))}
                         </div>
@@ -1075,24 +1122,19 @@ const SpecialRoomPermission = () => {
                     )}
 
                     {/* Actions Row */}
-                    <div className="flex justify-between items-center mt-8 pt-4 border-t">
+                    <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-3 sm:gap-2 items-stretch sm:items-center mt-8 pt-4 border-t">
                       {formStep > 1 ? (
-                        <Button variant="outline" onClick={prevStep}>Previous</Button>
+                        <Button variant="outline" onClick={prevStep} className="h-11 sm:h-10 text-sm font-semibold w-full sm:w-auto min-h-[44px]">Previous</Button>
                       ) : (
-                        <div />
+                        <div className="hidden sm:block" />
                       )}
                       
-                      <div className="flex gap-2">
+                      <div className="flex flex-col sm:flex-row gap-2 sm:gap-2">
+                        <Button variant="ghost" onClick={() => handleFormSubmit("Draft")} className="h-11 sm:h-10 text-sm font-semibold w-full sm:w-auto min-h-[44px]">Save Draft</Button>
                         {formStep < 3 ? (
-                          <>
-                            <Button variant="ghost" onClick={() => handleFormSubmit("Draft")}>Save Draft</Button>
-                            <Button onClick={nextStep}>Next Step</Button>
-                          </>
+                          <Button onClick={nextStep} className="h-11 sm:h-10 text-sm font-semibold w-full sm:w-auto min-h-[44px]">Next Step</Button>
                         ) : (
-                          <>
-                            <Button variant="ghost" onClick={() => handleFormSubmit("Draft")}>Save Draft</Button>
-                            <Button onClick={() => handleFormSubmit("Submitted")} className="bg-green-600 hover:bg-green-700">Submit Application</Button>
-                          </>
+                          <Button onClick={() => handleFormSubmit("Submitted")} className="bg-green-600 hover:bg-green-700 h-11 sm:h-10 text-sm font-semibold w-full sm:w-auto min-h-[44px]">Submit Application</Button>
                         )}
                       </div>
                     </div>
@@ -1101,13 +1143,13 @@ const SpecialRoomPermission = () => {
               </div>
 
               {/* Room Info Side Column */}
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-md">Room Inventory Status</CardTitle>
-                    <CardDescription>Real-time equipment check for selection.</CardDescription>
+              <div className="space-y-4 sm:space-y-6">
+                <Card className="rounded-2xl border bg-white shadow-sm">
+                  <CardHeader className="p-4 sm:p-6 pb-2">
+                    <CardTitle className="text-sm font-bold text-slate-800">Room Inventory Status</CardTitle>
+                    <CardDescription className="text-2xs sm:text-xs">Real-time equipment check for selection.</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="p-4 sm:p-6 pt-0 space-y-4">
                     {inventoryStatus.length > 0 ? (
                       <div className="space-y-3">
                         {inventoryStatus.slice(0, 5).map(inv => (
@@ -1120,37 +1162,35 @@ const SpecialRoomPermission = () => {
                         ))}
                       </div>
                     ) : (
-                      <div className="text-xs text-muted-foreground flex items-center gap-2 p-2 bg-muted/40 rounded">
-                        <Info className="w-4 h-4 text-primary" /> Enter Date and Time slot in Step 1 to load real-time equipment availability.
+                      <div className="text-xs text-muted-foreground flex items-center gap-2 p-2.5 bg-muted/40 rounded-xl leading-relaxed">
+                        <Info className="w-4 h-4 text-primary shrink-0" /> Enter Date and Time slot in Step 1 to load real-time equipment availability.
                       </div>
                     )}
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardContent className="p-4 space-y-4 text-xs">
-                    <img src={selectedRoom.image} alt={selectedRoom.name} className="w-full h-32 object-cover rounded-md mb-2" />
-                    <h3 className="font-bold text-sm">{selectedRoom.name}</h3>
-                    <p className="text-muted-foreground leading-relaxed">{selectedRoom.description}</p>
-                    <div>
-                      <div className="font-semibold mb-1">Room Capacity:</div>
-                      <div>Max {selectedRoom.capacity} participants</div>
+                <Card className="rounded-2xl border bg-white shadow-sm overflow-hidden">
+                  <CardContent className="p-4 sm:p-6 space-y-4 text-xs">
+                    <img src={selectedRoom.image} alt={selectedRoom.name} className="w-full h-40 sm:h-32 object-cover rounded-xl border mb-2" />
+                    <h3 className="font-bold text-sm text-slate-800">{selectedRoom.name}</h3>
+                    <p className="text-muted-foreground leading-relaxed text-xs">{selectedRoom.description}</p>
+                    <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                      <div className="font-semibold text-slate-700 text-xs">Room Capacity:</div>
+                      <div className="text-slate-600 font-medium text-2xs mt-0.5">Max {selectedRoom.capacity} participants</div>
                     </div>
                   </CardContent>
                 </Card>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
-    )}
-
-
+          )}
+        </div>
+      )}
 
       {/* -------------------- MY REQUESTS / HISTORY TAB -------------------- */}
       {activeTab === "history" && (
         <div className="space-y-6">
           {/* Stats Row */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-4">
             {[
               { label: "Total Requests", val: stats.total, color: "bg-blue-50 border-blue-200 text-blue-700" },
               { label: "Pending Requests", val: stats.pending, color: "bg-amber-50 border-amber-200 text-amber-700" },
@@ -1160,33 +1200,33 @@ const SpecialRoomPermission = () => {
               { label: "Today's Bookings", val: stats.todayBookings, color: "bg-orange-50 border-orange-200 text-orange-700" },
               { label: "Completed Bookings", val: stats.completed, color: "bg-slate-50 border-slate-200 text-slate-700" }
             ].map(card => (
-              <Card key={card.label} className={`${card.color} border hover:shadow-md transition duration-200`}>
-                <CardContent className="p-3 text-center">
-                  <div className="text-xs font-semibold leading-tight">{card.label}</div>
-                  <div className="text-xl font-extrabold mt-1">{card.val}</div>
+              <Card key={card.label} className={`${card.color} border hover:shadow-md transition duration-200 rounded-xl`}>
+                <CardContent className="p-3 text-center flex flex-col justify-center h-full">
+                  <div className="text-[10px] sm:text-xs font-semibold leading-tight">{card.label}</div>
+                  <div className="text-lg sm:text-xl font-extrabold mt-1">{card.val}</div>
                 </CardContent>
               </Card>
             ))}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
             {/* Requests List Table */}
             <div className="lg:col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>My Requests History</CardTitle>
-                  <CardDescription>Track status and actions for your requests.</CardDescription>
+              <Card className="rounded-2xl border bg-white shadow-sm">
+                <CardHeader className="p-4 sm:p-6 pb-2">
+                  <CardTitle className="text-lg font-bold text-slate-800">My Requests History</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Track status and actions for your requests.</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4 sm:p-6 pt-0">
                   {myRequests.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-xs text-left border-collapse">
+                    <div className="overflow-x-auto -mx-4 sm:mx-0">
+                      <table className="w-full text-xs text-left border-collapse min-w-[500px] sm:min-w-0">
                         <thead>
-                          <tr className="border-b bg-muted/50 text-muted-foreground uppercase font-bold">
+                          <tr className="border-b bg-slate-50 text-slate-500 uppercase font-bold text-[10px] tracking-wider">
                             <th className="p-3">Request ID</th>
-                            <th className="p-3">Room Type</th>
-                            <th className="p-3">Date</th>
-                            <th className="p-3">Time</th>
+                            <th className="p-3">Room / Schedule</th>
+                            <th className="p-3 hidden sm:table-cell">Date</th>
+                            <th className="p-3 hidden sm:table-cell">Time</th>
                             <th className="p-3 text-center">Status</th>
                             <th className="p-3 text-right">Actions</th>
                           </tr>
@@ -1195,13 +1235,18 @@ const SpecialRoomPermission = () => {
                           {myRequests.map((req) => (
                             <tr 
                               key={req._id} 
-                              className={`border-b hover:bg-secondary/5 cursor-pointer ${selectedRequestDetails?._id === req._id ? 'bg-secondary/10' : ''}`}
+                              className={`border-b hover:bg-secondary/5 cursor-pointer transition ${selectedRequestDetails?._id === req._id ? 'bg-secondary/10' : ''}`}
                               onClick={() => setSelectedRequestDetails(req)}
                             >
-                              <td className="p-3 font-semibold">{req.requestId}</td>
-                              <td className="p-3">{req.facilityRequired}</td>
-                              <td className="p-3">{req.schedule.requestedDate}</td>
-                              <td className="p-3">{req.schedule.startTime} - {req.schedule.endTime}</td>
+                              <td className="p-3 font-semibold text-primary">{req.requestId}</td>
+                              <td className="p-3">
+                                <div className="font-bold text-slate-800 text-xs sm:text-sm">{req.facilityRequired}</div>
+                                <div className="sm:hidden text-muted-foreground text-[10px] font-medium mt-1 leading-snug">
+                                  {req.schedule.requestedDate} • {req.schedule.startTime} - {req.schedule.endTime}
+                                </div>
+                              </td>
+                              <td className="p-3 hidden sm:table-cell font-medium text-slate-600">{req.schedule.requestedDate}</td>
+                              <td className="p-3 hidden sm:table-cell font-medium text-slate-600">{req.schedule.startTime} - {req.schedule.endTime}</td>
                               <td className="p-3 text-center">
                                 <span className={`px-2.5 py-0.5 rounded-full text-3xs font-extrabold uppercase ${
                                   req.status === 'Approved' ? 'bg-green-100 text-green-700' :
@@ -1217,16 +1262,16 @@ const SpecialRoomPermission = () => {
                                 <div className="flex justify-end gap-1.5">
                                   {['Approved', 'Conditional Approval'].includes(req.status) && (
                                     <>
-                                      <Button variant="outline" size="xs" onClick={() => downloadPdf(req._id)} className="h-7 px-2">
-                                        <Download className="w-3.5 h-3.5" />
+                                      <Button variant="outline" size="icon" onClick={() => downloadPdf(req._id)} className="h-10 w-10 sm:h-8 sm:w-8 p-0 flex items-center justify-center min-h-[40px] sm:min-h-0">
+                                        <Download className="w-4 h-4 text-slate-600" />
                                       </Button>
-                                      <Button variant="outline" size="xs" onClick={() => printForm(req)} className="h-7 px-2">
-                                        <Printer className="w-3.5 h-3.5" />
+                                      <Button variant="outline" size="icon" onClick={() => printForm(req)} className="h-10 w-10 sm:h-8 sm:w-8 p-0 flex items-center justify-center min-h-[40px] sm:min-h-0">
+                                        <Printer className="w-4 h-4 text-slate-600" />
                                       </Button>
                                     </>
                                   )}
                                   {['Submitted', 'Faculty Verified', 'Coordinator Review'].includes(req.status) && (
-                                    <Button variant="destructive" size="xs" onClick={() => cancelRequest(req._id)} className="h-7 px-2 text-2xs">
+                                    <Button variant="destructive" onClick={() => cancelRequest(req._id)} className="h-10 px-3.5 text-xs sm:h-8 sm:px-2.5 sm:text-2xs flex items-center justify-center font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 min-h-[40px] sm:min-h-0">
                                       Cancel
                                     </Button>
                                   )}
@@ -1238,7 +1283,7 @@ const SpecialRoomPermission = () => {
                       </table>
                     </div>
                   ) : (
-                    <p className="text-xs text-muted-foreground p-8 text-center bg-muted/10 border border-dashed rounded">No requests submitted yet.</p>
+                    <p className="text-xs text-muted-foreground p-8 text-center bg-muted/10 border border-dashed rounded-2xl">No requests submitted yet.</p>
                   )}
                 </CardContent>
               </Card>
@@ -1247,20 +1292,20 @@ const SpecialRoomPermission = () => {
             {/* Request Detail Panel (Timeline, History, QR details) */}
             <div>
               {selectedRequestDetails ? (
-                <Card className="sticky top-20 border-primary/20">
-                  <CardHeader className="border-b pb-4 bg-primary/5">
-                    <CardTitle className="text-md flex justify-between items-center">
+                <Card className="sticky top-20 border-primary/20 rounded-2xl shadow-sm bg-white overflow-hidden">
+                  <CardHeader className="border-b pb-4 bg-primary/5 p-4 sm:p-6">
+                    <CardTitle className="text-md font-bold flex justify-between items-center text-slate-800">
                       <span>Request Details</span>
-                      <span className="text-xs font-mono font-semibold">{selectedRequestDetails.requestId}</span>
+                      <span className="text-xs font-mono font-bold text-primary">{selectedRequestDetails.requestId}</span>
                     </CardTitle>
-                    <CardDescription>{selectedRequestDetails.facilityRequired} Booking</CardDescription>
+                    <CardDescription className="text-xs">{selectedRequestDetails.facilityRequired} Booking</CardDescription>
                   </CardHeader>
-                  <CardContent className="pt-4 space-y-5 text-xs">
+                  <CardContent className="p-4 sm:p-6 space-y-5 text-xs">
                     
                     {/* Status Tracker Timeline */}
                     <div>
-                      <div className="font-semibold mb-3">Status Timeline</div>
-                      <div className="relative border-l border-primary/20 pl-4 space-y-4">
+                      <div className="font-bold text-slate-800 mb-3 text-xs uppercase tracking-wider">Status Timeline</div>
+                      <div className="relative border-l border-primary/20 pl-4 space-y-4 ml-2">
                         {[
                           { key: 'Submitted', label: 'Submitted & Created' },
                           { key: 'Faculty Verified', label: 'Faculty Verified' },
@@ -1281,43 +1326,43 @@ const SpecialRoomPermission = () => {
 
                           return (
                             <div key={index} className="relative">
-                              <span className={`absolute -left-6 top-0 w-3.5 h-3.5 rounded-full border flex items-center justify-center ${isDone ? 'bg-primary border-primary text-white' : 'bg-background border-muted-foreground'}`}>
+                              <span className={`absolute -left-6 top-0 w-3.5 h-3.5 rounded-full border flex items-center justify-center ${isDone ? 'bg-primary border-primary text-white' : 'bg-background border-slate-300'}`}>
                                 {isDone && <Check className="w-2 h-2" />}
                               </span>
-                              <div className={`${isDone ? 'text-foreground font-bold' : 'text-muted-foreground'}`}>{node.label}</div>
+                              <div className={`${isDone ? 'text-slate-800 font-bold' : 'text-slate-400 font-medium'}`}>{node.label}</div>
                             </div>
                           );
                         })}
                       </div>
                     </div>
 
-                    <div className="border-t pt-3 grid grid-cols-2 gap-y-2">
-                      <span className="text-muted-foreground">Purpose:</span>
-                      <span className="font-medium text-right">{selectedRequestDetails.purpose}</span>
+                    <div className="border-t pt-3 grid grid-cols-2 gap-y-2 text-xs">
+                      <span className="text-muted-foreground font-semibold">Purpose:</span>
+                      <span className="font-medium text-right text-slate-800">{selectedRequestDetails.purpose}</span>
                       
-                      <span className="text-muted-foreground">Category:</span>
-                      <span className="font-medium text-right">{selectedRequestDetails.category}</span>
+                      <span className="text-muted-foreground font-semibold">Category:</span>
+                      <span className="font-medium text-right text-slate-800">{selectedRequestDetails.category}</span>
                       
-                      <span className="text-muted-foreground">Participants:</span>
-                      <span className="font-medium text-right">{selectedRequestDetails.teamDetails?.participantsCount} Persons</span>
+                      <span className="text-muted-foreground font-semibold">Participants:</span>
+                      <span className="font-medium text-right text-slate-800">{selectedRequestDetails.teamDetails?.participantsCount} Persons</span>
 
-                      <span className="text-muted-foreground">Status:</span>
+                      <span className="text-muted-foreground font-semibold">Status:</span>
                       <span className="font-bold text-right text-primary">{selectedRequestDetails.status}</span>
                     </div>
 
                     {/* Remarks history audit trail */}
                     {selectedRequestDetails.approvalHistory?.length > 0 && (
                       <div className="border-t pt-3">
-                        <div className="font-semibold mb-2">Audit History Remarks</div>
+                        <div className="font-semibold text-slate-800 mb-2">Audit History Remarks</div>
                         <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
                           {selectedRequestDetails.approvalHistory.map((hist: any, hIdx: number) => (
-                            <div key={hIdx} className="bg-secondary/20 p-2 rounded text-2xs border">
+                            <div key={hIdx} className="bg-secondary/20 p-2.5 rounded-xl text-2xs border">
                               <div className="flex justify-between font-semibold text-muted-foreground">
                                 <span>{hist.role} ({hist.byName})</span>
                                 <span>{new Date(hist.date).toLocaleDateString()}</span>
                               </div>
-                              <div className="mt-1">Action: <span className="font-bold">{hist.action}</span></div>
-                              {hist.remarks && <div className="mt-1 text-muted-foreground italic">"{hist.remarks}"</div>}
+                              <div className="mt-1 font-medium">Action: <span className="font-bold text-slate-700">{hist.action}</span></div>
+                              {hist.remarks && <div className="mt-1 text-slate-500 italic">"{hist.remarks}"</div>}
                             </div>
                           ))}
                         </div>
@@ -1326,11 +1371,11 @@ const SpecialRoomPermission = () => {
 
                     {/* PDF Actions */}
                     {['Approved', 'Conditional Approval'].includes(selectedRequestDetails.status) && (
-                      <div className="flex gap-2 border-t pt-4">
-                        <Button className="flex-1" size="sm" onClick={() => downloadPdf(selectedRequestDetails._id)}>
+                      <div className="flex flex-col sm:flex-row gap-2.5 border-t pt-4">
+                        <Button className="w-full sm:flex-1 h-11 sm:h-9 text-sm font-semibold min-h-[44px]" size="sm" onClick={() => downloadPdf(selectedRequestDetails._id)}>
                           <Download className="w-4 h-4 mr-2" /> Download PDF
                         </Button>
-                        <Button className="flex-1" variant="outline" size="sm" onClick={() => printForm(selectedRequestDetails)}>
+                        <Button className="w-full sm:flex-1 h-11 sm:h-9 text-sm font-semibold min-h-[44px]" variant="outline" size="sm" onClick={() => printForm(selectedRequestDetails)}>
                           <Printer className="w-4 h-4 mr-2" /> Print Form
                         </Button>
                       </div>
@@ -1338,8 +1383,8 @@ const SpecialRoomPermission = () => {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="h-full border border-dashed rounded-md flex items-center justify-center p-8 text-center text-muted-foreground text-xs">
-                  <Info className="w-5 h-5 mb-2 block mx-auto text-muted-foreground" /> Select a request from the history table to view real-time timeline, remarks, audit trail, and print commands.
+                <div className="h-full border border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center p-8 text-center text-muted-foreground text-xs bg-slate-50/50 min-h-[200px]">
+                  <Info className="w-6 h-6 mb-2 block text-slate-400" /> Select a request from the history table to view real-time timeline, remarks, audit trail, and print commands.
                 </div>
               )}
             </div>
@@ -1349,7 +1394,7 @@ const SpecialRoomPermission = () => {
       
       {/* Room Details Modal */}
       <Dialog open={!!viewDetailsRoom} onOpenChange={(open) => !open && setViewDetailsRoom(null)}>
-        <DialogContent className="max-w-md md:max-w-lg rounded-2xl bg-white border border-slate-200">
+        <DialogContent className="w-[calc(100%-32px)] max-w-md md:max-w-lg rounded-2xl bg-white border border-slate-200 p-4 sm:p-6 overflow-y-auto max-h-[90vh]">
           {viewDetailsRoom && (
             <>
               <DialogHeader>
@@ -1359,7 +1404,7 @@ const SpecialRoomPermission = () => {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 mt-4">
-                <img src={viewDetailsRoom.image} alt={viewDetailsRoom.name} className="w-full h-48 object-cover rounded-xl border border-slate-100" />
+                <img src={viewDetailsRoom.image} alt={viewDetailsRoom.name} className="w-full h-48 sm:h-56 object-cover rounded-xl border border-slate-100" />
                 
                 <div>
                   <h4 className="text-sm font-bold text-slate-800 mb-1">Description</h4>
@@ -1373,7 +1418,7 @@ const SpecialRoomPermission = () => {
 
                 <div>
                   <h4 className="text-sm font-bold text-slate-800 mb-2">Available Equipment Checklist ({viewDetailsRoom.equipment.length})</h4>
-                  <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
                     {viewDetailsRoom.equipment.map((eq) => (
                       <div key={eq} className="flex items-center gap-2 bg-blue-50/50 text-blue-700 rounded-lg p-2 border border-blue-100/40">
                         <span className="text-sm">{getEquipmentEmoji(eq)}</span>
@@ -1383,12 +1428,12 @@ const SpecialRoomPermission = () => {
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t border-slate-100">
                   <Button 
                     type="button" 
                     variant="outline" 
                     onClick={() => setViewDetailsRoom(null)}
-                    className="border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-semibold px-4 py-2 text-xs rounded-lg h-9"
+                    className="w-full sm:w-auto h-11 sm:h-9 text-sm font-semibold min-h-[44px] border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 rounded-lg"
                   >
                     Close
                   </Button>
@@ -1398,7 +1443,7 @@ const SpecialRoomPermission = () => {
                       setSelectedRoom(viewDetailsRoom);
                       setViewDetailsRoom(null);
                     }}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 text-xs rounded-lg transition h-9"
+                    className="w-full sm:w-auto h-11 sm:h-9 text-sm font-semibold min-h-[44px] bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
                   >
                     Book Room
                   </Button>
