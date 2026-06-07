@@ -18,7 +18,9 @@ import productRouter from './routes/product.routes.js';
 import heroRouter from './routes/heroRoutes.js';
 import cartRouter from './routes/cart.routes.js';
 import deliveryRouter from './routes/delivery.routes.js';
+import roomPermissionRouter from './routes/roomPermission.routes.js';
 import scheduler from './scheduler.js';
+import { seedSpecialRooms } from './utils/seedSpecialRooms.js';
 
 
 dotenv.config();
@@ -80,6 +82,7 @@ app.use('/api/cart', cartRouter);
 app.use('/api/orders', orderRouter);
 app.use('/api/orders', orderRouter);
 app.use('/api/delivery', deliveryRouter);
+app.use('/api/room-permissions', roomPermissionRouter);
 import notificationRouter from './routes/notification.routes.js';
 app.use('/api/notifications', notificationRouter);
 // Static uploads
@@ -115,6 +118,7 @@ import { Server } from 'socket.io';
 
 async function start() {
   await connectToDatabase(MONGO_URI);
+  await seedSpecialRooms();
 
   const httpServer = createServer(app);
   const io = new Server(httpServer, {

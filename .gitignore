@@ -49,3 +49,9 @@ render.yaml
 tmp/
 temp/
 *.tmp
+
+# Uploads and temporary records
+ideahub-backend/uploads/
+*.pdf
+ideahub-backend/scratch_test.js
+

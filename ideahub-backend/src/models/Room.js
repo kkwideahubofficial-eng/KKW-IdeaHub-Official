@@ -34,6 +34,18 @@ const roomSchema = new Schema(
       type: String,
       default: null,
     },
+    isSpecial: {
+      type: Boolean,
+      default: false,
+    },
+    description: {
+      type: String,
+      default: '',
+    },
+    image: {
+      type: String,
+      default: '',
+    },
     lastUpdatedDate: {
       type: Date,
       default: Date.now,

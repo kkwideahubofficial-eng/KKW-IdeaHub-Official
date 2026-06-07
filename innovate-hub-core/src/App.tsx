@@ -23,6 +23,7 @@ import ManageEvents from "./pages/ManageEvents";
 import ManageAchievements from "./pages/ManageAchievements";
 import ManageRooms from "./pages/ManageRooms";
 import ManageHero from "./pages/coordinator/ManageHero";
+import ManageSpecialRooms from "./pages/coordinator/ManageSpecialRooms";
 import Records from "./pages/Records";
 import Checkout from "./pages/Checkout";
 import OrderSuccess from "./pages/OrderSuccess";
@@ -37,13 +38,15 @@ import EcommerceStats from "./pages/head/EcommerceStats";
 import RecordStats from "./pages/head/RecordStats";
 import MachineryList from "./pages/machinery/MachineryList";
 import MachineryRequestForm from "./pages/machinery/MachineryRequestForm";
+import SpecialRoomPermission from "./pages/SpecialRoomPermission";
+import ManageRoomPermissions from "./pages/coordinator/ManageRoomPermissions";
+import HeadRoomPermissions from "./pages/head/HeadRoomPermissions";
+import VerifyRoomPermission from "./pages/VerifyRoomPermission";
+import FacultyVerification from "./pages/FacultyVerification";
 
 
 
 import Profile from "./pages/Profile";
-import DriverDashboard from "./pages/driver/Dashboard";
-import DriverLogin from "./pages/driver/Login";
-import DriverSignup from "./pages/driver/Signup";
 import InstallPWA from "./components/InstallPWA";
 
 const queryClient = new QueryClient();
@@ -150,6 +153,14 @@ const App = () => (
                 }
               />
               <Route
+                path="/coordinator/manage-special-rooms"
+                element={
+                  <RequireCoordinator>
+                    <ManageSpecialRooms />
+                  </RequireCoordinator>
+                }
+              />
+              <Route
                 path="/coordinator-dashboard"
                 element={
                   <RequireCoordinator>
@@ -240,6 +251,33 @@ const App = () => (
                   </RequireAuth>
                 }
               />
+              {/* Room Permission Routes */}
+              <Route
+                path="/room-permission"
+                element={
+                  <RequireAuth>
+                    <SpecialRoomPermission />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/coordinator/room-permissions"
+                element={
+                  <RequireCoordinator>
+                    <ManageRoomPermissions />
+                  </RequireCoordinator>
+                }
+              />
+              <Route
+                path="/head/room-permissions"
+                element={
+                  <RequireHead>
+                    <HeadRoomPermissions />
+                  </RequireHead>
+                }
+              />
+              <Route path="/verify-room-permission/:requestId" element={<VerifyRoomPermission />} />
+              <Route path="/verify-faculty/:requestId" element={<FacultyVerification />} />
               <Route path="/achievements" element={<Achievements />} />
               <Route path="/achievements/:id" element={<AchievementDetail />} />
               <Route path="/events" element={<Events />} />
@@ -271,10 +309,7 @@ const App = () => (
                 }
               />
 
-              {/* Driver Routes */}
-              <Route path="/driver/login" element={<DriverLogin />} />
-              <Route path="/driver/signup" element={<DriverSignup />} />
-              <Route path="/driver/dashboard" element={<DriverDashboard />} />
+
 
               <Route path="*" element={<NotFound />} />
             </Routes>

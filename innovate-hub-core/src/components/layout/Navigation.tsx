@@ -75,6 +75,7 @@ const Navigation = () => {
       return [
         { name: "Dashboard", path: "/head-dashboard" },
         { name: "Requests", path: "/head/requests" },
+        { name: "Room Permissions", path: "/head/room-permissions" },
         { name: "Manage Machinery", path: "/manage-machinery" },
         { name: "Manage Orders", path: "/manage-orders" },
         { name: "Records & Attendance", path: "/head/records" },
@@ -90,6 +91,7 @@ const Navigation = () => {
       links.push({ name: "Book Slots", path: "/book-slots" });
       links.push({ name: "My Bookings", path: "/my-bookings" });
       links.push({ name: "Machinery Permission", path: "/machinery" });
+      links.push({ name: "Room Permission", path: "/room-permission" });
       links.push({ name: "Profile", path: "/profile" });
     }
 
@@ -109,6 +111,7 @@ const Navigation = () => {
     if (user?.role === 'coordinator') {
       links.push(
         { name: "Dashboard", path: "/coordinator-dashboard" },
+        { name: "Room Permissions", path: "/coordinator/room-permissions" },
         { name: "Manage Events", path: "/manage-events" },
         { name: "Manage Orders", path: "/manage-orders" },
         { name: "Manage Hero", path: "/manage-hero" },

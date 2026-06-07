@@ -21,10 +21,7 @@ interface Room {
   name: string;
   capacity: number;
   features: string[];
-  isActive: {
-    type: Boolean,
-    default: true,
-  },
+  isActive: boolean;
   deactivationReason?: string | null;
   timeSlots: {
     startTime: string;
@@ -52,6 +49,11 @@ const ManageRooms = () => {
   const [isDeactivateDialogOpen, setIsDeactivateDialogOpen] = useState(false);
   const [roomToDeactivate, setRoomToDeactivate] = useState<Room | null>(null);
   const [deactivationReason, setDeactivationReason] = useState("");
+
+  // Edit Room State
+  const [isEditRoomDialogOpen, setIsEditRoomDialogOpen] = useState(false);
+  const [editingRoom, setEditingRoom] = useState<Room | null>(null);
+  const [editRoomForm, setEditRoomForm] = useState({ name: "", capacity: 1, features: "" });
 
   useEffect(() => {
     fetchData();
@@ -137,6 +139,35 @@ const ManageRooms = () => {
       fetchData();
     } catch (error) {
       toast.error("Failed to create room");
+    }
+  };
+
+  const handleEditClick = (room: Room) => {
+    setEditingRoom(room);
+    setEditRoomForm({
+      name: room.name,
+      capacity: room.capacity,
+      features: room.features.join(", ")
+    });
+    setIsEditRoomDialogOpen(true);
+  };
+
+  const handleUpdateRoom = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingRoom) return;
+    try {
+      await axios.put(`/rooms/${editingRoom._id}`, {
+        ...editingRoom,
+        name: editRoomForm.name,
+        capacity: editRoomForm.capacity,
+        features: editRoomForm.features.split(",").map((f) => f.trim()).filter(Boolean)
+      });
+      toast.success("Room details updated successfully");
+      setIsEditRoomDialogOpen(false);
+      setEditingRoom(null);
+      fetchData();
+    } catch (error) {
+      toast.error("Failed to update room details");
     }
   };
 
@@ -343,9 +374,14 @@ const ManageRooms = () => {
                                Capacity: <span className="font-medium text-foreground">{room.capacity}</span>
                            </div>
                         </div>
-                        <Button variant="ghost" size="icon" onClick={() => handleDeleteRoom(room._id)} className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 -mt-1 -mr-2 flex-shrink-0">
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-1 -mt-1 -mr-2 flex-shrink-0">
+                            <Button variant="ghost" size="icon" onClick={() => handleEditClick(room)} className="text-muted-foreground hover:text-primary hover:bg-primary/10">
+                                <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDeleteRoom(room._id)} className="text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </div>
                     </CardHeader>
                     
                     <CardContent className="pt-4 flex-1 flex flex-col">
@@ -437,7 +473,7 @@ const ManageRooms = () => {
                             }}>
                                 <DialogTrigger asChild>
                                     <Button variant="default" size="sm" className="w-full shadow-sm hover:shadow transition-all" onClick={() => setSelectedRoom(room)}>
-                                        <Edit2 className="mr-2 h-4 w-4" /> Manage Schedule
+                                        <CalendarRange className="mr-2 h-4 w-4" /> Manage Schedule
                                     </Button>
                                 </DialogTrigger>
                                 <DialogContent className="max-w-md">
@@ -544,6 +580,52 @@ const ManageRooms = () => {
                     <Button type="submit" variant="destructive">Deactivate</Button>
                 </DialogFooter>
             </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Room Dialog */}
+      <Dialog open={isEditRoomDialogOpen} onOpenChange={setIsEditRoomDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Room Details</DialogTitle>
+            <DialogDescription>Update the workspace details for this room.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdateRoom} className="space-y-5 mt-2">
+            <div className="space-y-2">
+              <Label htmlFor="editRoomName">Room Name</Label>
+              <Input 
+                id="editRoomName" 
+                value={editRoomForm.name}
+                onChange={e => setEditRoomForm({...editRoomForm, name: e.target.value})}
+                required 
+                placeholder="e.g. Innovation Lab A"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editCapacity">Capacity (Students)</Label>
+              <Input 
+                id="editCapacity" 
+                type="number"
+                min="1"
+                value={editRoomForm.capacity}
+                onChange={e => setEditRoomForm({...editRoomForm, capacity: parseInt(e.target.value) || 1})}
+                required 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editFeatures">Features (comma separated)</Label>
+              <Input 
+                id="editFeatures" 
+                placeholder="e.g. Projector, Whiteboard, High-Speed PCs"
+                value={editRoomForm.features}
+                onChange={e => setEditRoomForm({...editRoomForm, features: e.target.value})}
+              />
+            </div>
+            <DialogFooter className="pt-4">
+              <Button type="button" variant="outline" onClick={() => setIsEditRoomDialogOpen(false)}>Cancel</Button>
+              <Button type="submit">Save Changes</Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

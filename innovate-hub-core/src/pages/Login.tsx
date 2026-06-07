@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { Truck } from "lucide-react";
 import { API_BASE_URL } from "@/lib/api";
 
 const Login = () => {
@@ -120,16 +119,7 @@ const Login = () => {
               </Link>
             </p>
             
-            <div className="mt-6 pt-6 border-t text-center">
-              <Link 
-                to="/driver/login" 
-                className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
-                title="Opens Driver Portal"
-              >
-                <Truck className="w-4 h-4" />
-                Are you a Delivery Partner? Login here
-              </Link>
-            </div>
+
           </form>
         </CardContent>
       </Card>

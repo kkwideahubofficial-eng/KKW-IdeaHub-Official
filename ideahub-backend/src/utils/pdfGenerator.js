@@ -128,8 +128,13 @@ const badgeLabel = (status) => {
     completed: { text: 'COMPLETED', color: COLORS.primary },
     cancelled: { text: 'CANCELLED', color: COLORS.textLight },
     overstayed: { text: 'OVERSTAYED', color: COLORS.danger },
+    'conditional approval': { text: 'CONDITIONAL', color: COLORS.warning },
+    'coordinator review': { text: 'PENDING COORD', color: COLORS.warning },
+    'idea hub head review': { text: 'PENDING HEAD', color: COLORS.warning },
+    'faculty verified': { text: 'FACULTY VERIFIED', color: COLORS.success },
+    'submitted': { text: 'SUBMITTED', color: COLORS.secondary }
   };
-  return map[s] || map.pending;
+  return map[s] || { text: s.toUpperCase(), color: COLORS.warning };
 };
 
 const statusDisplay = (status) => {
@@ -346,13 +351,279 @@ const generateMachineryPdf = async (doc, data) => {
   drawFooter(doc);
 };
 
+const generateSpecialRoomPdf = async (doc, data) => {
+  const margin = 56.7;
+  const contentWidth = 595.28 - 2 * margin;
+  let currentY = margin;
+
+  // Set default color to black for a clean black-and-white look
+  doc.fillColor('#000000').strokeColor('#000000');
+
+  // 1. Centered Header Box
+  const headerHeight = 75;
+  doc.rect(margin, currentY, contentWidth, headerHeight).lineWidth(1).stroke();
+
+  // College logo inside the header box on top-right
+  const logoWidth = 45;
+  const logoHeight = 55;
+  const logoX = 595.28 - margin - logoWidth - 10;
+  const logoY = currentY + 10;
+
+  const logoPath = path.resolve('uploads/logo.png');
+  if (fs.existsSync(logoPath)) {
+    doc.image(logoPath, logoX, logoY, { width: logoWidth, height: logoHeight });
+  } else {
+    // Draw oval border and "LOGO" text inside
+    doc.lineWidth(1);
+    doc.ellipse(logoX + logoWidth / 2, logoY + logoHeight / 2, logoWidth / 2, logoHeight / 2).stroke();
+    doc.font('Times-Roman').fontSize(8);
+    doc.text('COLLEGE\nLOGO', logoX, logoY + logoHeight / 2 - 8, { width: logoWidth, align: 'center' });
+  }
+
+  // Centered Header Box Text
+  doc.font('Times-Bold').fontSize(13);
+  doc.text('AICTE IDEA Lab and Innovation Centre', margin, currentY + 12, { width: contentWidth, align: 'center' });
+
+  doc.fontSize(11.5);
+  doc.text('K. K. Wagh Institute of Engineering Education and Research', margin, currentY + 30, { width: contentWidth, align: 'center' });
+
+  doc.font('Times-Roman').fontSize(9.5);
+  doc.text('Hirabai Haridas Vidyanagari, Amrutdham, Panchavati, Nashik - 422003', margin, currentY + 48, { width: contentWidth, align: 'center' });
+
+  currentY += headerHeight + 18;
+
+  // 2. Form Title
+  doc.font('Times-Bold').fontSize(11.5);
+  doc.text('Request Form for Conference Room / Discussion Room / Ideation Room', margin, currentY, { align: 'center', underline: true });
+  
+  currentY += 24;
+
+  // 3. Letter Section
+  doc.font('Times-Roman').fontSize(10.5);
+  doc.text('To,', margin, currentY);
+  doc.text('The Director', margin, currentY + 14);
+  doc.text('K. K. Wagh Institute of Engineering Education and Research,', margin, currentY + 28);
+  doc.text('Nashik', margin, currentY + 42);
+
+  const currentDate = data.header.applicationDate || new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+  doc.text(`Date: ${currentDate}`, 595.28 - margin - 200, currentY, { width: 200, align: 'right' });
+
+  currentY += 62;
+
+  // 4. Opening Paragraph
+  doc.text('Respected Sir,', margin, currentY);
+  doc.text('We need the following facility of the AICTE IDEA Lab and Innovation Centre for the purpose mentioned below.', margin, currentY + 16, { width: contentWidth });
+  
+  currentY += 42;
+
+  // 5. Main Information Table
+  const col1Width = 180;
+  const col2Width = contentWidth - col1Width;
+
+  const rows = [
+    {
+      label: 'Facility Required',
+      value: data.room.facilityRequired || '',
+      height: 25
+    },
+    {
+      label: 'Date and Time',
+      value: `${data.schedule.requestedDate || ''}\n${data.schedule.timeSlot || ''}`,
+      height: 30
+    },
+    {
+      label: 'Name of Requester (Mobile and Email ID)',
+      value: `${data.student.name || ''}\nMobile: ${data.student.mobile || 'N/A'}  |  Email: ${data.student.email || 'N/A'}`,
+      height: 35
+    },
+    {
+      label: 'Signature of the Requester',
+      value: '', // blank space for signature
+      height: 30
+    },
+    {
+      label: 'Purpose',
+      value: data.room.purpose || '',
+      height: 60 // increased height
+    },
+    {
+      label: 'Recommendation of the Teaching Faculty in Case of Student Request',
+      value: data.faculty.remarks || '',
+      height: 50 // large multiline area
+    },
+    {
+      label: 'Name of Recommending Faculty (Mobile and Email ID)',
+      value: `${data.faculty.name || ''}\nMobile: ${data.faculty.mobile || 'N/A'}  |  Email: ${data.faculty.email || 'N/A'}`,
+      height: 35
+    },
+    {
+      label: 'Remark of the AICTE IDEA Lab & Innovation Centre Coordinator',
+      value: '', // Custom handled for decision highlighting
+      height: 35
+    }
+  ];
+
+  const tableTop = currentY;
+  const tableHeight = rows.reduce((acc, r) => acc + r.height, 0);
+
+  // Draw table outline
+  doc.rect(margin, tableTop, contentWidth, tableHeight).lineWidth(1).stroke();
+
+  // Draw vertical column divider
+  doc.moveTo(margin + col1Width, tableTop).lineTo(margin + col1Width, tableTop + tableHeight).stroke();
+
+  let rowY = tableTop;
+  rows.forEach((row, i) => {
+    // Draw horizontal separator
+    if (i > 0) {
+      doc.moveTo(margin, rowY).lineTo(margin + contentWidth, rowY).stroke();
+    }
+
+    // Label column (Left)
+    doc.font('Times-Bold').fontSize(9);
+    doc.text(row.label, margin + 8, rowY + 6, { width: col1Width - 16 });
+
+    // Value column (Right)
+    doc.font('Times-Roman').fontSize(9);
+
+    if (i === 7) {
+      // Coordinator Remark cell (Permitted / Not Permitted / Permitted with Condition)
+      const status = (data.status || '').toLowerCase();
+      let permitted = 'Permitted';
+      let notPermitted = 'Not Permitted';
+      let conditional = 'Permitted with Condition';
+
+      if (status === 'approved' || status === 'completed') {
+        permitted = '✔ Permitted';
+      } else if (status === 'rejected') {
+        notPermitted = '✔ Not Permitted';
+      } else if (status === 'conditional approval') {
+        conditional = '✔ Permitted with Condition';
+      }
+
+      doc.text(`${permitted}   /   ${notPermitted}   /   ${conditional}`, margin + col1Width + 8, rowY + 12, { width: col2Width - 16 });
+    } else {
+      // Normal cells
+      doc.text(String(row.value), margin + col1Width + 8, rowY + 6, { width: col2Width - 16 });
+    }
+
+    rowY += row.height;
+  });
+
+  currentY = tableTop + tableHeight + 15;
+
+  // 6. Approval Workflow Section
+  const blockY = currentY;
+  const blockHeight = 85;
+
+  // Resolve coordinator and head names/statuses from history
+  const approvalHistory = data.approvalHistory || [];
+
+  // Faculty status
+  let facultyStatus = 'Pending';
+  if (data.faculty.verified === 'RECOMMENDED') {
+    facultyStatus = 'Recommended';
+  } else {
+    const facHist = approvalHistory.find(h => h.role === 'Faculty');
+    if (facHist) {
+      if (facHist.action === 'Verified') facultyStatus = 'Recommended';
+      else if (facHist.action === 'Rejected') facultyStatus = 'Not Recommended';
+    }
+  }
+
+  // Coordinator status & name
+  const coordHist = approvalHistory.find(h => h.role === 'Coordinator' && (h.action === 'Coordinator Approved' || h.action === 'Approved' || h.action === 'Rejected' || h.action === 'Changes Requested'));
+  const coordinatorName = coordHist ? coordHist.byName : '';
+  let coordinatorStatus = 'Pending';
+  if (coordHist) {
+    if (coordHist.action === 'Coordinator Approved' || coordHist.action === 'Approved') {
+      coordinatorStatus = 'Approved';
+    } else if (coordHist.action === 'Rejected') {
+      coordinatorStatus = 'Rejected';
+    }
+  } else if (['IDEA Hub Head Review', 'Approved', 'Conditional Approval'].includes(data.status)) {
+    coordinatorStatus = 'Approved';
+  }
+
+  // Head status & name
+  const headHist = approvalHistory.find(h => h.role === 'Head' && (h.action === 'Approved' || h.action === 'Conditional Approval' || h.action === 'Rejected'));
+  const headName = headHist ? headHist.byName : '';
+  let headStatus = 'Pending';
+  if (headHist) {
+    if (headHist.action === 'Approved' || headHist.action === 'Conditional Approval') {
+      headStatus = 'Approved';
+    } else if (headHist.action === 'Rejected') {
+      headStatus = 'Rejected';
+    }
+  } else if (['Approved', 'Conditional Approval'].includes(data.status)) {
+    headStatus = 'Approved';
+  }
+
+  // Column 1: Faculty Recommendation
+  let colX = margin;
+  doc.font('Times-Bold').fontSize(9);
+  doc.text('Faculty Recommendation', colX, blockY, { width: 130 });
+  doc.font('Times-Roman').fontSize(8.5);
+  doc.text(`Faculty Name: ${data.faculty.name || 'N/A'}`, colX, blockY + 14, { width: 130 });
+  doc.text(`Status: ${facultyStatus}`, colX, blockY + 26, { width: 130 });
+  doc.text('Signature: ________________', colX, blockY + 55, { width: 130 });
+
+  // Column 2: Coordinator Approval
+  colX = margin + 140;
+  doc.font('Times-Bold').fontSize(9);
+  doc.text('Coordinator Approval', colX, blockY, { width: 130 });
+  doc.font('Times-Roman').fontSize(8.5);
+  doc.text(`Coordinator Name: ${coordinatorName || 'N/A'}`, colX, blockY + 14, { width: 130 });
+  doc.text(`Status: ${coordinatorStatus}`, colX, blockY + 26, { width: 130 });
+  doc.text('Signature: ________________', colX, blockY + 55, { width: 130 });
+
+  // Column 3: Head Approval
+  colX = margin + 280;
+  doc.font('Times-Bold').fontSize(9);
+  doc.text('Head Approval', colX, blockY, { width: 130 });
+  doc.font('Times-Roman').fontSize(8.5);
+  doc.text(`Head Name: ${headName || 'N/A'}`, colX, blockY + 14, { width: 130 });
+  doc.text(`Status: ${headStatus}`, colX, blockY + 26, { width: 130 });
+  doc.text('Signature: ________________', colX, blockY + 55, { width: 130 });
+
+  // QR Code on the bottom right
+  const qrSize = 65;
+  const qrX = 595.28 - margin - qrSize;
+  const qrY = blockY + 5;
+
+  const qrText = `Request ID: ${data.header.requestId || 'N/A'}\nStudent Name: ${data.student.name || 'N/A'}\nFacility Name: ${data.room.facilityRequired || 'N/A'}\nBooking Date: ${data.schedule.requestedDate || 'N/A'}\nApproval Status: ${data.status || 'N/A'}`;
+
+  try {
+    const qrBuffer = await QRCode.toBuffer(qrText, { width: qrSize, margin: 1 });
+    doc.image(qrBuffer, qrX, qrY, { width: qrSize, height: qrSize });
+    doc.font('Times-Roman').fontSize(6.5);
+    doc.text('Scan to Verify', qrX, qrY + qrSize + 2, { width: qrSize, align: 'center' });
+  } catch (e) {
+    console.error('QR generation error:', e);
+  }
+
+  currentY = blockY + blockHeight + 15;
+
+  // 7. Footer Notes
+  doc.moveTo(margin, currentY).lineTo(595.28 - margin, currentY).lineWidth(0.8).stroke();
+  currentY += 8;
+
+  doc.font('Times-Bold').fontSize(9);
+  doc.text('Note:', margin, currentY);
+
+  doc.font('Times-Roman').fontSize(8.5);
+  doc.text('1. Submitting the request form does not mean that permission is granted.', margin + 10, currentY + 12);
+  doc.text('2. All facilities must be used with utmost care.', margin + 10, currentY + 24);
+};
+
 const generatePdf = async (type, data, outputPath) => {
   const dir = path.dirname(outputPath);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
 
-  const doc = new PDFDocument({ margin: MARGIN, size: 'A4', layout: 'portrait' });
+  const docMargin = type === 'specialRoom' ? 56.7 : MARGIN;
+  const doc = new PDFDocument({ margin: docMargin, size: 'A4', layout: 'portrait' });
 
   return new Promise((resolve, reject) => {
     const stream = fs.createWriteStream(outputPath);
@@ -362,6 +633,8 @@ const generatePdf = async (type, data, outputPath) => {
       try {
         if (type === 'room') {
           await generateRoomPdf(doc, data);
+        } else if (type === 'specialRoom') {
+          await generateSpecialRoomPdf(doc, data);
         } else {
           await generateMachineryPdf(doc, data);
         }

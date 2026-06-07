@@ -20,8 +20,8 @@ export async function getRoomAvailability(req, res) {
 
 
 
-    // CHANGED: Fetch all rooms so we can show "Unavailable" message for inactive ones
-    const rooms = await Room.find({}); 
+    // CHANGED: Fetch all normal rooms (excluding special ones) so we can show "Unavailable" message for inactive ones
+    const rooms = await Room.find({ isSpecial: { $ne: true } }); 
     const roomIds = rooms.map(r => r._id);
 
     const bookings = await Booking.find({
