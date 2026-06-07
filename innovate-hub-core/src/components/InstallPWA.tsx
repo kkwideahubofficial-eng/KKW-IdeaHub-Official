@@ -41,7 +41,7 @@ const InstallPWA = () => {
   if (!isVisible) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50">
+    <div className="fixed bottom-20 right-4 sm:bottom-4 sm:right-4 z-50">
       <Button 
         onClick={handleInstallClick} 
         className="shadow-lg hover:shadow-xl transition-all duration-300 bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center w-12 h-12 rounded-full sm:w-auto sm:h-12 sm:rounded-lg sm:px-4 sm:py-2.5 sm:gap-2"

@@ -702,6 +702,10 @@ export const getEventAnalytics = async (req, res) => {
 // @access  Private
 export const getStudentNotifications = async (req, res) => {
   try {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    // Delete notifications older than 7 days
+    await EventNotification.deleteMany({ createdAt: { $lt: sevenDaysAgo } });
+
     const notifications = await EventNotification.find({ user: req.user._id })
       .sort({ createdAt: -1 })
       .limit(30);

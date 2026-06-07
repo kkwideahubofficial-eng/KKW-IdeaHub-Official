@@ -29,6 +29,9 @@ const eventNotificationSchema = new Schema(
   { timestamps: true }
 );
 
+// Add TTL index on createdAt to auto-delete after 7 days (604800 seconds)
+eventNotificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 604800 });
+
 const EventNotification = mongoose.models.EventNotification || mongoose.model('EventNotification', eventNotificationSchema);
 
 export default EventNotification;

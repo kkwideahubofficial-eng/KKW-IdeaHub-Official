@@ -243,45 +243,40 @@ const Events = () => {
 
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-4 sm:py-8">
       {/* Page Header */}
-      <div className="mb-8 pt-4">
-        <h1 className="text-4xl font-extrabold tracking-tight text-foreground/90">Event Management</h1>
-        <p className="text-lg text-muted-foreground/80 mt-2 font-light">Create, manage and track all lab events in one place</p>
+      <div className="mb-6 sm:mb-8 pt-2 sm:pt-4">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-foreground/90">Event Management</h1>
+        <p className="text-xs sm:text-sm lg:text-base text-muted-foreground/80 mt-1.5 font-light">Create, manage and track all lab events in one place</p>
       </div>
 
       {/* Event Status Overview Section */}
-      <div className="bg-[#F8FAFC] border border-slate-200/60 rounded-2xl p-6 mb-8 shadow-sm">
-        <h2 className="text-lg font-bold text-slate-800 mb-4 font-sans">Event Status Overview</h2>
+      <div className="bg-[#F8FAFC] border border-slate-200/60 rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8 shadow-sm">
+        <h2 className="text-base sm:text-lg font-bold text-slate-800 mb-3 sm:mb-4 font-sans">Event Status Overview</h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           {/* Card 1 - Upcoming Events */}
           <div 
-            className="flex flex-col justify-between h-[180px] p-6 rounded-[16px] border bg-[#EFF6FF] border-[#BFDBFE] text-[#2563EB] shadow-sm hover:-translate-y-[2px] hover:shadow-md transition-all duration-300 font-sans cursor-pointer group"
+            className="flex flex-col justify-between min-h-[130px] sm:h-[180px] p-4 sm:p-6 rounded-[16px] border bg-[#EFF6FF] border-[#BFDBFE] text-[#2563EB] shadow-sm hover:-translate-y-1 sm:hover:-translate-y-[2px] hover:shadow-md transition-all duration-300 font-sans cursor-pointer group"
             onClick={() => {
               setActiveTab("browse");
               setStatusFilter("upcoming");
             }}
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-[#BFDBFE] shadow-sm">
-                <Calendar className="w-5 h-5 text-[#2563EB]" />
+            {/* Mobile View */}
+            <div className="flex sm:hidden flex-col items-center justify-between h-full w-full text-center py-0.5">
+              <span className="font-semibold text-sm text-[#2563EB]">Upcoming Events</span>
+              <div className="flex flex-col items-center">
+                <span className="text-[28px] font-extrabold text-slate-900 leading-none">
+                  {String(overviewStats.upcoming).padStart(2, '0')}
+                </span>
+                <span className="text-[12px] text-slate-500 mt-1 font-medium">
+                  Scheduled
+                </span>
               </div>
-              <span className="font-semibold text-base text-[#2563EB]">Upcoming Events</span>
-            </div>
-            
-            <div className="flex flex-col items-start mt-2">
-              <span className="text-[36px] font-bold text-slate-900 leading-none">
-                {String(overviewStats.upcoming).padStart(2, '0')}
-              </span>
-              <span className="text-[13px] text-slate-500 mt-1 leading-tight font-medium">Scheduled</span>
-              <span className="text-[13px] text-slate-500 leading-tight">Yet to begin</span>
-            </div>
-            
-            <div className="flex justify-center mt-2">
               <Button 
                 variant="outline" 
-                className="h-8 px-4 py-1 text-xs border-[#2563EB] text-[#2563EB] bg-white hover:bg-[#2563EB]/10 rounded-lg font-medium shadow-sm"
+                className="h-8 px-3 text-xs border-[#2563EB] text-[#2563EB] bg-white hover:bg-[#2563EB]/10 rounded-lg font-bold shadow-sm"
                 onClick={(e) => {
                   e.stopPropagation();
                   setActiveTab("browse");
@@ -291,35 +286,63 @@ const Events = () => {
                 View All
               </Button>
             </div>
+
+            {/* Desktop View */}
+            <div className="hidden sm:flex flex-col justify-between h-full w-full">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-[#BFDBFE] shadow-sm shrink-0">
+                  <Calendar className="w-5 h-5 text-[#2563EB]" />
+                </div>
+                <span className="font-bold text-base text-[#2563EB]">Upcoming Events</span>
+              </div>
+              
+              <div className="flex items-end justify-between mt-0">
+                <div className="flex flex-col items-start">
+                  <span className="text-[36px] font-extrabold text-slate-900 leading-none">
+                    {String(overviewStats.upcoming).padStart(2, '0')}
+                  </span>
+                  <span className="text-[13px] text-slate-500 mt-1 leading-tight font-semibold">
+                    Scheduled <span className="hidden sm:inline">• Yet to begin</span>
+                  </span>
+                </div>
+                
+                <Button 
+                  variant="outline" 
+                  className="h-8 px-4 py-1 text-xs border-[#2563EB] text-[#2563EB] bg-white hover:bg-[#2563EB]/10 rounded-lg font-bold shadow-sm shrink-0 min-h-[32px]"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveTab("browse");
+                    setStatusFilter("upcoming");
+                  }}
+                >
+                  View All
+                </Button>
+              </div>
+            </div>
           </div>
 
           {/* Card 2 - Ongoing Events */}
           <div 
-            className="flex flex-col justify-between h-[180px] p-6 rounded-[16px] border bg-[#F0FDF4] border-[#BBF7D0] text-[#22C55E] shadow-sm hover:-translate-y-[2px] hover:shadow-md transition-all duration-300 font-sans cursor-pointer group"
+            className="flex flex-col justify-between min-h-[130px] sm:h-[180px] p-4 sm:p-6 rounded-[16px] border bg-[#F0FDF4] border-[#BBF7D0] text-[#22C55E] shadow-sm hover:-translate-y-1 sm:hover:-translate-y-[2px] hover:shadow-md transition-all duration-300 font-sans cursor-pointer group"
             onClick={() => {
               setActiveTab("browse");
               setStatusFilter("ongoing");
             }}
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-[#BBF7D0] shadow-sm">
-                <PlayCircle className="w-5 h-5 text-[#22C55E]" />
+            {/* Mobile View */}
+            <div className="flex sm:hidden flex-col items-center justify-between h-full w-full text-center py-0.5">
+              <span className="font-semibold text-sm text-[#22C55E]">Ongoing Events</span>
+              <div className="flex flex-col items-center">
+                <span className="text-[28px] font-extrabold text-slate-900 leading-none">
+                  {String(overviewStats.ongoing).padStart(2, '0')}
+                </span>
+                <span className="text-[12px] text-slate-500 mt-1 font-medium">
+                  In Progress
+                </span>
               </div>
-              <span className="font-semibold text-base text-[#22C55E]">Ongoing Events</span>
-            </div>
-            
-            <div className="flex flex-col items-start mt-2">
-              <span className="text-[36px] font-bold text-slate-900 leading-none">
-                {String(overviewStats.ongoing).padStart(2, '0')}
-              </span>
-              <span className="text-[13px] text-slate-500 mt-1 leading-tight font-medium">In Progress</span>
-              <span className="text-[13px] text-slate-500 leading-tight">Currently ongoing</span>
-            </div>
-            
-            <div className="flex justify-center mt-2">
               <Button 
                 variant="outline" 
-                className="h-8 px-4 py-1 text-xs border-[#22C55E] text-[#22C55E] bg-white hover:bg-[#22C55E]/10 rounded-lg font-medium shadow-sm"
+                className="h-8 px-3 text-xs border-[#22C55E] text-[#22C55E] bg-white hover:bg-[#22C55E]/10 rounded-lg font-bold shadow-sm"
                 onClick={(e) => {
                   e.stopPropagation();
                   setActiveTab("browse");
@@ -329,35 +352,63 @@ const Events = () => {
                 View All
               </Button>
             </div>
+
+            {/* Desktop View */}
+            <div className="hidden sm:flex flex-col justify-between h-full w-full">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-[#BBF7D0] shadow-sm shrink-0">
+                  <PlayCircle className="w-5 h-5 text-[#22C55E]" />
+                </div>
+                <span className="font-bold text-base text-[#22C55E]">Ongoing Events</span>
+              </div>
+              
+              <div className="flex items-end justify-between mt-0">
+                <div className="flex flex-col items-start">
+                  <span className="text-[36px] font-extrabold text-slate-900 leading-none">
+                    {String(overviewStats.ongoing).padStart(2, '0')}
+                  </span>
+                  <span className="text-[13px] text-slate-500 mt-1 leading-tight font-semibold">
+                    In Progress <span className="hidden sm:inline">• Ongoing</span>
+                  </span>
+                </div>
+                
+                <Button 
+                  variant="outline" 
+                  className="h-8 px-4 py-1 text-xs border-[#22C55E] text-[#22C55E] bg-white hover:bg-[#22C55E]/10 rounded-lg font-bold shadow-sm shrink-0 min-h-[32px]"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveTab("browse");
+                    setStatusFilter("ongoing");
+                  }}
+                >
+                  View All
+                </Button>
+              </div>
+            </div>
           </div>
 
           {/* Card 3 - Past Events */}
           <div 
-            className="flex flex-col justify-between h-[180px] p-6 rounded-[16px] border bg-[#FFFBEB] border-[#FDE68A] text-[#F59E0B] shadow-sm hover:-translate-y-[2px] hover:shadow-md transition-all duration-300 font-sans cursor-pointer group"
+            className="flex flex-col justify-between min-h-[130px] sm:h-[180px] p-4 sm:p-6 rounded-[16px] border bg-[#FFFBEB] border-[#FDE68A] text-[#F59E0B] shadow-sm hover:-translate-y-1 sm:hover:-translate-y-[2px] hover:shadow-md transition-all duration-300 font-sans cursor-pointer group"
             onClick={() => {
               setActiveTab("browse");
               setStatusFilter("past");
             }}
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-[#FDE68A] shadow-sm">
-                <Clock className="w-5 h-5 text-[#F59E0B]" />
+            {/* Mobile View */}
+            <div className="flex sm:hidden flex-col items-center justify-between h-full w-full text-center py-0.5">
+              <span className="font-semibold text-sm text-[#F59E0B]">Past Events</span>
+              <div className="flex flex-col items-center">
+                <span className="text-[28px] font-extrabold text-slate-900 leading-none">
+                  {String(overviewStats.past).padStart(2, '0')}
+                </span>
+                <span className="text-[12px] text-slate-500 mt-1 font-medium">
+                  Completed
+                </span>
               </div>
-              <span className="font-semibold text-base text-[#F59E0B]">Past Events</span>
-            </div>
-            
-            <div className="flex flex-col items-start mt-2">
-              <span className="text-[36px] font-bold text-slate-900 leading-none">
-                {String(overviewStats.past).padStart(2, '0')}
-              </span>
-              <span className="text-[13px] text-slate-500 mt-1 leading-tight font-medium">Completed</span>
-              <span className="text-[13px] text-slate-500 leading-tight">Already finished</span>
-            </div>
-            
-            <div className="flex justify-center mt-2">
               <Button 
                 variant="outline" 
-                className="h-8 px-4 py-1 text-xs border-[#F59E0B] text-[#F59E0B] bg-white hover:bg-[#F59E0B]/10 rounded-lg font-medium shadow-sm"
+                className="h-8 px-3 text-xs border-[#F59E0B] text-[#F59E0B] bg-white hover:bg-[#F59E0B]/10 rounded-lg font-bold shadow-sm"
                 onClick={(e) => {
                   e.stopPropagation();
                   setActiveTab("browse");
@@ -367,35 +418,63 @@ const Events = () => {
                 View All
               </Button>
             </div>
+
+            {/* Desktop View */}
+            <div className="hidden sm:flex flex-col justify-between h-full w-full">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-[#FDE68A] shadow-sm shrink-0">
+                  <Clock className="w-5 h-5 text-[#F59E0B]" />
+                </div>
+                <span className="font-bold text-base text-[#F59E0B]">Past Events</span>
+              </div>
+              
+              <div className="flex items-end justify-between mt-0">
+                <div className="flex flex-col items-start">
+                  <span className="text-[36px] font-extrabold text-slate-900 leading-none">
+                    {String(overviewStats.past).padStart(2, '0')}
+                  </span>
+                  <span className="text-[13px] text-slate-500 mt-1 leading-tight font-semibold">
+                    Completed <span className="hidden sm:inline">• Finished</span>
+                  </span>
+                </div>
+                
+                <Button 
+                  variant="outline" 
+                  className="h-8 px-4 py-1 text-xs border-[#F59E0B] text-[#F59E0B] bg-white hover:bg-[#F59E0B]/10 rounded-lg font-bold shadow-sm shrink-0 min-h-[32px]"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveTab("browse");
+                    setStatusFilter("past");
+                  }}
+                >
+                  View All
+                </Button>
+              </div>
+            </div>
           </div>
 
           {/* Card 4 - Total Events */}
           <div 
-            className="flex flex-col justify-between h-[180px] p-6 rounded-[16px] border bg-[#FAF5FF] border-[#E9D5FF] text-[#9333EA] shadow-sm hover:-translate-y-[2px] hover:shadow-md transition-all duration-300 font-sans cursor-pointer group"
+            className="flex flex-col justify-between min-h-[130px] sm:h-[180px] p-4 sm:p-6 rounded-[16px] border bg-[#FAF5FF] border-[#E9D5FF] text-[#9333EA] shadow-sm hover:-translate-y-1 sm:hover:-translate-y-[2px] hover:shadow-md transition-all duration-300 font-sans cursor-pointer group"
             onClick={() => {
               setActiveTab("browse");
               setStatusFilter("all");
             }}
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-[#E9D5FF] shadow-sm">
-                <Layers className="w-5 h-5 text-[#9333EA]" />
+            {/* Mobile View */}
+            <div className="flex sm:hidden flex-col items-center justify-between h-full w-full text-center py-0.5">
+              <span className="font-semibold text-sm text-[#9333EA]">Total Events</span>
+              <div className="flex flex-col items-center">
+                <span className="text-[28px] font-extrabold text-slate-900 leading-none">
+                  {String(overviewStats.total).padStart(2, '0')}
+                </span>
+                <span className="text-[12px] text-slate-500 mt-1 font-medium">
+                  All Time
+                </span>
               </div>
-              <span className="font-semibold text-base text-[#9333EA]">Total Events</span>
-            </div>
-            
-            <div className="flex flex-col items-start mt-2">
-              <span className="text-[36px] font-bold text-slate-900 leading-none">
-                {String(overviewStats.total).padStart(2, '0')}
-              </span>
-              <span className="text-[13px] text-slate-500 mt-1 leading-tight font-medium">All Time</span>
-              <span className="text-[13px] text-slate-500 leading-tight">All events</span>
-            </div>
-            
-            <div className="flex justify-center mt-2">
               <Button 
                 variant="outline" 
-                className="h-8 px-4 py-1 text-xs border-[#9333EA] text-[#9333EA] bg-white hover:bg-[#9333EA]/10 rounded-lg font-medium shadow-sm"
+                className="h-8 px-3 text-xs border-[#9333EA] text-[#9333EA] bg-white hover:bg-[#9333EA]/10 rounded-lg font-bold shadow-sm"
                 onClick={(e) => {
                   e.stopPropagation();
                   setActiveTab("browse");
@@ -405,33 +484,88 @@ const Events = () => {
                 View All
               </Button>
             </div>
+
+            {/* Desktop View */}
+            <div className="hidden sm:flex flex-col justify-between h-full w-full">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-[#E9D5FF] shadow-sm shrink-0">
+                  <Layers className="w-5 h-5 text-[#9333EA]" />
+                </div>
+                <span className="font-bold text-base text-[#9333EA]">Total Events</span>
+              </div>
+              
+              <div className="flex items-end justify-between mt-0">
+                <div className="flex flex-col items-start">
+                  <span className="text-[36px] font-extrabold text-slate-900 leading-none">
+                    {String(overviewStats.total).padStart(2, '0')}
+                  </span>
+                  <span className="text-[13px] text-slate-500 mt-1 leading-tight font-semibold">
+                    All Time <span className="hidden sm:inline">• All events</span>
+                  </span>
+                </div>
+                
+                <Button 
+                  variant="outline" 
+                  className="h-8 px-4 py-1 text-xs border-[#9333EA] text-[#9333EA] bg-white hover:bg-[#9333EA]/10 rounded-lg font-bold shadow-sm shrink-0 min-h-[32px]"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveTab("browse");
+                    setStatusFilter("all");
+                  }}
+                >
+                  View All
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-        <div className="flex justify-between items-center border-b pb-4">
-          <TabsList className="bg-muted/50 p-1 rounded-xl">
-            <TabsTrigger value="browse" className="rounded-lg font-semibold px-6 py-2.5">Browse Events</TabsTrigger>
-            {user && <TabsTrigger value="my-events" className="rounded-lg font-semibold px-6 py-2.5">My Events & History</TabsTrigger>}
-            {user && (
-              <TabsTrigger value="notifications" className="rounded-lg font-semibold px-6 py-2.5 flex items-center gap-1.5">
-                Notifications
-                {notifications.filter(n => !n.isRead).length > 0 && (
-                  <Badge variant="destructive" className="h-5 w-5 p-0 flex items-center justify-center rounded-full text-[10px]">
-                    {notifications.filter(n => !n.isRead).length}
-                  </Badge>
-                )}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-8">
+        <div className="border-b pb-3 sm:pb-4 overflow-hidden">
+          <div 
+            className="w-full overflow-x-auto [&::-webkit-scrollbar]:hidden"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            <TabsList 
+              className="flex w-full sm:w-auto justify-start sm:justify-center bg-slate-100/60 sm:bg-muted/50 p-1.5 sm:p-1 rounded-xl h-12 items-center min-w-max"
+            >
+              <TabsTrigger 
+                value="browse" 
+                className="rounded-lg font-bold px-5 py-2 text-sm sm:text-base flex items-center justify-center shrink-0 h-10 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm sm:data-[state=active]:bg-primary sm:data-[state=active]:text-primary-foreground"
+              >
+                Events
               </TabsTrigger>
-            )}
-          </TabsList>
+              {user && (
+                <TabsTrigger 
+                  value="my-events" 
+                  className="rounded-lg font-bold px-5 py-2 text-sm sm:text-base flex items-center justify-center shrink-0 h-10 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm sm:data-[state=active]:bg-primary sm:data-[state=active]:text-primary-foreground"
+                >
+                  History
+                </TabsTrigger>
+              )}
+              {user && (
+                <TabsTrigger 
+                  value="notifications" 
+                  className="rounded-lg font-bold px-5 py-2 text-sm sm:text-base flex items-center justify-center shrink-0 h-10 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm sm:data-[state=active]:bg-primary sm:data-[state=active]:text-primary-foreground flex items-center gap-1.5"
+                >
+                  Alerts
+                  {notifications.filter(n => !n.isRead).length > 0 && (
+                    <Badge variant="destructive" className="h-5 w-5 p-0 flex items-center justify-center rounded-full text-[10px] font-bold bg-rose-500 text-white border-none shrink-0">
+                      {notifications.filter(n => !n.isRead).length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              )}
+            </TabsList>
+          </div>
         </div>
 
         {/* Tab 1: Browse Events */}
         <TabsContent value="browse" className="space-y-6">
           {/* Filters Panel */}
-          <div className="bg-card/30 border p-5 rounded-2xl grid grid-cols-1 md:grid-cols-4 gap-4 items-end shadow-sm">
+          <div className="bg-card/30 border p-5 rounded-2xl grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end shadow-sm">
             <div className="space-y-2">
               <Label htmlFor="search" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Search</Label>
               <div className="relative">
@@ -499,7 +633,7 @@ const Events = () => {
               <Button onClick={() => { setSearch(""); setCategory("all"); setDateFilter(""); setStatusFilter("all"); }} variant="link" className="mt-2 text-primary font-semibold">Clear Filters</Button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {filteredEvents.map((event) => (
                 <Card 
                   key={event._id} 
@@ -572,13 +706,13 @@ const Events = () => {
 
                       <div className="flex gap-2.5">
                         <Link to={`/events/${event._id}`} className="flex-1">
-                          <Button variant="outline" className="w-full rounded-xl border-primary/20 hover:bg-primary/5 hover:text-primary transition-all font-semibold text-xs h-10">
+                          <Button variant="outline" className="w-full rounded-xl border-primary/20 hover:bg-primary/5 hover:text-primary transition-all font-semibold text-sm sm:text-xs h-11 sm:h-10">
                             View Details
                           </Button>
                         </Link>
                         {event.status === 'Registration Open' && (
                           <Link to={`/events/${event._id}?register=true`} className="flex-1">
-                            <Button className="w-full rounded-xl bg-primary hover:bg-primary/95 text-white transition-all font-semibold text-xs h-10">
+                            <Button className="w-full rounded-xl bg-primary hover:bg-primary/95 text-white transition-all font-semibold text-sm sm:text-xs h-11 sm:h-10">
                               Register
                             </Button>
                           </Link>
