@@ -17,6 +17,13 @@ interface Achievement {
   date: string;
   achievedBy: string;
   imageUrl?: string;
+  achievementType?: string;
+  contributionDomain?: string;
+  competitionLevel?: string;
+  prizeAmount?: number;
+  eventYear?: number;
+  teamSize?: number;
+  ideaHubContributions?: Record<string, boolean>;
 }
 
 const ManageAchievements = () => {
@@ -24,7 +31,20 @@ const ManageAchievements = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentAchievement, setCurrentAchievement] = useState<Achievement | null>(null);
-  const [form, setForm] = useState({ title: '', description: '', date: '', achievedBy: '', imageUrl: '' });
+  const [form, setForm] = useState({
+    title: '',
+    description: '',
+    date: '',
+    achievedBy: '',
+    imageUrl: '',
+    achievementType: '',
+    contributionDomain: '',
+    competitionLevel: '',
+    prizeAmount: '',
+    eventYear: '',
+    teamSize: '',
+    ideaHubContributions: {} as Record<string, boolean>,
+  });
 
   useEffect(() => {
     const fetchAchievements = async () => {
@@ -49,9 +69,16 @@ const ManageAchievements = () => {
         date: new Date(achievement.date).toISOString().split('T')[0],
         achievedBy: achievement.achievedBy,
         imageUrl: achievement.imageUrl || ''
+        , achievementType: achievement.achievementType || ''
+        , contributionDomain: achievement.contributionDomain || ''
+        , competitionLevel: achievement.competitionLevel || ''
+        , prizeAmount: achievement.prizeAmount ? String(achievement.prizeAmount) : ''
+        , eventYear: achievement.eventYear ? String(achievement.eventYear) : ''
+        , teamSize: achievement.teamSize ? String(achievement.teamSize) : ''
+        , ideaHubContributions: achievement.ideaHubContributions || {}
       });
     } else {
-      setForm({ title: '', description: '', date: '', achievedBy: '', imageUrl: '' });
+      setForm({ title: '', description: '', date: '', achievedBy: '', imageUrl: '', achievementType: '', contributionDomain: '', competitionLevel: '', prizeAmount: '', eventYear: '', teamSize: '', ideaHubContributions: {} as Record<string, boolean> });
     }
     setIsDialogOpen(true);
   };
@@ -64,6 +91,14 @@ const ManageAchievements = () => {
       formData.append('description', form.description);
       formData.append('date', form.date);
       formData.append('achievedBy', form.achievedBy);
+      formData.append('achievementType', form.achievementType || '');
+      formData.append('contributionDomain', form.contributionDomain || '');
+      formData.append('competitionLevel', form.competitionLevel || '');
+      if (form.prizeAmount) formData.append('prizeAmount', form.prizeAmount);
+      if (form.eventYear) formData.append('eventYear', form.eventYear);
+      if (form.teamSize) formData.append('teamSize', form.teamSize);
+      // Serialize contribution flags
+      formData.append('ideaHubContributions', JSON.stringify(form.ideaHubContributions || {}));
       if (form.imageUrl) formData.append('imageUrl', form.imageUrl);
       
       const fileInput = document.getElementById('achievement-image') as HTMLInputElement | null;
@@ -129,12 +164,68 @@ const ManageAchievements = () => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
+                <Label htmlFor="achievementType">Achievement Type</Label>
+                <Input id="achievementType" value={form.achievementType} onChange={(e) => setForm({...form, achievementType: e.target.value})} placeholder="e.g., Research / Prototype / Publication" />
+              </div>
+              <div>
+                <Label htmlFor="contributionDomain">Contribution Domain</Label>
+                <Input id="contributionDomain" value={form.contributionDomain} onChange={(e) => setForm({...form, contributionDomain: e.target.value})} placeholder="e.g., Robotics / AI / Design" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
                 <Label htmlFor="date">Date</Label>
                 <Input id="date" type="date" value={form.date} onChange={(e) => setForm({...form, date: e.target.value})} required />
               </div>
               <div>
                  <Label htmlFor="achievedBy">Achieved By</Label>
                  <Input id="achievedBy" value={form.achievedBy} onChange={(e) => setForm({...form, achievedBy: e.target.value})} required />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="competitionLevel">Competition Level</Label>
+                <Input id="competitionLevel" value={form.competitionLevel} onChange={(e) => setForm({...form, competitionLevel: e.target.value})} placeholder="Local / State / National / International" />
+              </div>
+              <div>
+                <Label htmlFor="teamSize">Team Size</Label>
+                <Input id="teamSize" type="number" min={1} value={form.teamSize} onChange={(e) => setForm({...form, teamSize: e.target.value})} />
+              </div>
+              <div>
+                <Label htmlFor="prizeAmount">Prize Amount (₹)</Label>
+                <Input id="prizeAmount" type="number" min={0} value={form.prizeAmount} onChange={(e) => setForm({...form, prizeAmount: e.target.value})} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="eventYear">Event Year</Label>
+                <Input id="eventYear" type="number" min={2000} max={2099} value={form.eventYear} onChange={(e) => setForm({...form, eventYear: e.target.value})} />
+              </div>
+              <div>
+                <Label>IDEA Hub Contributions</Label>
+                <div className="grid grid-cols-1 gap-2">
+                  {[
+                    { key: 'workspaceProvided', label: 'Workspace Provided' },
+                    { key: 'meetingRoomAccess', label: 'Meeting Room Access' },
+                    { key: 'dPrintingSupport', label: '3D Printing Support' },
+                    { key: 'electronicsComponents', label: 'Electronics Components' },
+                    { key: 'prototypeDevelopment', label: 'Prototype Development' },
+                    { key: 'testingFacility', label: 'Testing Facility' },
+                    { key: 'mentorshipSupport', label: 'Mentorship Support' },
+                    { key: 'presentationGuidance', label: 'Presentation Guidance' },
+                    { key: 'competitionRegistration', label: 'Competition Registration' },
+                    { key: 'industryMentoring', label: 'Industry Mentoring' },
+                  ].map((c) => (
+                    <label key={c.key} className="inline-flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={!!form.ideaHubContributions[c.key]}
+                        onChange={(e) => setForm({ ...form, ideaHubContributions: { ...(form.ideaHubContributions || {}), [c.key]: e.target.checked } })}
+                      />
+                      <span className="text-sm">{c.label}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">

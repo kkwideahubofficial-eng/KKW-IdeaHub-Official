@@ -5,6 +5,11 @@ import { upload } from '../middlewares/upload.js';
 import {
   createAchievement,
   getAllAchievements,
+  filterAchievements,
+  getAchievementTimeline,
+  getContributionAnalytics,
+  getAchievementAnalytics,
+  getPrizeAnalytics,
   getAchievementById,
   updateAchievement,
   deleteAchievement,
@@ -14,6 +19,11 @@ const router = Router();
 
 // Public routes
 router.get('/', getAllAchievements);
+router.get('/filter', filterAchievements);
+router.get('/timeline', getAchievementTimeline);
+router.get('/contributions', getContributionAnalytics);
+router.get('/analytics', getAchievementAnalytics);
+router.get('/prize-analytics', getPrizeAnalytics);
 router.get('/:id', param('id').isMongoId(), getAchievementById);
 
 // Coordinator-only routes
@@ -27,6 +37,9 @@ router.post(
     body('description').not().isEmpty().withMessage('Description is required'),
     body('date').isISO8601().toDate().withMessage('Valid date is required'),
     body('achievedBy').not().isEmpty().withMessage('Achieved by is required'),
+    body('prizeAmount').optional().isFloat({ min: 0 }).toFloat(),
+    body('eventYear').optional().isInt({ min: 1900, max: 3000 }).toInt(),
+    body('teamSize').optional().isInt({ min: 1 }).toInt(),
   ],
   createAchievement
 );
@@ -42,6 +55,9 @@ router.put(
     body('description').optional().not().isEmpty(),
     body('date').optional().isISO8601().toDate(),
     body('achievedBy').optional().not().isEmpty(),
+    body('prizeAmount').optional().isFloat({ min: 0 }).toFloat(),
+    body('eventYear').optional().isInt({ min: 1900, max: 3000 }).toInt(),
+    body('teamSize').optional().isInt({ min: 1 }).toInt(),
   ],
   updateAchievement
 );

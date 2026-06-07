@@ -107,17 +107,13 @@ app.use((err, _req, res, _next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI || '';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/ideahub';
 
 // Socket.io Integration
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 
 async function start() {
-  if (!MONGO_URI) {
-    console.error('MONGO_URI not set. Please configure it in .env');
-    process.exit(1);
-  }
   await connectToDatabase(MONGO_URI);
 
   const httpServer = createServer(app);
