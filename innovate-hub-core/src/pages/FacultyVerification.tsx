@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
-import { CheckCircle2, AlertTriangle, ShieldCheck, Mail, User, Clock, FileText } from "lucide-react";
+import { CheckCircle2, AlertTriangle, ShieldCheck, Mail, User, Clock, FileText, Info } from "lucide-react";
 
 const FacultyVerification = () => {
   const { requestId } = useParams();

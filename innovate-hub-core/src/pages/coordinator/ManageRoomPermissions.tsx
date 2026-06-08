@@ -314,7 +314,7 @@ const ManageRoomPermissions = () => {
                       <td className="p-4 text-right">
                         <Button
                           variant="outline"
-                          size="xs"
+                          size="sm"
                           onClick={() => {
                             setSelectedRequest(req);
                             setDecisionRemarks("");
@@ -512,9 +512,9 @@ const ManageRoomPermissions = () => {
                       Are you sure you want to {confirmAction === 'approve' ? 'approve' : confirmAction === 'reject' ? 'reject' : 'request changes for'} this request?
                     </div>
                     <div className="flex gap-2">
-                      <Button size="xs" variant="outline" onClick={() => setConfirmAction(null)}>Cancel</Button>
+                      <Button size="sm" variant="outline" onClick={() => setConfirmAction(null)}>Cancel</Button>
                       <Button 
-                        size="xs" 
+                        size="sm" 
                         className={confirmAction === 'reject' ? 'bg-red-600 hover:bg-red-700 text-white' : confirmAction === 'approve' ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-amber-500 hover:bg-amber-600 text-white'}
                         onClick={() => {
                           handleDecision(selectedRequest._id, confirmAction);

@@ -1,256 +1,926 @@
 import MachineryRequest from '../models/MachineryRequest.js';
 import User from '../models/User.js';
-import '../models/Machinery.js'; // Ensure Machinery model is registered for populate
+import Material from '../models/Material.js';
+import Machinery from '../models/Machinery.js';
+import EventNotification from '../models/EventNotification.js';
+import PushSubscription from '../models/PushSubscription.js';
 import sendEmail from '../utils/sendEmail.js';
 import generatePdf from '../utils/pdfGenerator.js';
+import webpush from '../config/webPush.js';
+import mongoose from 'mongoose';
 
-// Create a new request (Student)
-export const createRequest = async (req, res) => {
+// Helper utilities for time calculations
+function parseTimeToMinutes(timeStr) {
+  if (!timeStr) return 0;
+  const [h, m] = timeStr.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function minutesToTimeStr(mins) {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+}
+
+function timesOverlap(start1, end1, start2, end2) {
+  return parseTimeToMinutes(start1) < parseTimeToMinutes(end2) && 
+         parseTimeToMinutes(start2) < parseTimeToMinutes(end1);
+}
+
+// In-app Notification helper
+async function createInAppNotification(userId, title, body, type = 'machinery') {
   try {
-    const { 
-      machineryId, 
-      teamMembers, 
-      usageDate, 
-      startTime, 
-      endTime, 
-      purpose, 
-      consentAgreed, 
-      groupPhotoUrl 
-    } = req.body;
-
-    // TODO: Add validation to check if slot is already booked? 
-    // For now, allowing multiple requests for same slot, head will decide.
-
-    const newRequest = new MachineryRequest({
-      machineryId,
-      studentId: req.user._id,
-      teamMembers,
-      usageDate,
-      startTime,
-      endTime,
-      purpose,
-      consentAgreed,
-      groupPhotoUrl,
-      status: 'pending'
+    await EventNotification.create({
+      user: userId,
+      title,
+      body,
+      type
     });
+  } catch (err) {
+    console.error('Failed to create in-app notification:', err);
+  }
+}
 
-    const savedRequest = await newRequest.save();
+// Push Notification helper
+async function sendPushNotification(userId, title, body) {
+  try {
+    const subscriptions = await PushSubscription.find({ user: userId });
+    if (subscriptions.length > 0) {
+      const payload = JSON.stringify({
+        title,
+        body,
+        icon: '/icons/icon-192.png',
+      });
+      const pushPromises = subscriptions.map(sub => 
+        webpush.sendNotification(sub.subscription, payload)
+      );
+      await Promise.allSettled(pushPromises);
+    }
+  } catch (err) {
+    console.error('Failed to send push notification:', err);
+  }
+}
 
-    // Update requester user profile with their latest branch, year, mobile from teamMembers[0] if available
-    if (teamMembers && teamMembers.length > 0) {
-      const firstMember = teamMembers[0];
-      const updates = {};
-      if (firstMember.mobile) updates.mobile = firstMember.mobile;
-      if (firstMember.branch) updates.branch = firstMember.branch;
-      if (firstMember.year) {
-        let mappedYear = firstMember.year;
-        if (firstMember.year === '1st Year') mappedYear = 'FE';
-        else if (firstMember.year === '2nd Year') mappedYear = 'SE';
-        else if (firstMember.year === '3rd Year') mappedYear = 'TE';
-        else if (firstMember.year === '4th Year') mappedYear = 'BE';
-        updates.year = mappedYear;
-      }
-      
-      if (Object.keys(updates).length > 0) {
-        await User.findByIdAndUpdate(req.user._id, updates);
+// Check Availability & Suggest nearest slots for a machine
+export const checkMachineAvailability = async (req, res) => {
+  try {
+    const { machineId, date, startTime, endTime, excludeRequestId } = req.query;
+
+    if (!machineId || !date || !startTime || !endTime) {
+      return res.status(400).json({ message: 'machineId, date, startTime, and endTime are required' });
+    }
+
+    const durationMins = parseTimeToMinutes(endTime) - parseTimeToMinutes(startTime);
+    if (durationMins <= 0) {
+      return res.status(400).json({ message: 'Invalid time range' });
+    }
+
+    const machine = await Machinery.findById(machineId);
+    if (!machine) return res.status(404).json({ message: 'Machine not found' });
+
+    const targetDate = new Date(date);
+    const startOfDay = new Date(targetDate.setHours(0,0,0,0));
+    const endOfDay = new Date(targetDate.setHours(23,59,59,999));
+
+    // Get all approved bookings for this machine on this day
+    const query = {
+      'requestedMachines.machineId': machineId,
+      status: { $in: ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled'] },
+      'requestedMachines.usageDate': { $gte: startOfDay, $lte: endOfDay }
+    };
+    if (excludeRequestId) {
+      query._id = { $ne: excludeRequestId };
+    }
+
+    const requests = await MachineryRequest.find(query);
+
+    let overlapsCount = 0;
+    for (const reqObj of requests) {
+      for (const mach of reqObj.requestedMachines) {
+        if (mach.machineId.toString() === machineId.toString()) {
+          const machDate = new Date(mach.usageDate);
+          if (machDate.toDateString() === startOfDay.toDateString()) {
+            if (timesOverlap(startTime, endTime, mach.startTime, mach.endTime)) {
+              overlapsCount++;
+            }
+          }
+        }
       }
     }
 
-    res.status(201).json(savedRequest);
+    const remainingCapacity = machine.capacity - overlapsCount;
+
+    if (remainingCapacity <= 0) {
+      // Find alternative slots on that date (9 AM to 6 PM)
+      const suggestions = [];
+      const dayStart = 540; // 09:00 AM
+      const dayEnd = 1080;  // 06:00 PM
+
+      for (let t = dayStart; t <= dayEnd - durationMins; t += 30) {
+        const potentialStart = minutesToTimeStr(t);
+        const potentialEnd = minutesToTimeStr(t + durationMins);
+
+        let conflicts = 0;
+        for (const reqObj of requests) {
+          for (const mach of reqObj.requestedMachines) {
+            if (mach.machineId.toString() === machineId.toString()) {
+              const machDate = new Date(mach.usageDate);
+              if (machDate.toDateString() === startOfDay.toDateString()) {
+                if (timesOverlap(potentialStart, potentialEnd, mach.startTime, mach.endTime)) {
+                  conflicts++;
+                }
+              }
+            }
+          }
+        }
+
+        if (machine.capacity - conflicts > 0) {
+          suggestions.push({ startTime: potentialStart, endTime: potentialEnd });
+        }
+        if (suggestions.length >= 3) break;
+      }
+
+      return res.status(200).json({
+        available: false,
+        status: 'Unavailable',
+        message: 'No available capacity for this slot. All units are booked.',
+        suggestions
+      });
+    }
+
+    return res.status(200).json({
+      available: true,
+      status: 'Available',
+      message: `${remainingCapacity} out of ${machine.capacity} units available.`,
+      remainingCapacity
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error checking machine availability', error: error.message });
+  }
+};
+
+// Create or save draft request
+export const createRequest = async (req, res) => {
+  try {
+    const {
+      projectName,
+      projectCategory,
+      projectDescription,
+      projectObjectives,
+      expectedOutcome,
+      teamName,
+      numberOfStudents,
+      students,
+      facultyGuide,
+      requestedMachines,
+      requestedMaterials,
+      uploadedFiles,
+      benefits,
+      declaration,
+      status // 'Draft' or 'Submitted' / 'Student Resubmitted'
+    } = req.body;
+
+    const studentId = req.user._id;
+
+    // Check material stocks first if submitting
+    if (status !== 'Draft') {
+      for (const mat of (requestedMaterials || [])) {
+        if (mat.materialId) {
+          const material = await Material.findById(mat.materialId);
+          if (material) {
+            const remaining = Math.max(0, material.currentStock - material.allocatedQuantity);
+            if (mat.quantityRequired > remaining) {
+              return res.status(400).json({
+                message: `Auto Capacity Validation failed: Only ${remaining} ${material.unit} of "${material.name}" available. Requested: ${mat.quantityRequired}.`
+              });
+            }
+          }
+        }
+      }
+
+      // Check machine slot availability
+      for (const mach of (requestedMachines || [])) {
+        if (mach.machineId && mach.usageDate && mach.startTime && mach.endTime) {
+          const machine = await Machinery.findById(mach.machineId);
+          if (machine) {
+            const usageDate = new Date(mach.usageDate);
+            const startD = new Date(usageDate.setHours(0,0,0,0));
+            const endD = new Date(usageDate.setHours(23,59,59,999));
+
+            const bookings = await MachineryRequest.find({
+              'requestedMachines.machineId': mach.machineId,
+              status: { $in: ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled'] },
+              'requestedMachines.usageDate': { $gte: startD, $lte: endD }
+            });
+
+            let overlaps = 0;
+            for (const b of bookings) {
+              for (const bm of b.requestedMachines) {
+                if (bm.machineId.toString() === mach.machineId.toString()) {
+                  if (new Date(bm.usageDate).toDateString() === usageDate.toDateString()) {
+                    if (timesOverlap(mach.startTime, mach.endTime, bm.startTime, bm.endTime)) {
+                      overlaps++;
+                    }
+                  }
+                }
+              }
+            }
+
+            if (overlaps >= machine.capacity) {
+              return res.status(400).json({
+                message: `Double Booking Alert: The machine "${machine.name}" is already fully booked from ${mach.startTime} to ${mach.endTime} on ${new Date(mach.usageDate).toLocaleDateString()}.`
+              });
+            }
+          }
+        }
+      }
+    }
+
+    // Auto-generate Request ID e.g., MAT-2026-001
+    let requestId = '';
+    const prefix = 'MAT-2026-';
+    const lastRequest = await MachineryRequest.findOne({ requestId: { $regex: `^${prefix}` } }).sort({ createdAt: -1 });
+    if (lastRequest) {
+      const numStr = lastRequest.requestId.replace(prefix, '');
+      const nextNum = parseInt(numStr) + 1;
+      requestId = `${prefix}${nextNum.toString().padStart(3, '0')}`;
+    } else {
+      requestId = `${prefix}001`;
+    }
+
+    // Prepare compatibility variables
+    const primaryMachine = requestedMachines && requestedMachines.length > 0 ? requestedMachines[0] : null;
+    const teamMems = (students || []).slice(1).map(s => ({
+      name: s.name,
+      branch: s.branch,
+      year: s.year,
+      mobile: s.mobile,
+      email: s.email
+    }));
+
+    const newRequest = new MachineryRequest({
+      requestId,
+      projectName,
+      projectCategory,
+      projectDescription,
+      projectObjectives,
+      expectedOutcome,
+      teamName,
+      numberOfStudents: Number(numberOfStudents) || 1,
+      students: students || [],
+      facultyGuide: facultyGuide || {},
+      requestedMachines: requestedMachines || [],
+      requestedMaterials: requestedMaterials || [],
+      uploadedFiles: uploadedFiles || {},
+      benefits: benefits || {},
+      declaration: declaration || {},
+      status: status || 'Submitted',
+      studentId: studentId,
+      approvalHistory: status !== 'Draft' ? [{
+        role: 'Student',
+        action: 'Submitted',
+        remarks: 'Request submitted for Coordinator Review.',
+        byName: req.user.name,
+        date: new Date()
+      }] : [],
+
+      // Backward compatibility mapping
+      machineryId: primaryMachine ? primaryMachine.machineId : undefined,
+      teamMembers: teamMems,
+      usageDate: primaryMachine ? primaryMachine.usageDate : undefined,
+      startTime: primaryMachine ? primaryMachine.startTime : undefined,
+      endTime: primaryMachine ? primaryMachine.endTime : undefined,
+      purpose: projectDescription || '',
+      consentAgreed: declaration ? declaration.acceptResponsibility : false,
+      groupPhotoUrl: uploadedFiles ? uploadedFiles.designFileUrl : ''
+    });
+
+    const saved = await newRequest.save();
+
+    // Trigger profile updates
+    if (students && students.length > 0) {
+      const lead = students[0];
+      const updates = {};
+      if (lead.mobile) updates.mobile = lead.mobile;
+      if (lead.branch) updates.branch = lead.branch;
+      if (lead.year) {
+        let mappedYear = lead.year;
+        if (lead.year === '1st Year') mappedYear = 'FE';
+        else if (lead.year === '2nd Year') mappedYear = 'SE';
+        else if (lead.year === '3rd Year') mappedYear = 'TE';
+        else if (lead.year === '4th Year') mappedYear = 'BE';
+        updates.year = mappedYear;
+      }
+      await User.findByIdAndUpdate(studentId, updates);
+    }
+
+    // Trigger Notification for Coordinator
+    if (status !== 'Draft') {
+      await createInAppNotification(
+        studentId,
+        'Permission Request Submitted',
+        `Your request ${requestId} has been submitted successfully.`
+      );
+      
+      const coordinators = await User.find({ role: 'coordinator' });
+      for (const coord of coordinators) {
+        await createInAppNotification(
+          coord._id,
+          'New Request Awaiting Review',
+          `New request ${requestId} for project "${projectName}" submitted by ${req.user.name}.`
+        );
+        await sendPushNotification(
+          coord._id,
+          'New Material/Machinery Request',
+          `${req.user.name} submitted request ${requestId}`
+        );
+      }
+    }
+
+    res.status(201).json(saved);
   } catch (error) {
     console.error('Error creating request:', error);
     res.status(500).json({ message: 'Error creating request', error: error.message });
   }
 };
 
-// Get all requests (Head) or My requests (Student)
+// Update existing request (resubmit or update draft)
+export const updateRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      projectName,
+      projectCategory,
+      projectDescription,
+      projectObjectives,
+      expectedOutcome,
+      teamName,
+      numberOfStudents,
+      students,
+      facultyGuide,
+      requestedMachines,
+      requestedMaterials,
+      uploadedFiles,
+      benefits,
+      declaration,
+      status
+    } = req.body;
+
+    const request = await MachineryRequest.findById(id);
+    if (!request) return res.status(404).json({ message: 'Request not found' });
+
+    // Validate that student owns it and it's editable (Draft or Changes Requested)
+    if (request.studentId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Unauthorized action' });
+    }
+
+    if (!['Draft', 'Changes Requested'].includes(request.status)) {
+      return res.status(400).json({ message: 'This request cannot be modified in its current state.' });
+    }
+
+    // Stock validations if submitting
+    if (status === 'Submitted' || status === 'Student Resubmitted') {
+      for (const mat of (requestedMaterials || [])) {
+        if (mat.materialId) {
+          const material = await Material.findById(mat.materialId);
+          if (material) {
+            const remaining = Math.max(0, material.currentStock - material.allocatedQuantity);
+            if (mat.quantityRequired > remaining) {
+              return res.status(400).json({
+                message: `Auto Capacity Validation failed: Only ${remaining} ${material.unit} of "${material.name}" available. Requested: ${mat.quantityRequired}.`
+              });
+            }
+          }
+        }
+      }
+    }
+
+    request.projectName = projectName;
+    request.projectCategory = projectCategory;
+    request.projectDescription = projectDescription;
+    request.projectObjectives = projectObjectives;
+    request.expectedOutcome = expectedOutcome;
+    request.teamName = teamName;
+    request.numberOfStudents = Number(numberOfStudents) || 1;
+    request.students = students;
+    request.facultyGuide = facultyGuide;
+    request.requestedMachines = requestedMachines;
+    request.requestedMaterials = requestedMaterials;
+    request.uploadedFiles = uploadedFiles;
+    request.benefits = benefits;
+    request.declaration = declaration;
+
+    if (status === 'Submitted' || status === 'Student Resubmitted') {
+      request.status = status;
+      request.approvalHistory.push({
+        role: 'Student',
+        action: 'Resubmitted',
+        remarks: 'Student updated request details and resubmitted.',
+        byName: req.user.name,
+        date: new Date()
+      });
+
+      // Notify Coordinator
+      const coordinators = await User.find({ role: 'coordinator' });
+      for (const coord of coordinators) {
+        await createInAppNotification(
+          coord._id,
+          'Resubmitted Request Review Needed',
+          `Request ${request.requestId} has been resubmitted with updates by ${req.user.name}.`
+        );
+      }
+    }
+
+    // Sync backward compatibility fields
+    const primaryMachine = requestedMachines && requestedMachines.length > 0 ? requestedMachines[0] : null;
+    request.machineryId = primaryMachine ? primaryMachine.machineId : undefined;
+    request.teamMembers = (students || []).slice(1).map(s => ({
+      name: s.name,
+      branch: s.branch,
+      year: s.year,
+      mobile: s.mobile,
+      email: s.email
+    }));
+    request.usageDate = primaryMachine ? primaryMachine.usageDate : undefined;
+    request.startTime = primaryMachine ? primaryMachine.startTime : undefined;
+    request.endTime = primaryMachine ? primaryMachine.endTime : undefined;
+    request.purpose = projectDescription || '';
+    request.consentAgreed = declaration ? declaration.acceptResponsibility : false;
+    request.groupPhotoUrl = uploadedFiles ? uploadedFiles.designFileUrl : '';
+
+    const saved = await request.save();
+    res.status(200).json(saved);
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating request', error: error.message });
+  }
+};
+
+// Fetch requests with search, filter, and population
 export const getRequests = async (req, res) => {
   try {
-    console.log('getRequests: Starting...');
-    console.log('getRequests: req.user:', req.user);
-
-    if (!req.user) {
-      throw new Error('req.user is undefined in getRequests');
-    }
-
     const { role, _id } = req.user;
+    const { search, status, machine, material, date } = req.query;
+
     let query = {};
 
-    if (role === 'head' || role === 'admin') {
-      // Head sees all requests
-      query = {};
-    } else {
-      // Students see only their own requests
-      query = { studentId: _id };
+    // Roll-based access logic
+    if (role !== 'head' && role !== 'coordinator' && role !== 'admin') {
+      // Student sees only theirs
+      query.studentId = _id;
     }
 
-    console.log('getRequests: Query:', query);
-    console.log('getRequests: MachineryRequest Model:', MachineryRequest);
-    
-    // Test basic find first
-    // const count = await MachineryRequest.countDocuments(query);
-    // console.log('getRequests: Count:', count);
+    // Advanced search
+    if (search) {
+      query.$or = [
+        { requestId: { $regex: search, $options: 'i' } },
+        { projectName: { $regex: search, $options: 'i' } },
+        { teamName: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    // Status filtering
+    if (status) {
+      query.status = status;
+    }
+
+    // Machine filtering
+    if (machine) {
+      query['requestedMachines.machineId'] = machine;
+    }
+
+    // Material filtering
+    if (material) {
+      query['requestedMaterials.materialId'] = material;
+    }
+
+    // Date filtering
+    if (date) {
+      const targetDate = new Date(date);
+      const start = new Date(targetDate.setHours(0,0,0,0));
+      const end = new Date(targetDate.setHours(23,59,59,999));
+      query['requestedMachines.usageDate'] = { $gte: start, $lte: end };
+    }
 
     const requests = await MachineryRequest.find(query)
+      .populate('studentId', 'name email mobile branch year')
       .populate('machineryId', 'name imageUrl')
-      .populate('studentId', 'name email mobile branch year') // Populate requester details
+      .populate('requestedMachines.machineId', 'name imageUrl capacity')
+      .populate('requestedMaterials.materialId', 'name unit currentStock allocatedQuantity')
+      .populate('materialAllocations.materialId', 'name unit')
       .sort({ createdAt: -1 });
-
-    console.log('getRequests: Found:', requests.length);
 
     res.status(200).json(requests);
   } catch (error) {
-    console.error('Error fetching requests IN CONTROLLER:', error);
-    // Send back the specific error message to the client
-    res.status(500).json({ 
-        message: 'Error fetching requests', 
-        error: error.message,
-        stack: error.stack 
-    });
+    res.status(500).json({ message: 'Error fetching requests', error: error.message });
   }
 };
 
-// Update request status (Head - Approve/Reject)
-export const updateRequestStatus = async (req, res) => {
+// Get single request detail (public or private)
+export const getRequestById = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { status, rejectionReason } = req.body;
+    const request = await MachineryRequest.findById(req.params.id)
+      .populate('studentId', 'name email mobile branch year')
+      .populate('machineryId', 'name imageUrl')
+      .populate('requestedMachines.machineId', 'name imageUrl capacity')
+      .populate('requestedMaterials.materialId', 'name unit currentStock allocatedQuantity')
+      .populate('materialAllocations.materialId', 'name unit')
+      .populate('approvedBy', 'name');
 
-    if (!['approved', 'rejected'].includes(status)) {
-        return res.status(400).json({ message: 'Invalid status value' });
-    }
-
-    const updateData = {
-        status,
-        approvedBy: req.user._id
-    };
-
-    if (status === 'rejected') {
-        updateData.rejectionReason = rejectionReason || 'No reason provided';
-    }
-
-    const updatedRequest = await MachineryRequest.findByIdAndUpdate(
-        id, 
-        updateData, 
-        { new: true }
-    )
-    .populate('studentId', 'name email')
-    .populate('machineryId', 'name');
-
-    if (!updatedRequest) {
+    if (!request) {
       return res.status(404).json({ message: 'Request not found' });
     }
 
-    // Send Email Notification
-    console.log(`[Machinery] updateRequestStatus: Attempting to send email. Status: ${status}`);
-    
-    if (updatedRequest.studentId && updatedRequest.studentId.email) {
-        try {
-            const student = updatedRequest.studentId;
-            const machineName = updatedRequest.machineryId ? updatedRequest.machineryId.name : 'Machinery';
-            
-            console.log(`[Machinery] Sending email to: ${student.email} for machine: ${machineName}`);
-
-            let subject = '';
-            let htmlContent = '';
-
-            if (status === 'approved') {
-                subject = 'Machinery Request Approved - Idea Lab';
-                htmlContent = `
-                    <h2>Great news, ${student.name}!</h2>
-                    <p>Your request for <b>${machineName}</b> has been approved.</p>
-                    <p><b>Date:</b> ${new Date(updatedRequest.usageDate).toLocaleDateString()}</p>
-                    <p><b>Time:</b> ${updatedRequest.startTime} - ${updatedRequest.endTime}</p>
-                    <br/>
-                    <p>Please follow all safety guidelines while using the machinery.</p>
-                    <p>Regards,<br/>Idea Lab Team</p>
-                `;
-            } else if (status === 'rejected') {
-                subject = 'Machinery Request Rejected - Idea Lab';
-                htmlContent = `
-                    <h2>Hello ${student.name},</h2>
-                    <p>Your request for <b>${machineName}</b> has been rejected.</p>
-                    <p><b>Reason:</b> ${rejectionReason || 'No reason provided'}</p>
-                    <br/>
-                    <p>You can submit a new request or contact the coordinator for more details.</p>
-                    <p>Regards,<br/>Idea Lab Team</p>
-                `;
-            }
-
-            if (subject) {
-                const mailResult = await sendEmail(student.email, subject, htmlContent);
-                console.log(`[Machinery] Email result: ${mailResult ? 'Date: ' + new Date() : 'Failed (null)'}`);
-            }
-        } catch (emailErr) {
-            console.error('[Machinery] Failed to send machinery request email:', emailErr);
-            // Non-blocking error
-        }
-    } else {
-        console.warn(`[Machinery] EMAIL NOT SENT: Student ID or Email missing. RequestID: ${id}`);
-    }
-
-    res.status(200).json(updatedRequest);
+    res.status(200).json(request);
   } catch (error) {
-    res.status(500).json({ message: 'Error regarding request', error: error.message });
+    res.status(500).json({ message: 'Error fetching request details', error: error.message });
   }
 };
 
-// Download Machinery Request PDF
+// Handle workflow status transitions (Coordinator & Head reviews)
+export const updateRequestStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, remarks, checks, conditions } = req.body;
+    const { role, name } = req.user;
+
+    const request = await MachineryRequest.findById(id)
+      .populate('studentId', 'name email mobile')
+      .populate('requestedMaterials.materialId', 'name unit currentStock allocatedQuantity')
+      .populate('requestedMachines.machineId', 'name');
+
+    if (!request) return res.status(404).json({ message: 'Request not found' });
+
+    // Save previous status to check if it's newly transitioning to approved/rejected
+    const oldStatus = request.status;
+
+    // Validate Status values
+    const allowedStatuses = [
+      'Draft', 'Submitted', 'Coordinator Review', 'Coordinator Approved', 
+      'Coordinator Rejected', 'Changes Requested', 'Student Resubmitted', 
+      'Head Review', 'Approved', 'Rejected', 'Approved With Conditions', 
+      'Material Allocated', 'Machine Scheduled', 'Completed', 'Cancelled'
+    ];
+    if (status && !allowedStatuses.includes(status)) {
+      return res.status(400).json({ message: 'Invalid status value' });
+    }
+
+    // Check roles
+    if (['coordinator', 'head', 'admin'].includes(role) === false) {
+      return res.status(403).json({ message: 'Only coordinators or heads can execute status actions.' });
+    }
+
+    // Apply reviews and Remarks
+    if (status) request.status = status;
+    if (remarks) {
+      if (role === 'head') {
+        request.headRemarks = remarks;
+      } else {
+        request.coordinatorRemarks = remarks;
+      }
+    }
+
+    // Record Coordinator Review checks
+    if (checks) {
+      request.coordinatorChecks = {
+        machineAvailability: !!checks.machineAvailability,
+        materialAvailability: !!checks.materialAvailability,
+        projectFeasibility: !!checks.projectFeasibility,
+        studentEligibility: !!checks.studentEligibility,
+        previousUsageHistory: !!checks.previousUsageHistory
+      };
+    }
+
+    // Record Head conditional approvals
+    if (conditions) {
+      request.headConditions = conditions;
+    }
+
+    // Record Audit trace
+    request.approvalHistory.push({
+      date: new Date(),
+      role: role.toUpperCase(),
+      action: status || 'Remarks Added',
+      remarks: remarks || conditions || 'Status updated',
+      byName: name
+    });
+
+    // Handle Material Reservation/Stock Updates
+    // Transitioning INTO Approved or Allocated state: reserve/allocate material stock
+    const isApprovedState = ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled'].includes(status);
+    const wasApprovedState = ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled'].includes(oldStatus);
+
+    if (isApprovedState && !wasApprovedState) {
+      // Deduct stock levels by adding to allocatedQuantity
+      for (const mat of request.requestedMaterials) {
+        if (mat.materialId) {
+          const materialItem = await Material.findById(mat.materialId);
+          if (materialItem) {
+            materialItem.allocatedQuantity += mat.quantityRequired;
+            await materialItem.save();
+          }
+        }
+      }
+
+      // Pre-populate materialAllocations array for tracking
+      if (request.materialAllocations.length === 0) {
+        request.materialAllocations = request.requestedMaterials.map(m => ({
+          materialId: m.materialId,
+          quantityRequested: m.quantityRequired,
+          quantityIssued: 0,
+          returnedQuantity: 0,
+          balanceQuantity: 0
+        }));
+      }
+    }
+
+    // Transitioning OUT OF Approved/Allocated to Cancelled/Rejected/Completed: release allocation
+    const isReleasedState = ['Completed', 'Cancelled', 'Rejected', 'Coordinator Rejected'].includes(status);
+    if (isReleasedState && wasApprovedState) {
+      for (const mat of request.requestedMaterials) {
+        if (mat.materialId) {
+          const materialItem = await Material.findById(mat.materialId);
+          if (materialItem) {
+            materialItem.allocatedQuantity = Math.max(0, materialItem.allocatedQuantity - mat.quantityRequired);
+            
+            // If completed, deduct the actually issued/consumed materials permanently from stock
+            if (status === 'Completed') {
+              const allocationRecord = request.materialAllocations.find(a => a.materialId.toString() === mat.materialId.toString());
+              const consumedQty = allocationRecord ? (allocationRecord.quantityIssued - allocationRecord.returnedQuantity) : mat.quantityRequired;
+              materialItem.currentStock = Math.max(0, materialItem.currentStock - consumedQty);
+            }
+            
+            await materialItem.save();
+          }
+        }
+      }
+    }
+
+    if (status === 'Approved' || status === 'Approved With Conditions') {
+      request.approvedBy = req.user._id;
+    }
+
+    const saved = await request.save();
+
+    // Trigger real-time notifications to the Student
+    if (request.studentId && request.studentId.email) {
+      const studentEmail = request.studentId.email;
+      const studentName = request.studentId.name;
+      const machineNames = request.requestedMachines.map(m => m.machineName).join(', ') || 'IDEA Lab Resources';
+      
+      let subject = `IDEA Hub: Request Status Updated - ${request.requestId}`;
+      let bodyText = `<p>Dear ${studentName},</p>
+                      <p>Your Request <b>${request.requestId}</b> for <b>${machineNames}</b> has been updated to <b>${status}</b>.</p>`;
+
+      if (remarks) bodyText += `<p><b>Remarks:</b> ${remarks}</p>`;
+      if (conditions) bodyText += `<p><b>Approval Conditions:</b> ${conditions}</p>`;
+      bodyText += `<br/><p>Please log in to your Student Dashboard to check details.</p>
+                  <p>Regards,<br/>IDEA Hub Team</p>`;
+
+      try {
+        await sendEmail(studentEmail, subject, bodyText);
+        await createInAppNotification(request.studentId._id, `Request Status: ${status}`, `Your request ${request.requestId} was updated to ${status} by ${name}.`);
+        await sendPushNotification(request.studentId._id, `Request ${status}`, `Request ${request.requestId} updated to ${status}.`);
+      } catch (err) {
+        console.error('Failed to trigger notifications:', err);
+      }
+    }
+
+    res.status(200).json(saved);
+  } catch (error) {
+    console.error('Error updating status:', error);
+    res.status(500).json({ message: 'Error updating request status', error: error.message });
+  }
+};
+
+// Coordinator Action: Allocate / Issue Material quantities and update stock
+export const issueMaterials = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { allocations } = req.body; // Array of { materialId, quantityIssued }
+
+    const request = await MachineryRequest.findById(id);
+    if (!request) return res.status(404).json({ message: 'Request not found' });
+
+    // Validate Coordinator/Admin role
+    if (!['coordinator', 'head', 'admin'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Permission denied' });
+    }
+
+    // Process issue amounts
+    for (const alloc of (allocations || [])) {
+      const record = request.materialAllocations.find(a => a.materialId.toString() === alloc.materialId.toString());
+      if (record) {
+        const material = await Material.findById(alloc.materialId);
+        if (material) {
+          const diff = Number(alloc.quantityIssued) - record.quantityIssued;
+          
+          // Deduct from remaining stock
+          if (material.currentStock < diff) {
+            return res.status(400).json({ message: `Insufficient stock for "${material.name}". Only ${material.currentStock} units remaining.` });
+          }
+
+          record.quantityIssued = Number(alloc.quantityIssued);
+          record.issuedDate = new Date();
+          record.issuedBy = req.user._id;
+          record.balanceQuantity = record.quantityIssued - record.returnedQuantity;
+        }
+      }
+    }
+
+    request.status = 'Material Allocated';
+    request.approvalHistory.push({
+      date: new Date(),
+      role: req.user.role.toUpperCase(),
+      action: 'Material Issued',
+      remarks: 'Materials issued successfully to the student team.',
+      byName: req.user.name
+    });
+
+    const saved = await request.save();
+    res.status(200).json(saved);
+  } catch (error) {
+    res.status(500).json({ message: 'Error issuing materials', error: error.message });
+  }
+};
+
+// Coordinator Action: Return Material/Tools and update database
+export const returnResource = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { returns } = req.body; // Array of { resourceType, resourceId, resourceName, returnedQuantity, condition, remarks }
+
+    const request = await MachineryRequest.findById(id);
+    if (!request) return res.status(404).json({ message: 'Request not found' });
+
+    if (!['coordinator', 'head', 'admin'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Permission denied' });
+    }
+
+    for (const ret of (returns || [])) {
+      // Record return logs
+      request.returns.push({
+        resourceType: ret.resourceType,
+        resourceId: ret.resourceId,
+        resourceName: ret.resourceName,
+        returnedQuantity: Number(ret.returnedQuantity),
+        returnDate: new Date(),
+        condition: ret.condition || 'Good',
+        remarks: ret.remarks || '',
+        returnedBy: req.user.name
+      });
+
+      // Update allocations balance if it's a material return
+      if (ret.resourceType === 'Material') {
+        const alloc = request.materialAllocations.find(a => a.materialId.toString() === ret.resourceId.toString());
+        if (alloc) {
+          alloc.returnedQuantity += Number(ret.returnedQuantity);
+          alloc.balanceQuantity = Math.max(0, alloc.quantityIssued - alloc.returnedQuantity);
+        }
+
+        // Restore returnable tools back into currentStock levels in the Inventory
+        const material = await Material.findById(ret.resourceId);
+        if (material) {
+          material.currentStock += Number(ret.returnedQuantity);
+          material.allocatedQuantity = Math.max(0, material.allocatedQuantity - Number(ret.returnedQuantity));
+          await material.save();
+        }
+      }
+    }
+
+    request.status = 'Completed';
+    request.actualExitTime = new Date();
+    request.approvalHistory.push({
+      date: new Date(),
+      role: req.user.role.toUpperCase(),
+      action: 'Completed',
+      remarks: 'Resources returned, status marked as Completed.',
+      byName: req.user.name
+    });
+
+    const saved = await request.save();
+    res.status(200).json(saved);
+  } catch (error) {
+    res.status(500).json({ message: 'Error returning resource', error: error.message });
+  }
+};
+
+// Check-in tracking (Usage Tracking)
+export const checkInStudent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const request = await MachineryRequest.findById(id);
+    if (!request) return res.status(404).json({ message: 'Request not found' });
+
+    request.actualEntryTime = new Date();
+    request.approvalHistory.push({
+      date: new Date(),
+      role: req.user.role.toUpperCase(),
+      action: 'Check In',
+      remarks: 'Team checked in at IDEA Hub.',
+      byName: req.user.name
+    });
+
+    const saved = await request.save();
+    res.status(200).json(saved);
+  } catch (error) {
+    res.status(500).json({ message: 'Error during check-in', error: error.message });
+  }
+};
+
+// Check-out tracking (Usage Tracking)
+export const checkOutStudent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const request = await MachineryRequest.findById(id);
+    if (!request) return res.status(404).json({ message: 'Request not found' });
+
+    request.actualExitTime = new Date();
+    request.status = 'Completed';
+    request.approvalHistory.push({
+      date: new Date(),
+      role: req.user.role.toUpperCase(),
+      action: 'Check Out',
+      remarks: 'Team checked out from IDEA Hub.',
+      byName: req.user.name
+    });
+
+    const saved = await request.save();
+    res.status(200).json(saved);
+  } catch (error) {
+    res.status(500).json({ message: 'Error during check-out', error: error.message });
+  }
+};
+
+// Download Machinery/Material PDF
 export const downloadMachineryPdf = async (req, res) => {
   try {
     const { id } = req.params;
     const request = await MachineryRequest.findById(id)
-      .populate('machineryId', 'name')
-      .populate('studentId', 'name email mobile branch year prn');
+      .populate('studentId', 'name email mobile branch year')
+      .populate('requestedMachines.machineId', 'name')
+      .populate('requestedMaterials.materialId', 'name unit')
+      .populate('approvedBy', 'name');
+
     if (!request) {
-      return res.status(404).json({ message: 'Machinery request not found' });
+      return res.status(404).json({ message: 'Request not found' });
     }
 
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     const qrData = JSON.stringify({
       id: request._id,
-      name: request.studentId?.name || '',
+      requestId: request.requestId,
+      project: request.projectName,
+      team: request.teamName || request.students[0]?.name || '',
       status: request.status,
-      url: `${baseUrl}/api/machinery/requests/${request._id}`,
+      url: `${baseUrl.replace('5000', '8080')}/verify-request/${request.requestId}`,
     });
 
-    // Prepare data for PDF
+    // Compile data structure for PDF generator
     const data = {
       header: {
-        labName: request.machineryId?.name || 'Innovation Lab / Maker Space',
-        application: 'Machinery Request Application',
-        applicationId: request._id,
-        requestDate: request.createdAt ? new Date(request.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : ''
+        applicationId: request.requestId,
+        applicationDate: request.applicationDate ? new Date(request.applicationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '',
+        projectName: request.projectName,
+        projectCategory: request.projectCategory,
+        projectDescription: request.projectDescription,
+        guideName: request.facultyGuide?.name || 'N/A',
       },
       student: {
-        name: request.studentId?.name,
-        email: request.studentId?.email,
-        mobile: request.studentId?.mobile,
-        branch: request.studentId?.branch,
-        year: request.studentId?.year,
-        prn: request.studentId?.prn || ''
+        name: request.students[0]?.name || '',
+        email: request.students[0]?.email || '',
+        mobile: request.students[0]?.mobile || '',
+        branch: request.students[0]?.branch || '',
+        year: request.students[0]?.year || '',
+        prn: request.students[0]?.prn || '',
       },
-      machinery: {
-        name: request.machineryId?.name,
-        usageDate: request.usageDate ? new Date(request.usageDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '',
-        timeSlot: `${request.startTime} - ${request.endTime}`,
-        purpose: request.purpose,
-        numberOfStudents: request.teamMembers?.length || 1,
-        teamMembers: request.teamMembers || []
-      },
+      requestedMachines: request.requestedMachines.map(m => ({
+        name: m.machineId?.name || m.machineName,
+        usageDate: m.usageDate ? new Date(m.usageDate).toLocaleDateString() : '',
+        timeSlot: `${m.startTime} - ${m.endTime}`,
+        hours: m.usageHours,
+        purpose: m.purposeOfUsage
+      })),
+      requestedMaterials: request.requestedMaterials.map(m => ({
+        name: m.materialId?.name || m.materialName,
+        quantity: m.quantityRequired,
+        purpose: m.purposeOfUsage
+      })),
+      teamMembers: request.students.map((s, i) => ({
+        index: i + 1,
+        name: s.name,
+        branch: s.branch,
+        year: s.year,
+        prn: s.prn
+      })),
       status: request.status,
-      approvedBy: request.approvedBy || '',
-      approvalDate: request.approvedAt ? new Date(request.approvedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '',
-      remarks: request.rejectionReason || '',
-      documents: {
-        groupPhoto: !!request.groupPhotoUrl,
-        supportingDocument: false
-      },
+      approvedBy: request.approvedBy?.name || '',
+      approvalDate: request.updatedAt ? new Date(request.updatedAt).toLocaleDateString() : '',
+      remarks: request.headRemarks || request.coordinatorRemarks || '',
+      conditions: request.headConditions || '',
       qrData: qrData
     };
 
-    // Generate PDF using utility
-    const pdfPath = `uploads/pdfs/Machinery_${request._id}_${request.status}_${new Date().toISOString().split('T')[0]}.pdf`;
+    const pdfPath = `uploads/pdfs/ResourceRequest_${request.requestId}_${request.status}_${new Date().toISOString().split('T')[0]}.pdf`;
     await generatePdf('machinery', data, pdfPath);
 
     res.download(pdfPath, (err) => {
@@ -264,3 +934,24 @@ export const downloadMachineryPdf = async (req, res) => {
     res.status(500).json({ message: 'Error generating PDF', error: err.message });
   }
 };
+
+// Public endpoint to verify PDF via Request ID
+export const verifyPublicRequest = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const request = await MachineryRequest.findOne({ requestId })
+      .populate('studentId', 'name email branch year prn')
+      .populate('requestedMachines.machineId', 'name')
+      .populate('requestedMaterials.materialId', 'name')
+      .populate('approvedBy', 'name');
+
+    if (!request) {
+      return res.status(404).json({ message: 'Request not found for this ID' });
+    }
+
+    res.status(200).json(request);
+  } catch (error) {
+    res.status(500).json({ message: 'Error verifying request', error: error.message });
+  }
+};
+

@@ -826,7 +826,7 @@ const SpecialRoomPermission = () => {
                                         key={idx} 
                                         type="button" 
                                         variant="outline" 
-                                        size="xs" 
+                                        size="sm" 
                                         onClick={() => {
                                           setFormData(prev => ({ ...prev, schedule: { ...prev.schedule, startTime: s.startTime, endTime: s.endTime } }));
                                           setAvailabilityCheck(null);

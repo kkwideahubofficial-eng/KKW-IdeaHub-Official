@@ -3,11 +3,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link } from "react-router-dom";
-import { Calendar, Check, X, Clock, Users, Loader2, Image as ImageIcon, Trophy } from "lucide-react";
+import { 
+  Calendar, Check, X, Clock, Users, Loader2, Database, ShieldAlert, 
+  Settings, FileDown, Eye, RefreshCw, Layers, Printer, Search, Download
+} from "lucide-react";
 import { toast } from "sonner";
-import axios from "../lib/axios";
+import api from "../lib/axios";
+const axios = api;
 
+// Room booking types
 interface TeamMember {
   _id: string;
   name: string;
@@ -28,13 +39,72 @@ interface BookingRequest {
   updatedAt: string;
 }
 
-interface DashboardStats {
-  totalPending: number;
-  totalApproved: number;
-  totalRejected: number;
+// Material/Machinery types
+interface StudentMember {
+  name: string;
+  prn: string;
+  branch: string;
+  year: string;
+  mobile: string;
+  email: string;
 }
 
-// A reusable component to render a list of bookings
+interface ResourceRequest {
+  _id: string;
+  requestId: string;
+  projectName: string;
+  projectCategory: string;
+  projectDescription: string;
+  status: string;
+  createdAt: string;
+  students: StudentMember[];
+  requestedMachines: {
+    machineId: any;
+    machineName: string;
+    usageDate: string;
+    startTime: string;
+    endTime: string;
+    usageHours: number;
+    purposeOfUsage: string;
+    specialRequirements: string;
+  }[];
+  requestedMaterials: {
+    materialId: any;
+    materialName: string;
+    quantityRequired: number;
+    purposeOfUsage: string;
+  }[];
+  uploadedFiles?: {
+    designFileUrl?: string;
+    cadFileUrl?: string;
+    circuitDiagramUrl?: string;
+    supportingDocsUrl?: string;
+  };
+  materialAllocations: {
+    materialId: any;
+    quantityRequested: number;
+    quantityIssued: number;
+    returnedQuantity: number;
+    balanceQuantity: number;
+  }[];
+  teamName?: string;
+  actualEntryTime?: string;
+  actualExitTime?: string;
+}
+
+interface Material {
+  _id: string;
+  name: string;
+  category: string;
+  description: string;
+  currentStock: number;
+  allocatedQuantity: number;
+  remainingQuantity: number;
+  lowStockThreshold: number;
+  unit: string;
+}
+
+// BookingList component for room requests
 interface BookingListProps {
   bookings: BookingRequest[];
   showActions?: boolean;
@@ -52,12 +122,10 @@ const BookingList: React.FC<BookingListProps> = ({
 }) => {
   if (bookings.length === 0) {
     return (
-      <div className="text-center py-8">
+      <div className="text-center py-8 text-xs">
         <Calendar className="mx-auto h-12 w-12 text-muted-foreground" />
-        <h3 className="mt-4 text-lg font-medium">No bookings found</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          There are no bookings in this category.
-        </p>
+        <h3 className="mt-4 text-sm font-medium">No bookings found</h3>
+        <p className="mt-1 text-[11px] text-muted-foreground">There are no bookings in this category.</p>
       </div>
     );
   }
@@ -68,328 +136,885 @@ const BookingList: React.FC<BookingListProps> = ({
         const isActionProcessing = processingId === request._id;
         
         return (
-        <Card key={request._id} className="flex flex-col h-full border rounded-xl shadow-sm hover:shadow-md transition-shadow">
-          <CardHeader className="pb-3">
-             <div className="flex justify-between items-start mb-2">
-                <Badge variant={request.status === 'approved' ? 'default' : request.status === 'rejected' ? 'destructive' : 'secondary'} className="uppercase text-[10px] tracking-wide">
+          <Card key={request._id} className="flex flex-col h-full border rounded-xl shadow-sm hover:shadow-md transition-shadow text-xs">
+            <CardHeader className="pb-3">
+              <div className="flex justify-between items-start mb-2">
+                <Badge variant={request.status === 'approved' ? 'default' : request.status === 'rejected' ? 'destructive' : 'secondary'} className="uppercase text-[9px] tracking-wide">
                   {request.status}
                 </Badge>
-                <div className="text-xs text-muted-foreground font-medium flex items-center">
+                <div className="text-[10px] text-muted-foreground font-medium flex items-center">
                   <Clock className="w-3 h-3 mr-1" />
                   {new Date(request.createdAt).toLocaleDateString()}
                 </div>
-            </div>
-            <CardTitle className="text-lg font-semibold line-clamp-1" title={request.team?.teamName || 'No Team Name'}>
-              {request.team?.teamName || 'No Team Name'}
-            </CardTitle>
-            <CardDescription className="text-sm">
-               <span className="font-medium text-foreground">{request.team?.name || 'Team Member'}</span>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex-grow space-y-4 text-sm">
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="bg-muted/50 p-2 rounded">
-                 <p className="text-muted-foreground mb-1">Date</p>
-                 <p className="font-medium truncate" title={new Date(request.slotDate).toLocaleDateString()}>
-                    {new Date(request.slotDate).toLocaleDateString()}
-                 </p>
               </div>
-              <div className="bg-muted/50 p-2 rounded">
-                 <p className="text-muted-foreground mb-1">Time</p>
-                 <p className="font-medium truncate">
-                   {request.startTime} - {request.endTime}
-                 </p>
+              <CardTitle className="text-sm font-semibold truncate" title={request.team?.teamName || 'No Team'}>
+                {request.team?.teamName || 'No Team'}
+              </CardTitle>
+              <CardDescription className="text-3xs">
+                <span className="font-medium text-foreground">{request.team?.name || 'Applicant'}</span>
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex-grow space-y-4">
+              <div className="grid grid-cols-2 gap-2 text-3xs">
+                <div className="bg-muted/50 p-2 rounded">
+                  <p className="text-muted-foreground mb-1">Date</p>
+                  <p className="font-semibold">{new Date(request.slotDate).toLocaleDateString()}</p>
+                </div>
+                <div className="bg-muted/50 p-2 rounded">
+                  <p className="text-muted-foreground mb-1">Time</p>
+                  <p className="font-semibold">{request.startTime} - {request.endTime}</p>
+                </div>
               </div>
-            </div>
-            
-            <div className="bg-muted/30 p-3 rounded-md border border-border/50">
-               <p className="text-muted-foreground text-xs mb-1 uppercase tracking-wider font-semibold">Purpose</p>
-               <p className="line-clamp-3 text-muted-foreground/90 italic">"{request.purpose}"</p>
-            </div>
-          </CardContent>
-          
-          {showActions && (
-             <div className="p-4 pt-0 mt-auto flex gap-3">
+              <div className="bg-muted/30 p-2.5 rounded border border-border/50">
+                <p className="text-muted-foreground text-3xs font-semibold uppercase tracking-wider mb-1">Purpose</p>
+                <p className="line-clamp-2 italic">"{request.purpose}"</p>
+              </div>
+            </CardContent>
+            {showActions && (
+              <div className="p-4 pt-0 mt-auto flex gap-2">
                 <Button
-                    variant="outline"
-                    className="flex-1 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground transition-all"
-                    onClick={() => onReject(request._id)}
-                    disabled={isActionProcessing || (processingId !== null && processingId !== request._id)}
-                  >
-                    {isActionProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4 mr-1" />}
-                    Reject
-                  </Button>
-                  <Button
-                    className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground transition-all"
-                    onClick={() => onApprove(request._id)}
-                    disabled={isActionProcessing || (processingId !== null && processingId !== request._id)} 
-                  >
-                    {isActionProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
-                    Approve
-                  </Button>
-             </div>
-          )}
-        </Card>
-      )})}
+                  variant="outline"
+                  className="flex-grow h-8 text-3xs border-destructive text-destructive hover:bg-destructive hover:text-white"
+                  onClick={() => onReject(request._id)}
+                  disabled={isActionProcessing}
+                >
+                  Reject
+                </Button>
+                <Button
+                  className="flex-grow h-8 text-3xs bg-primary hover:bg-primary/95 text-white"
+                  onClick={() => onApprove(request._id)}
+                  disabled={isActionProcessing}
+                >
+                  Approve
+                </Button>
+              </div>
+            )}
+          </Card>
+        );
+      })}
     </div>
   );
 };
 
 const CoordinatorDashboard = () => {
+  // Outer Tabs: room_bookings vs materials_machinery
+  const [dashboardTab, setDashboardTab] = useState("room_bookings");
+
+  // Room Booking State
   const [pendingBookings, setPendingBookings] = useState<BookingRequest[]>([]);
   const [approvedBookings, setApprovedBookings] = useState<BookingRequest[]>([]);
   const [rejectedBookings, setRejectedBookings] = useState<BookingRequest[]>([]);
-  const [stats, setStats] = useState<{
-    totalPending: number;
-    totalApproved: number;
-    totalRejected: number;
-    activeTeams: number;
-    thisWeek: number;
-  }>({ 
-    totalPending: 0, 
-    totalApproved: 0, 
-    totalRejected: 0,
-    activeTeams: 0,
-    thisWeek: 0
-  });
-  
-  const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState({ totalPending: 0, totalApproved: 0, totalRejected: 0 });
   const [processingId, setProcessingId] = useState<string | null>(null);
-  const [initialLoad, setInitialLoad] = useState(true);
+
+  // Materials & Machinery State
+  const [resourceRequests, setResourceRequests] = useState<ResourceRequest[]>([]);
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [resourceLoading, setResourceLoading] = useState(false);
+
+  // Detail Modal & Action remarks
+  const [selectedResRequest, setSelectedResRequest] = useState<ResourceRequest | null>(null);
+  const [showResReviewDialog, setShowResReviewDialog] = useState(false);
+  const [decisionRemarks, setDecisionRemarks] = useState("");
+  
+  // Coordinator Checklist
+  const [checks, setChecks] = useState({
+    machineAvailability: false,
+    materialAvailability: false,
+    projectFeasibility: false,
+    studentEligibility: false,
+    previousUsageHistory: false
+  });
+
+  // Material Allocation Modal
+  const [showAllocateDialog, setShowAllocateDialog] = useState(false);
+  const [allocateQuantities, setAllocateQuantities] = useState<Record<string, number>>({});
+
+  // Material Return Modal
+  const [showReturnDialog, setShowReturnDialog] = useState(false);
+  const [returnQuantities, setReturnQuantities] = useState<Record<string, number>>({});
+  const [returnCondition, setReturnCondition] = useState<Record<string, string>>({});
+  const [returnRemarks, setReturnRemarks] = useState<Record<string, string>>({});
+
+  // Material Stock Editor
+  const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
+  const [showStockEditDialog, setShowStockEditDialog] = useState(false);
+  const [stockInput, setStockInput] = useState(0);
+
+  // Seeding loader
+  const [seeding, setSeeding] = useState(false);
+
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setIsLoading(true);
-        
-        // Fetch dashboard stats
-        const statsRes = await axios.get('/bookings/dashboard-stats')
-          .catch(() => ({
-            data: { 
-              stats: { 
-                totalPending: 0, 
-                totalApproved: 0, 
-                totalRejected: 0 
-              } 
-            }
-          }));
-
-        // Fetch pending bookings
-        const allBookingsRes = await axios.get('/bookings/all');
-        const allBookings: BookingRequest[] = allBookingsRes.data;
-
-        // Update stats
-        setStats(prev => ({
-          ...prev,
-          totalPending: allBookings.filter(b => b.status === 'pending').length,
-          totalApproved: allBookings.filter(b => b.status === 'approved').length,
-          totalRejected: allBookings.filter(b => b.status === 'rejected').length,
-        }));
-
-        // Filter and set bookings by status
-        setPendingBookings(allBookings.filter(b => b.status === 'pending'));
-        setApprovedBookings(allBookings.filter(b => b.status === 'approved'));
-        setRejectedBookings(allBookings.filter(b => b.status === 'rejected'));
-      } catch (error) {
-        console.error('Error in fetchDashboardData:', error);
-        toast.error('Failed to load dashboard data');
-      } finally {
-        setIsLoading(false);
-        setInitialLoad(false);
-      }
-    };
-
-    fetchDashboardData();
+    fetchRoomBookings();
+    fetchResourcePortalData();
   }, []);
 
+  const fetchRoomBookings = async () => {
+    try {
+      const allRes = await axios.get('/bookings/all');
+      const all = allRes.data;
+      setPendingBookings(all.filter((b: any) => b.status === 'pending'));
+      setApprovedBookings(all.filter((b: any) => b.status === 'approved'));
+      setRejectedBookings(all.filter((b: any) => b.status === 'rejected'));
+      setStats({
+        totalPending: all.filter((b: any) => b.status === 'pending').length,
+        totalApproved: all.filter((b: any) => b.status === 'approved').length,
+        totalRejected: all.filter((b: any) => b.status === 'rejected').length,
+      });
+    } catch {
+      console.error("Room bookings failed.");
+    }
+  };
+
+  const fetchResourcePortalData = async () => {
+    setResourceLoading(true);
+    try {
+      const [rRes, matRes] = await Promise.all([
+        api.get("/machinery/requests"),
+        api.get("/materials")
+      ]);
+      setResourceRequests(rRes.data);
+      setMaterials(matRes.data);
+    } catch {
+      toast.error("Failed to load inventory requests");
+    } finally {
+      setResourceLoading(false);
+    }
+  };
+
   const handleApprove = async (id: string) => {
-    if (!id) return;
-    
     try {
       setProcessingId(id);
-      await axios.patch(`/bookings/${id}/decision`, { 
-        decision: 'approved',
-        reason: 'Approved by coordinator'
-      });
-      
-      // Update local state
-      const bookingToApprove = pendingBookings.find(req => req._id === id);
-      if (bookingToApprove) {
-        setPendingBookings(prev => prev.filter(req => req._id !== id));
-        setApprovedBookings(prev => [{ ...bookingToApprove, status: 'approved' }, ...prev]);
-      }
-      // The stats are already updated from the main fetch, but we can adjust them here for immediate feedback
-      setStats(prev => ({
-        ...prev,
-        totalPending: prev.totalPending - 1,
-        totalApproved: prev.totalApproved + 1
-      }));
-      
-      toast.success("Booking approved! QR code sent to team.");
-    } catch (error) {
-      console.error('Error approving booking:', error);
-      toast.error('Failed to approve booking');
+      await axios.patch(`/bookings/${id}/decision`, { decision: 'approved', reason: 'Approved by coordinator' });
+      toast.success("Room Booking Approved.");
+      fetchRoomBookings();
+    } catch {
+      toast.error("Approval failed.");
     } finally {
       setProcessingId(null);
     }
   };
 
   const handleReject = async (id: string) => {
-    if (!id) return;
-    
     try {
       setProcessingId(id);
-      await axios.patch(`/bookings/${id}/decision`, { 
-        decision: 'rejected',
-        reason: 'Rejected by coordinator'
-      });
-      
-      // Update local state
-      const bookingToReject = pendingBookings.find(req => req._id === id);
-      if (bookingToReject) {
-        setPendingBookings(prev => prev.filter(req => req._id !== id));
-        setRejectedBookings(prev => [{ ...bookingToReject, status: 'rejected' }, ...prev]);
-      }
-      // Adjust stats for immediate feedback
-      setStats(prev => ({
-        ...prev,
-        totalPending: prev.totalPending - 1,
-        totalRejected: prev.totalRejected + 1
-      }));
-      
-      toast.error("Booking rejected.");
-    } catch (error) {
-      console.error('Error rejecting booking:', error);
-      toast.error('Failed to reject booking');
+      await axios.patch(`/bookings/${id}/decision`, { decision: 'rejected', reason: 'Rejected by coordinator' });
+      toast.error("Room Booking Rejected.");
+      fetchRoomBookings();
+    } catch {
+      toast.error("Rejection failed.");
     } finally {
       setProcessingId(null);
     }
   };
 
-  // Stats cards configuration
-  const statsCards = [
-    { 
-      label: "Pending Requests", 
-      value: stats.totalPending, 
-      icon: Clock 
-    },
-    { 
-      label: "Approved", 
-      value: stats.totalApproved, 
-      icon: Check 
-    },
-    { 
-      label: "Rejected", 
-      value: stats.totalRejected, 
-      icon: X 
-    },
-    { 
-      label: "Active Teams", 
-      value: stats.activeTeams, 
-      icon: Users 
-    },
-  ];
+  // Machinery Request Actions (Coordinator level)
+  const handleResourceRequestDecision = async (decision: "approve" | "reject" | "request_changes") => {
+    if (!selectedResRequest) return;
 
-  if (isLoading && initialLoad) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Loading dashboard data...</p>
-        </div>
-      </div>
-    );
-  }
-  
+    // Checklist validations for approval/forwarding
+    if (decision === "approve") {
+      const allChecked = Object.values(checks).every(v => v === true);
+      if (!allChecked) {
+        toast.error("Please complete all Coordinator Review Checks before approving.");
+        return;
+      }
+    }
+
+    let nextStatus = "Coordinator Approved";
+    if (decision === "reject") nextStatus = "Coordinator Rejected";
+    if (decision === "request_changes") nextStatus = "Changes Requested";
+
+    try {
+      await api.patch(`/machinery/requests/${selectedResRequest._id}/status`, {
+        status: nextStatus,
+        remarks: decisionRemarks,
+        checks: checks
+      });
+
+      toast.success(`Request status updated to ${nextStatus}.`);
+      setShowResReviewDialog(false);
+      resetReviewState();
+      fetchResourcePortalData();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to update status.");
+    }
+  };
+
+  const resetReviewState = () => {
+    setDecisionRemarks("");
+    setChecks({
+      machineAvailability: false,
+      materialAvailability: false,
+      projectFeasibility: false,
+      studentEligibility: false,
+      previousUsageHistory: false
+    });
+  };
+
+  // Issue Materials
+  const handleIssueMaterialsSubmit = async () => {
+    if (!selectedResRequest) return;
+    
+    const allocationsList = Object.keys(allocateQuantities).map(matId => ({
+      materialId: matId,
+      quantityIssued: Number(allocateQuantities[matId]) || 0
+    }));
+
+    try {
+      await api.post(`/machinery/requests/${selectedResRequest._id}/issue`, { allocations: allocationsList });
+      toast.success("Materials allocated successfully!");
+      setShowAllocateDialog(false);
+      fetchResourcePortalData();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Issue process failed.");
+    }
+  };
+
+  // Return Resources
+  const handleReturnResourcesSubmit = async () => {
+    if (!selectedResRequest) return;
+
+    const returnsList = Object.keys(returnQuantities).map(matId => ({
+      resourceType: "Material",
+      resourceId: matId,
+      resourceName: selectedResRequest.requestedMaterials.find(m => m.materialId?._id === matId || m.materialId === matId)?.materialName || "Material",
+      returnedQuantity: Number(returnQuantities[matId]) || 0,
+      condition: returnCondition[matId] || 'Good',
+      remarks: returnRemarks[matId] || ''
+    }));
+
+    try {
+      await api.post(`/machinery/requests/${selectedResRequest._id}/return`, { returns: returnsList });
+      toast.success("Return registered successfully.");
+      setShowReturnDialog(false);
+      fetchResourcePortalData();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Returns process failed.");
+    }
+  };
+
+  // Edit stock level
+  const handleUpdateStock = async () => {
+    if (!editingMaterial) return;
+    try {
+      await api.put(`/materials/${editingMaterial._id}`, { currentStock: stockInput });
+      toast.success("Stock level updated successfully!");
+      setShowStockEditDialog(false);
+      fetchResourcePortalData();
+    } catch {
+      toast.error("Failed to update stock.");
+    }
+  };
+
+  // Pre-seed materials script
+  const triggerSeedMaterials = async () => {
+    setSeeding(true);
+    try {
+      await api.post("/materials/seed");
+      toast.success("Initial inventory materials seeded.");
+      fetchResourcePortalData();
+    } catch {
+      toast.error("Failed to seed database.");
+    } finally {
+      setSeeding(false);
+    }
+  };
+
+  // Check-in check-out triggers
+  const handleCheckIn = async (id: string) => {
+    try {
+      await api.post(`/machinery/requests/${id}/checkin`);
+      toast.success("Student check-in recorded.");
+      fetchResourcePortalData();
+    } catch {
+      toast.error("Failed to record check-in.");
+    }
+  };
+
+  const handleCheckOut = async (id: string) => {
+    try {
+      await api.post(`/machinery/requests/${id}/checkout`);
+      toast.success("Student check-out recorded. Status marked Completed.");
+      fetchResourcePortalData();
+    } catch {
+      toast.error("Failed to record check-out.");
+    }
+  };
+
+  const resStats = {
+    pending: resourceRequests.filter(r => ['Submitted', 'Coordinator Review', 'Student Resubmitted'].includes(r.status)).length,
+    approved: resourceRequests.filter(r => ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled'].includes(r.status)).length,
+    lowStock: materials.filter(m => m.remainingQuantity <= m.lowStockThreshold).length,
+    allocated: materials.reduce((acc, m) => acc + m.allocatedQuantity, 0),
+  };
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground mb-2">Coordinator Dashboard</h1>
-        <p className="text-muted-foreground">Manage lab bookings and requests</p>
-      </div>
+    <Tabs value={dashboardTab} onValueChange={setDashboardTab} className="w-full">
+      <div className="container mx-auto px-4 py-8 max-w-7xl space-y-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-extrabold text-foreground tracking-tight">Coordinator Dashboard</h1>
+            <p className="text-muted-foreground text-sm">Review applications, coordinate reservations, and track inventory allocation.</p>
+          </div>
+          <TabsList className="bg-muted/30 p-1 rounded-lg border border-border/60">
+            <TabsTrigger value="room_bookings" className="rounded-md text-xs font-semibold">Room Bookings</TabsTrigger>
+            <TabsTrigger value="materials_machinery" className="rounded-md text-xs font-semibold">Materials & Machinery</TabsTrigger>
+          </TabsList>
+        </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {statsCards.map((stat, index) => (
-          <Card key={index}>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
+      {/* TABS CONTENT: ROOM BOOKINGS */}
+      <TabsContent value="room_bookings" className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {[
+            { label: "Pending Requests", value: stats.totalPending, icon: Clock, color: "text-blue-600" },
+            { label: "Approved Rooms", value: stats.totalApproved, icon: Check, color: "text-green-600" },
+            { label: "Rejected Rooms", value: stats.totalRejected, icon: X, color: "text-red-600" }
+          ].map((stat, idx) => (
+            <Card key={idx}>
+              <CardContent className="pt-6 flex justify-between items-center">
                 <div>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
+                  <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">{stat.label}</p>
                   <p className="text-2xl font-bold text-foreground mt-1">{stat.value}</p>
                 </div>
-                <div className="w-12 h-12 bg-accent rounded-lg flex items-center justify-center">
-                  <stat.icon className="w-6 h-6 text-primary" />
+                <div className="w-10 h-10 bg-secondary/15 rounded-lg flex items-center justify-center">
+                  <stat.icon className={`w-5 h-5 ${stat.color}`} />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <Tabs defaultValue="pending" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="pending">Pending</TabsTrigger>
+            <TabsTrigger value="approved">Approved</TabsTrigger>
+            <TabsTrigger value="rejected">Rejected</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="pending">
+            <Card>
+              <CardHeader><CardTitle className="text-base font-bold">Pending Booking Requests</CardTitle></CardHeader>
+              <CardContent>
+                <BookingList bookings={pendingBookings} showActions={true} onApprove={handleApprove} onReject={handleReject} processingId={processingId} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="approved">
+            <Card><CardHeader><CardTitle className="text-base font-bold">Approved Bookings</CardTitle></CardHeader><CardContent><BookingList bookings={approvedBookings} /></CardContent></Card>
+          </TabsContent>
+          <TabsContent value="rejected">
+            <Card><CardHeader><CardTitle className="text-base font-bold">Rejected Bookings</CardTitle></CardHeader><CardContent><BookingList bookings={rejectedBookings} /></CardContent></Card>
+          </TabsContent>
+        </Tabs>
+      </TabsContent>
+
+      {/* TABS CONTENT: MATERIALS & MACHINERY */}
+      <TabsContent value="materials_machinery" className="space-y-6">
+        
+        {/* Resource Stats Bar */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+          {[
+            { label: "Pending Resource Requests", value: resStats.pending, color: "text-blue-600" },
+            { label: "Active Resource Permissions", value: resStats.approved, color: "text-green-600" },
+            { label: "Allocated Materials Items", value: resStats.allocated, color: "text-indigo-600" },
+            { label: "Low Stock Inventory Alerts", value: resStats.lowStock, color: resStats.lowStock > 0 ? "text-amber-600" : "text-slate-600" }
+          ].map((item, idx) => (
+            <Card key={idx}>
+              <CardContent className="pt-6">
+                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">{item.label}</p>
+                <p className={`text-2xl font-bold mt-1 ${item.color}`}>{item.value}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <Tabs defaultValue="resource_pending" className="space-y-6">
+          <TabsList className="bg-muted/50 p-1 border rounded-lg">
+            <TabsTrigger value="resource_pending" className="text-xs">Pending Reviews ({resStats.pending})</TabsTrigger>
+            <TabsTrigger value="resource_approved" className="text-xs">Approved Permissions</TabsTrigger>
+            <TabsTrigger value="material_stock" className="text-xs">Material Inventory Manager</TabsTrigger>
+          </TabsList>
+
+          {/* Pending Reviews Tab */}
+          <TabsContent value="resource_pending" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base font-bold">Requests Awaiting Coordinator Review</CardTitle>
+                <CardDescription className="text-xs">Perform checks and forward approved requests to the Head</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {resourceRequests.filter(r => ['Submitted', 'Coordinator Review', 'Student Resubmitted'].includes(r.status)).length === 0 ? (
+                  <p className="text-muted-foreground text-center py-6 text-xs font-semibold">No resource requests pending coordinator review.</p>
+                ) : (
+                  resourceRequests.filter(r => ['Submitted', 'Coordinator Review', 'Student Resubmitted'].includes(r.status)).map((req) => (
+                    <div key={req._id} className="p-4 border rounded-xl bg-card hover:shadow-xs transition-shadow flex flex-col md:flex-row justify-between gap-4 items-start md:items-center text-xs">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-primary">{req.requestId}</span>
+                          <Badge variant="outline" className="text-[9px] font-bold uppercase">{req.status}</Badge>
+                        </div>
+                        <h4 className="font-bold text-sm text-foreground mt-1">{req.projectName}</h4>
+                        <p className="text-3xs text-muted-foreground mt-0.5">Submitted by: {req.students?.[0]?.name || "Student"} ({req.students?.[0]?.branch})</p>
+                      </div>
+                      
+                      <div className="flex gap-2 self-end md:self-auto">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => { setSelectedResRequest(req); setShowResReviewDialog(true); }}
+                          className="text-xs gap-1 font-semibold"
+                        >
+                          <Eye className="w-3.5 h-3.5" /> Review request
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Approved Permissions & Tracker Tab */}
+          <TabsContent value="resource_approved" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base font-bold">Approved Permissions Tracker</CardTitle>
+                <CardDescription className="text-xs">Manage checkout check-ins, allocations, and tool returns</CardDescription>
+              </CardHeader>
+              <CardContent className="overflow-x-auto text-xs font-medium">
+                <table className="w-full text-left border-collapse border rounded-xl">
+                  <thead className="bg-slate-50 uppercase text-[9px] tracking-wider text-slate-700 font-bold border-b">
+                    <tr>
+                      <th className="px-4 py-3">ID</th>
+                      <th className="px-4 py-3">Project & Team</th>
+                      <th className="px-4 py-3">Usage Time</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3">Tracking Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {resourceRequests.filter(r => !['Draft', 'Submitted', 'Coordinator Review', 'Student Resubmitted', 'Coordinator Rejected', 'Rejected'].includes(r.status)).length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="text-center py-6 text-muted-foreground font-semibold text-xs">No approved permissions found.</td>
+                      </tr>
+                    ) : (
+                      resourceRequests.filter(r => !['Draft', 'Submitted', 'Coordinator Review', 'Student Resubmitted', 'Coordinator Rejected', 'Rejected'].includes(r.status)).map((req) => (
+                        <tr key={req._id} className="hover:bg-slate-50/30">
+                          <td className="px-4 py-3 font-mono font-bold text-primary">{req.requestId}</td>
+                          <td className="px-4 py-3">
+                            <div className="font-bold text-slate-800">{req.projectName}</div>
+                            <div className="text-3xs text-muted-foreground">{req.teamName || req.students?.[0]?.name}</div>
+                          </td>
+                          <td className="px-4 py-3 font-mono text-3xs text-muted-foreground">
+                            {req.requestedMachines?.[0]?.startTime} - {req.requestedMachines?.[0]?.endTime}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge className="text-[8px] font-bold uppercase">{req.status}</Badge>
+                          </td>
+                          <td className="px-4 py-3 flex gap-2">
+                            {/* Materials Issue */}
+                            {req.status === 'Approved' && (
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => {
+                                  setSelectedResRequest(req);
+                                  const initialVals: Record<string, number> = {};
+                                  req.requestedMaterials.forEach(m => {
+                                    initialVals[m.materialId?._id || m.materialId] = m.quantityRequired;
+                                  });
+                                  setAllocateQuantities(initialVals);
+                                  setShowAllocateDialog(true);
+                                }}
+                                className="text-3xs h-7 font-bold border-primary text-primary hover:bg-primary/5"
+                              >
+                                Allocate Mat
+                              </Button>
+                            )}
+
+                            {/* Resource Returns */}
+                            {req.status === 'Material Allocated' && (
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => {
+                                  setSelectedResRequest(req);
+                                  const initialVals: Record<string, number> = {};
+                                  const conds: Record<string, string> = {};
+                                  const rems: Record<string, string> = {};
+                                  req.materialAllocations.forEach(m => {
+                                    const mId = m.materialId?._id || m.materialId;
+                                    initialVals[mId] = m.quantityIssued;
+                                    conds[mId] = 'Good';
+                                    rems[mId] = '';
+                                  });
+                                  setReturnQuantities(initialVals);
+                                  setReturnCondition(conds);
+                                  setReturnRemarks(rems);
+                                  setShowReturnDialog(true);
+                                }}
+                                className="text-3xs h-7 font-bold border-indigo-500 text-indigo-700 hover:bg-indigo-50"
+                              >
+                                Return tools
+                              </Button>
+                            )}
+
+                            {/* Check-in / Out */}
+                            {!req.actualEntryTime && req.status !== 'Completed' && (
+                              <Button 
+                                size="sm" 
+                                onClick={() => handleCheckIn(req._id)}
+                                className="text-3xs h-7 bg-green-600 text-white font-bold hover:bg-green-700"
+                              >
+                                Check In
+                              </Button>
+                            )}
+
+                            {req.actualEntryTime && !req.actualExitTime && (
+                              <Button 
+                                size="sm" 
+                                onClick={() => handleCheckOut(req._id)}
+                                className="text-3xs h-7 bg-amber-600 text-white font-bold hover:bg-amber-700"
+                              >
+                                Check Out
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Material Stock Editor Tab */}
+          <TabsContent value="material_stock" className="space-y-4">
+            <Card>
+              <CardHeader className="flex flex-row justify-between items-center pb-3">
+                <div>
+                  <CardTitle className="text-base font-bold">Material Consumables Catalog</CardTitle>
+                  <CardDescription className="text-xs">Adjust stock levels and configure thresholds</CardDescription>
+                </div>
+                <Button 
+                  onClick={triggerSeedMaterials} 
+                  disabled={seeding || materials.length > 0} 
+                  variant="outline" 
+                  className="text-xs font-semibold gap-1.5 border-dashed"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${seeding ? 'animate-spin' : ''}`} /> Pre-seed Standard Materials
+                </Button>
+              </CardHeader>
+              <CardContent className="overflow-x-auto text-xs">
+                <table className="w-full text-left border-collapse">
+                  <thead className="bg-slate-50 uppercase text-[9px] tracking-wider text-slate-700 font-bold border-b">
+                    <tr>
+                      <th className="px-4 py-3">Material Name</th>
+                      <th className="px-4 py-3">Category</th>
+                      <th className="px-4 py-3">Current Stock</th>
+                      <th className="px-4 py-3">Allocated Qty</th>
+                      <th className="px-4 py-3">Available Stock</th>
+                      <th className="px-4 py-3">Low stock threshold</th>
+                      <th className="px-4 py-3 text-right">Stock Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y font-medium text-slate-700">
+                    {materials.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="text-center py-6 text-muted-foreground font-semibold">No materials catalogs added yet.</td>
+                      </tr>
+                    ) : (
+                      materials.map((mat) => {
+                        const isLow = mat.remainingQuantity <= mat.lowStockThreshold;
+                        return (
+                          <tr key={mat._id} className={isLow ? 'bg-amber-50/25' : ''}>
+                            <td className="px-4 py-3 font-bold text-foreground">{mat.name}</td>
+                            <td className="px-4 py-3">{mat.category}</td>
+                            <td className="px-4 py-3 font-mono font-bold text-slate-800">{mat.currentStock} {mat.unit}</td>
+                            <td className="px-4 py-3 font-mono text-indigo-700">{mat.allocatedQuantity}</td>
+                            <td className={`px-4 py-3 font-mono font-extrabold ${mat.remainingQuantity <= 0 ? 'text-red-600' : 'text-green-700'}`}>
+                              {mat.remainingQuantity} {mat.unit}
+                            </td>
+                            <td className="px-4 py-3 font-mono text-muted-foreground">{mat.lowStockThreshold} {mat.unit}</td>
+                            <td className="px-4 py-3 text-right">
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                onClick={() => {
+                                  setEditingMaterial(mat);
+                                  setStockInput(mat.currentStock);
+                                  setShowStockEditDialog(true);
+                                }}
+                                className="text-3xs h-7 font-bold"
+                              >
+                                Edit Stock
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </TabsContent>
+
+      {/* DIALOG: Coordinator Review Checks Checklist */}
+      {selectedResRequest && showResReviewDialog && (
+        <Dialog open={showResReviewDialog} onOpenChange={setShowResReviewDialog}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto text-xs text-slate-700">
+            <DialogHeader>
+              <DialogTitle className="text-base font-extrabold">Coordinator Review: {selectedResRequest.requestId}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-6">
+              
+              {/* Project & Team Description */}
+              <div className="bg-secondary/10 p-3 rounded-lg border">
+                <p><b>Project Title:</b> {selectedResRequest.projectName} ({selectedResRequest.projectCategory})</p>
+                <p className="mt-1"><b>Description:</b> {selectedResRequest.projectDescription}</p>
+                <p className="mt-1"><b>Students:</b> {selectedResRequest.students?.map(s => s.name).join(', ')}</p>
+              </div>
+
+              {/* Resources details inside modal */}
+              <div className="space-y-3">
+                <h4 className="font-bold text-primary border-b pb-1">Requested Resources List</h4>
+                
+                {selectedResRequest.requestedMachines?.length > 0 && (
+                  <div>
+                    <p className="font-bold text-3xs uppercase text-slate-500 mb-1">Machines Bookings</p>
+                    {selectedResRequest.requestedMachines.map((m, i) => (
+                      <div key={i} className="p-2 border rounded bg-slate-50 mb-1.5">
+                        <p className="font-semibold">{m.machineName}</p>
+                        <p className="text-3xs text-muted-foreground mt-0.5">
+                          Date: {new Date(m.usageDate).toLocaleDateString()} | Hours: {m.usageHours} hrs ({m.startTime} - {m.endTime})
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {selectedResRequest.requestedMaterials?.length > 0 && (
+                  <div>
+                    <p className="font-bold text-3xs uppercase text-slate-500 mb-1">Materials Allocation</p>
+                    {selectedResRequest.requestedMaterials.map((m, i) => (
+                      <div key={i} className="flex justify-between items-center py-1 border-b last:border-0 font-medium">
+                        <span>• {m.materialName}</span>
+                        <span className="bg-slate-200 text-slate-800 font-bold px-2 py-0.5 rounded font-mono text-[10px]">Qty: {m.quantityRequired}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Uploaded Documents Downloads */}
+                {selectedResRequest.uploadedFiles && Object.values(selectedResRequest.uploadedFiles).some(Boolean) && (
+                  <div className="pt-2">
+                    <p className="font-bold text-3xs uppercase text-slate-500 mb-1.5">Project Attachments</p>
+                    <div className="flex flex-wrap gap-2 text-3xs">
+                      {selectedResRequest.uploadedFiles.designFileUrl && (
+                        <a href={selectedResRequest.uploadedFiles.designFileUrl} target="_blank" rel="noreferrer">
+                          <Button size="sm" variant="outline" className="h-7 text-3xs gap-1 font-semibold"><Eye className="w-3.5 h-3.5" /> View Design File</Button>
+                        </a>
+                      )}
+                      {selectedResRequest.uploadedFiles.cadFileUrl && (
+                        <a href={selectedResRequest.uploadedFiles.cadFileUrl} target="_blank" rel="noreferrer">
+                          <Button size="sm" variant="outline" className="h-7 text-3xs gap-1 font-semibold"><FileDown className="w-3.5 h-3.5" /> Download CAD File</Button>
+                        </a>
+                      )}
+                      {selectedResRequest.uploadedFiles.circuitDiagramUrl && (
+                        <a href={selectedResRequest.uploadedFiles.circuitDiagramUrl} target="_blank" rel="noreferrer">
+                          <Button size="sm" variant="outline" className="h-7 text-3xs gap-1 font-semibold"><FileDown className="w-3.5 h-3.5" /> Download Circuit Diagram</Button>
+                        </a>
+                      )}
+                      {selectedResRequest.uploadedFiles.supportingDocsUrl && (
+                        <a href={selectedResRequest.uploadedFiles.supportingDocsUrl} target="_blank" rel="noreferrer">
+                          <Button size="sm" variant="outline" className="h-7 text-3xs gap-1 font-semibold"><FileDown className="w-3.5 h-3.5" /> Download Supporting Docs</Button>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Coordinator Checklist checks (Section 12) */}
+              <div className="space-y-3 pt-3 border-t">
+                <h4 className="font-bold text-slate-800 flex items-center gap-1.5"><ShieldAlert className="w-4 h-4 text-primary" /> Coordinator Review Checks</h4>
+                <div className="space-y-2 border p-4 rounded-xl bg-slate-50">
+                  {[
+                    { label: "1. Machine Capacity & Slot Availability Checked", field: "machineAvailability" },
+                    { label: "2. Materials Stock Level & Allocation Available Checked", field: "materialAvailability" },
+                    { label: "3. Project Feasibility & Objectives align with IDEA Lab parameters", field: "projectFeasibility" },
+                    { label: "4. Applicant eligibility status verified in system", field: "studentEligibility" },
+                    { label: "5. Checked applicant previous resource return/usage history log", field: "previousUsageHistory" }
+                  ].map((chk) => (
+                    <div key={chk.field} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={chk.field}
+                        // @ts-ignore
+                        checked={checks[chk.field]}
+                        // @ts-ignore
+                        onCheckedChange={(c) => setChecks(prev => ({ ...prev, [chk.field]: !!c }))}
+                      />
+                      <Label htmlFor={chk.field} className="font-semibold text-xs leading-none cursor-pointer text-slate-700">{chk.label}</Label>
+                    </div>
+                  ))}
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
 
-      {/* Booking Requests */}
-      <Tabs defaultValue="pending" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="pending">Pending</TabsTrigger>
-          <TabsTrigger value="approved">Approved</TabsTrigger>
-          <TabsTrigger value="rejected">Rejected</TabsTrigger>
-          <TabsTrigger value="all">All Bookings</TabsTrigger>
-        </TabsList>
+              {/* Remarks Textarea */}
+              <div className="space-y-2">
+                <Label htmlFor="remarks">Coordinator remarks / comments</Label>
+                <Textarea 
+                  id="remarks" 
+                  value={decisionRemarks} 
+                  onChange={(e) => setDecisionRemarks(e.target.value)} 
+                  placeholder="Approved slot parameters, remarks, or correction instructions..."
+                  rows={2} 
+                />
+              </div>
 
-        <TabsContent value="pending" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Pending Booking Requests</CardTitle>
-              <CardDescription>Review and manage pending lab booking requests</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <BookingList 
-                bookings={pendingBookings} 
-                showActions={true} 
-                onApprove={handleApprove} 
-                onReject={handleReject} 
-                processingId={processingId} 
+            </div>
+            <DialogFooter className="pt-4 border-t flex flex-wrap gap-2 justify-end">
+              <Button variant="outline" className="font-bold" onClick={() => handleResourceRequestDecision("request_changes")}>Request Changes</Button>
+              <Button variant="destructive" className="font-bold" onClick={() => handleResourceRequestDecision("reject")}>Reject request</Button>
+              <Button variant="default" className="font-bold bg-primary hover:bg-primary/95 text-white" onClick={() => handleResourceRequestDecision("approve")}>Approve & Forward to Head</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* DIALOG: Allocate & Issue Material Modal */}
+      {selectedResRequest && showAllocateDialog && (
+        <Dialog open={showAllocateDialog} onOpenChange={setShowAllocateDialog}>
+          <DialogContent className="max-w-md text-xs text-slate-700">
+            <DialogHeader><DialogTitle className="text-base font-extrabold">Material Allocation Screen</DialogTitle></DialogHeader>
+            <div className="space-y-4 py-2">
+              <p className="font-semibold text-muted-foreground">Adjust quantities to allocate/issue to the team:</p>
+              {selectedResRequest.requestedMaterials.map((mat) => {
+                const mId = mat.materialId?._id || mat.materialId;
+                const matInventory = materials.find(m => m._id === mId);
+                
+                return (
+                  <div key={mId} className="flex justify-between items-center p-3 border rounded bg-slate-50/50">
+                    <div>
+                      <p className="font-bold">{mat.materialName}</p>
+                      <p className="text-3xs text-muted-foreground">Requested: {mat.quantityRequired} | Stock: {matInventory?.remainingQuantity || 0} avail</p>
+                    </div>
+                    <div className="w-24">
+                      <Input 
+                        type="number" 
+                        min="0"
+                        value={allocateQuantities[mId] || 0}
+                        onChange={(e) => setAllocateQuantities({ ...allocateQuantities, [mId]: Number(e.target.value) || 0 })}
+                        className="h-8 text-xs font-mono text-center font-bold"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowAllocateDialog(false)}>Cancel</Button>
+              <Button className="bg-primary text-white hover:bg-primary/90" onClick={handleIssueMaterialsSubmit}>Issue Material & Deduct Stock</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* DIALOG: Returns Material/Tools Modal */}
+      {selectedResRequest && showReturnDialog && (
+        <Dialog open={showReturnDialog} onOpenChange={setShowReturnDialog}>
+          <DialogContent className="max-w-lg text-xs text-slate-700">
+            <DialogHeader><DialogTitle className="text-base font-extrabold">Process Resource Returns</DialogTitle></DialogHeader>
+            <div className="space-y-4 py-2">
+              {selectedResRequest.materialAllocations.map((alloc) => {
+                const mId = alloc.materialId?._id || alloc.materialId;
+                const mName = materials.find(m => m._id === mId)?.name || "Material";
+                
+                return (
+                  <div key={mId} className="p-3 border rounded bg-slate-50/50 space-y-3">
+                    <div className="flex justify-between items-center border-b pb-1 font-bold text-foreground">
+                      <span>{mName}</span>
+                      <span className="text-3xs text-indigo-700 uppercase">Issued: {alloc.quantityIssued}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <Label className="text-3xs">Return Qty</Label>
+                        <Input 
+                          type="number" 
+                          min="0"
+                          max={alloc.quantityIssued}
+                          value={returnQuantities[mId] || 0}
+                          onChange={(e) => setReturnQuantities({ ...returnQuantities, [mId]: Number(e.target.value) || 0 })}
+                          className="h-8 text-xs text-center font-bold"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-3xs">Condition</Label>
+                        <Select 
+                          value={returnCondition[mId] || 'Good'} 
+                          onValueChange={(v) => setReturnCondition({ ...returnCondition, [mId]: v })}
+                        >
+                          <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Good">Good</SelectItem>
+                            <SelectItem value="Damaged">Damaged</SelectItem>
+                            <SelectItem value="Lost">Lost</SelectItem>
+                            <SelectItem value="Partially Consumed">Partially Consumed</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-3xs">Remarks</Label>
+                        <Input 
+                          value={returnRemarks[mId] || ''}
+                          onChange={(e) => setReturnRemarks({ ...returnRemarks, [mId]: e.target.value })}
+                          className="h-8 text-xs"
+                          placeholder="Note damages..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowReturnDialog(false)}>Cancel</Button>
+              <Button className="bg-primary text-white hover:bg-primary/90" onClick={handleReturnResourcesSubmit}>Confirm Return & Update Inventory</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* DIALOG: Edit Stock Dialog */}
+      {editingMaterial && showStockEditDialog && (
+        <Dialog open={showStockEditDialog} onOpenChange={setShowStockEditDialog}>
+          <DialogContent className="max-w-sm text-xs">
+            <DialogHeader><DialogTitle className="text-base font-extrabold">Adjust Stock: {editingMaterial.name}</DialogTitle></DialogHeader>
+            <div className="space-y-4 py-2">
+              <Label>Configure Current Stock Level ({editingMaterial.unit})</Label>
+              <Input 
+                type="number" 
+                min="0"
+                value={stockInput} 
+                onChange={(e) => setStockInput(Number(e.target.value) || 0)} 
+                className="font-bold text-center h-9"
               />
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowStockEditDialog(false)}>Cancel</Button>
+              <Button onClick={handleUpdateStock}>Update Stock Levels</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
-        <TabsContent value="approved" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Approved Bookings</CardTitle>
-              <CardDescription>View all approved lab bookings</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <BookingList bookings={approvedBookings} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="rejected" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Rejected Bookings</CardTitle>
-              <CardDescription>View all rejected lab bookings</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <BookingList bookings={rejectedBookings} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="all" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>All Bookings</CardTitle>
-              <CardDescription>View all booking requests</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <BookingList bookings={[...pendingBookings, ...approvedBookings, ...rejectedBookings].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+      </div>
+    </Tabs>
   );
 };
 

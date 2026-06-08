@@ -11,32 +11,49 @@ router.post('/upload', requireAuth, upload.single('image'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: 'No file uploaded' });
   }
-  // Cloudinary storage provides the URL in req.file.path
   const url = req.file.path;
   res.json({ url });
 });
 
+// --- Machinery/Material Request Endpoints ---
 
+// Get machine availability/suggestions
+router.get('/check/availability', requireAuth, requestController.checkMachineAvailability);
 
-// --- Machinery Management Routes ---
-
-// --- Machinery Request Routes ---
+// Public verify route
+router.get('/requests/:requestId/verify-public', requestController.verifyPublicRequest);
 
 // Create request (Student)
 router.post('/requests', requireAuth, requestController.createRequest);
 
-// Get requests (Head views all, Student views theirs)
+// Get requests (Head views all, Student views theirs, with filters/search)
 router.get('/requests', requireAuth, requestController.getRequests);
 
-// Update request status (Head only)
-// Update request status (Head or Coordinator)
+// Get single request details
+router.get('/requests/:id', requireAuth, requestController.getRequestById);
+
+// Update request (Student editing drafts/changes requested)
+router.put('/requests/:id', requireAuth, requestController.updateRequest);
+
+// Update request status (Head or Coordinator decisions)
 router.patch('/requests/:id/status', requireAuth, requireCoordinator, requestController.updateRequestStatus);
 
-// Download machinery request PDF
+// Allocate/Issue materials (Coordinator)
+router.post('/requests/:id/issue', requireAuth, requireCoordinator, requestController.issueMaterials);
+
+// Process resource/material returns (Coordinator)
+router.post('/requests/:id/return', requireAuth, requireCoordinator, requestController.returnResource);
+
+// Check-in student (Coordinator)
+router.post('/requests/:id/checkin', requireAuth, requireCoordinator, requestController.checkInStudent);
+
+// Check-out student (Coordinator)
+router.post('/requests/:id/checkout', requireAuth, requireCoordinator, requestController.checkOutStudent);
+
+// Download machinery/material request PDF
 router.get('/requests/:id/pdf', requireAuth, requestController.downloadMachineryPdf);
 
-
-// --- Machinery Management Routes ---
+// --- Machinery Management Endpoints ---
 
 // Get all machinery (Public/Auth)
 router.get('/', requireAuth, machineryController.getAllMachinery);
@@ -47,13 +64,13 @@ router.post('/', requireAuth, requireCoordinator, machineryController.createMach
 // Route for getting machinery records (Coordinator, Head, Admin only)
 router.get('/records', requireAuth, requireCoordinator, machineryController.getMachineryRecords);
 
-// Get single machinery details (Dynamic parameter :id matches anything, so keep at bottom)
+// Get single machinery details
 router.get('/:id', requireAuth, machineryController.getMachineryById);
 
 // Update machinery (Head or Coordinator)
 router.put('/:id', requireAuth, requireCoordinator, machineryController.updateMachinery);
 
-// Get availability stats
+// Get availability stats (for calendar widget)
 router.get('/:id/availability', requireAuth, machineryController.getMachineryAvailability);
 
 // Delete machinery (Head or Coordinator)

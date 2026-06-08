@@ -345,7 +345,7 @@ const ManageOrders = () => {
 
                                                         {/* Simple Timeline Status */}
                                                         <div>
-                                                           <OrderTimeline status={order.status} createdAt={order.createdAt} />
+                                                           <OrderTimeline status={order.status.toLowerCase() as any} createdAt={new Date(order.createdAt)} />
                                                         </div>
                                                     </div>
                                                 </div>

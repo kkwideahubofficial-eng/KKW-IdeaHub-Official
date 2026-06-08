@@ -3,12 +3,30 @@ import api from "@/lib/axios";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Calendar } from "lucide-react";
-import { ReadMore } from "@/components/ReadMore";
+import { 
+  Calendar as CalendarIcon, Clock, CheckCircle, XCircle, AlertTriangle, 
+  FileText, Search, ArrowRight, PlusCircle, History, BookOpen, Layers,
+  Printer, Share2, Download, Eye, Play, Check, Users, ShieldAlert, Award, Settings,
+  Database
+} from "lucide-react";
 import { getNextAvailableDate, formatTime12Hour } from "@/lib/dateUtils";
 
-interface Machinery {
+interface TeamMember {
+  name: string;
+  prn: string;
+  branch: string;
+  year: string;
+  division: string;
+  mobile: string;
+  email: string;
+}
+
+interface Machine {
   _id: string;
   name: string;
   description: string;
@@ -18,90 +36,917 @@ interface Machinery {
   isAvailable: boolean;
 }
 
+interface Material {
+  _id: string;
+  name: string;
+  category: string;
+  description: string;
+  currentStock: number;
+  allocatedQuantity: number;
+  remainingQuantity: number;
+  lowStockThreshold: number;
+  unit: string;
+  imageUrl?: string;
+}
+
+interface ResourceRequest {
+  _id: string;
+  requestId: string;
+  projectName: string;
+  projectCategory: string;
+  projectDescription: string;
+  status: string;
+  applicationDate: string;
+  students: TeamMember[];
+  requestedMachines: {
+    machineId: any;
+    machineName: string;
+    usageDate: string;
+    startTime: string;
+    endTime: string;
+    usageHours: number;
+  }[];
+  requestedMaterials: {
+    materialId: any;
+    materialName: string;
+    quantityRequired: number;
+  }[];
+  approvalHistory: {
+    date: string;
+    role: string;
+    action: string;
+    remarks: string;
+    byName: string;
+  }[];
+  materialAllocations: {
+    materialId: any;
+    quantityRequested: number;
+    quantityIssued: number;
+    returnedQuantity: number;
+    balanceQuantity: number;
+  }[];
+  returns: {
+    resourceType: string;
+    resourceName: string;
+    returnedQuantity: number;
+    returnDate: string;
+    condition: string;
+    remarks: string;
+  }[];
+  actualEntryTime?: string;
+  actualExitTime?: string;
+  teamName?: string;
+  projectObjectives?: string;
+  expectedOutcome?: string;
+}
+
 const MachineryList = () => {
-  const [machines, setMachines] = useState<Machinery[]>([]);
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [machines, setMachines] = useState<Machine[]>([]);
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [requests, setRequests] = useState<ResourceRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Search & Filter state for History Tab
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchField, setSearchField] = useState("projectName"); // projectName, requestId, teamName
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [resourceTypeFilter, setResourceTypeFilter] = useState("all"); // all, machine, material
+  const [dateFilter, setDateFilter] = useState("");
+
+  // Detailed Modal state
+  const [selectedRequest, setSelectedRequest] = useState<ResourceRequest | null>(null);
+  const [showDetailDialog, setShowDetailDialog] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
   useEffect(() => {
-    fetchMachines();
+    fetchInitialData();
   }, []);
 
-  const fetchMachines = async () => {
+  const fetchInitialData = async () => {
+    setLoading(true);
     try {
-      const res = await api.get("/machinery"); // Publicly accessible or requires auth
-      setMachines(res.data);
-    } catch {
-      toast.error("Failed to load machinery");
+      const [mRes, matRes, rRes] = await Promise.all([
+        api.get("/machinery"),
+        api.get("/materials"),
+        api.get("/machinery/requests")
+      ]);
+      setMachines(mRes.data);
+      setMaterials(matRes.data);
+      setRequests(rRes.data);
+    } catch (error) {
+      toast.error("Failed to load dashboard data");
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) return <div>Loading...</div>;
+  const downloadPdf = async (id: string, reqId: string) => {
+    setDownloadingId(id);
+    try {
+      const response = await api.get(`/machinery/requests/${id}/pdf`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `PermissionLetter_${reqId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Permission Letter Downloaded!');
+    } catch {
+      toast.error('Failed to download PDF.');
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const printPdf = async (id: string) => {
+    try {
+      const response = await api.get(`/machinery/requests/${id}/pdf`, { responseType: 'blob' });
+      const file = new Blob([response.data], { type: 'application/pdf' });
+      const fileURL = URL.createObjectURL(file);
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = fileURL;
+      document.body.appendChild(iframe);
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      toast.success('Print Dialog Opened.');
+    } catch {
+      toast.error('Failed to print PDF form.');
+    }
+  };
+
+  const shareRequest = (req: ResourceRequest) => {
+    const shareUrl = `${window.location.origin}/verify-request/${req.requestId}`;
+    if (navigator.share) {
+      navigator.share({
+        title: `IDEA Hub Permission: ${req.requestId}`,
+        text: `Verify permission status for project ${req.projectName}`,
+        url: shareUrl,
+      }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(shareUrl);
+      toast.success("Verification Link copied to clipboard!");
+    }
+  };
+
+  // Stats calculation
+  const stats = {
+    total: requests.length,
+    pending: requests.filter(r => ['Submitted', 'Coordinator Review', 'Head Review', 'Student Resubmitted'].includes(r.status)).length,
+    approved: requests.filter(r => ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled'].includes(r.status)).length,
+    rejected: requests.filter(r => ['Rejected', 'Coordinator Rejected'].includes(r.status)).length,
+    issued: requests.filter(r => r.status === 'Material Allocated' || r.materialAllocations?.some(a => a.quantityIssued > 0)).length,
+    bookings: requests.filter(r => r.status === 'Machine Scheduled' || r.requestedMachines?.length > 0).length,
+    completed: requests.filter(r => r.status === 'Completed').length,
+  };
+
+  // Filters application
+  const filteredRequests = requests.filter(r => {
+    // Search
+    let matchesSearch = true;
+    if (searchTerm) {
+      if (searchField === "projectName") {
+        matchesSearch = r.projectName.toLowerCase().includes(searchTerm.toLowerCase());
+      } else if (searchField === "requestId") {
+        matchesSearch = r.requestId.toLowerCase().includes(searchTerm.toLowerCase());
+      } else if (searchField === "teamName") {
+        matchesSearch = (r.teamName || "").toLowerCase().includes(searchTerm.toLowerCase());
+      }
+    }
+
+    // Status Filter
+    let matchesStatus = true;
+    if (statusFilter !== "all") {
+      if (statusFilter === "pending") {
+        matchesStatus = ['Submitted', 'Coordinator Review', 'Head Review', 'Student Resubmitted'].includes(r.status);
+      } else if (statusFilter === "approved") {
+        matchesStatus = ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled'].includes(r.status);
+      } else if (statusFilter === "rejected") {
+        matchesStatus = ['Rejected', 'Coordinator Rejected'].includes(r.status);
+      } else {
+        matchesStatus = r.status === statusFilter;
+      }
+    }
+
+    // Resource Type Filter
+    let matchesResourceType = true;
+    if (resourceTypeFilter === "machine") {
+      matchesResourceType = r.requestedMachines && r.requestedMachines.length > 0;
+    } else if (resourceTypeFilter === "material") {
+      matchesResourceType = r.requestedMaterials && r.requestedMaterials.length > 0;
+    }
+
+    // Date Filter
+    let matchesDate = true;
+    if (dateFilter) {
+      const appDate = new Date(r.applicationDate).toDateString();
+      const targetDate = new Date(dateFilter).toDateString();
+      matchesDate = appDate === targetDate;
+    }
+
+    return matchesSearch && matchesStatus && matchesResourceType && matchesDate;
+  });
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Approved':
+      case 'Machine Scheduled':
+      case 'Material Allocated':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'Approved With Conditions':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'Pending':
+      case 'Submitted':
+      case 'Coordinator Review':
+      case 'Head Review':
+      case 'Student Resubmitted':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'Changes Requested':
+        return 'bg-amber-100 text-amber-800 border-amber-200';
+      case 'Completed':
+        return 'bg-slate-100 text-slate-800 border-slate-200';
+      case 'Rejected':
+      case 'Coordinator Rejected':
+        return 'bg-red-100 text-red-800 border-red-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const renderTimeline = (status: string) => {
+    const steps = [
+      { name: "Submitted", active: ['Submitted', 'Coordinator Review', 'Changes Requested', 'Student Resubmitted', 'Coordinator Approved', 'Head Review', 'Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Completed'].includes(status) },
+      { name: "Coord Review", active: ['Coordinator Review', 'Student Resubmitted', 'Coordinator Approved', 'Head Review', 'Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Completed'].includes(status) },
+      { name: "Coord Approved", active: ['Coordinator Approved', 'Head Review', 'Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Completed'].includes(status) },
+      { name: "Head Review", active: ['Head Review', 'Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Completed'].includes(status) },
+      { name: "Approved", active: ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Completed'].includes(status) },
+      { name: "Allocated", active: ['Material Allocated', 'Machine Scheduled', 'Completed'].includes(status) },
+      { name: "Completed", active: status === 'Completed' }
+    ];
+
+    if (status === 'Rejected' || status === 'Coordinator Rejected') {
+      return (
+        <div className="flex items-center gap-2 p-3 bg-red-50 text-red-800 border border-red-100 rounded-md text-xs font-semibold">
+          <ShieldAlert className="w-4 h-4 text-red-600" />
+          <span>Application Rejected. Please review remarks and resubmit.</span>
+        </div>
+      );
+    }
+
+    if (status === 'Changes Requested') {
+      return (
+        <div className="flex items-center gap-2 p-3 bg-amber-50 text-amber-800 border border-amber-100 rounded-md text-xs font-semibold">
+          <ShieldAlert className="w-4 h-4 text-amber-600" />
+          <span>Changes Requested by Coordinator. Edit details from your request history and resubmit.</span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="w-full py-4 overflow-x-auto">
+        <div className="flex justify-between items-center min-w-[650px] px-4">
+          {steps.map((step, idx) => (
+            <div key={idx} className="flex items-center flex-1 last:flex-none">
+              <div className="flex flex-col items-center relative">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 text-[10px] font-bold transition-all ${step.active ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-muted-foreground border-border'}`}>
+                  {idx + 1}
+                </div>
+                <span className="text-[10px] font-medium text-foreground mt-1 absolute top-6 whitespace-nowrap">{step.name}</span>
+              </div>
+              {idx < steps.length - 1 && (
+                <div className={`h-[2px] flex-1 mx-2 transition-all ${steps[idx + 1].active ? 'bg-primary' : 'bg-border'}`} />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+          <p className="text-muted-foreground font-medium text-sm">Loading Permission Portal...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="text-center mb-10">
-        <h1 className="text-3xl font-bold mb-4">Idea Lab Machinery</h1>
-        <p className="text-muted-foreground max-w-2xl mx-auto">
-          Explore our advanced machinery available for student projects. 
-          Permission from the Idea Lab Head is required for usage.
-        </p>
+      {/* Header and Quick Stats */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-extrabold text-foreground tracking-tight flex items-center gap-2">
+            <BookOpen className="text-primary w-8 h-8" />
+            Material & Machinery Portal
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">KK Wagh AICTE IDEA Lab Permission Management System</p>
+        </div>
+        <div className="flex gap-2 w-full md:w-auto">
+          <Link to="/machinery/request/new" className="flex-grow md:flex-grow-0">
+            <Button className="w-full gap-2 shadow-md hover:scale-[1.02] transition-transform">
+              <PlusCircle className="w-4 h-4" /> New Permission Request
+            </Button>
+          </Link>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {machines.filter(m => m.isAvailable).map((machine) => (
-          <Card key={machine._id} className="flex flex-col hover:shadow-lg transition-shadow">
-            <div className="relative h-48 w-full bg-muted">
-               {machine.imageUrl ? (
-                 <img src={machine.imageUrl} alt={machine.name} className="w-full h-full object-cover rounded-t-lg" />
-               ) : (
-                 <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">No Image</div>
-               )}
-               {machine.isAvailable && (
-                 <span className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">Available</span>
-               )}
-            </div>
-            
-            <CardHeader>
-              <CardTitle>{machine.name}</CardTitle>
-              <div className="text-sm text-muted-foreground">
-                <ReadMore text={machine.description} limit={30} />
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
+        {[
+          { label: "My Requests", value: stats.total, color: "text-primary", icon: FileText },
+          { label: "Pending Reviews", value: stats.pending, color: "text-blue-600", icon: Clock },
+          { label: "Approved Perms", value: stats.approved, color: "text-green-600", icon: CheckCircle },
+          { label: "Rejected Requests", value: stats.rejected, color: "text-red-600", icon: XCircle },
+          { label: "Issued Materials", value: stats.issued, color: "text-indigo-600", icon: Layers },
+          { label: "Machine Bookings", value: stats.bookings, color: "text-purple-600", icon: CalendarIcon }
+        ].map((card, idx) => (
+          <Card key={idx} className="shadow-2xs border-border/60 hover:shadow-sm transition-shadow">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">{card.label}</p>
+                <p className={`text-xl font-bold mt-1 ${card.color}`}>{card.value}</p>
               </div>
-            </CardHeader>
-            <CardContent className="flex-1 flex flex-col gap-4">
-              <div className="text-sm">
-                <p><strong>Capacity:</strong> {machine.capacity} Students</p>
-                <div className="flex items-start gap-2 mt-2">
-                   <Calendar className="w-4 h-4 text-primary mt-0.5" />
-                   <div>
-                     <p className="font-semibold mb-1">Available Slots:</p>
-                     <ul className="text-muted-foreground list-disc pl-4 space-y-1">
-                        {machine.timeSlots.slice(0, 3).map((slot, i) => {
-                           const dateStr = getNextAvailableDate(slot.day, slot.startTime);
-                           
-                           return (
-                              <li key={i}>
-                                {slot.day} ({dateStr}): {formatTime12Hour(slot.startTime)} - {formatTime12Hour(slot.endTime)}
-                              </li>
-                           );
-                        })}
-
-                        {machine.timeSlots.length > 3 && <li>+{machine.timeSlots.length - 3} more</li>}
-                     </ul>
-                   </div>
-                </div>
+              <div className="w-8 h-8 rounded-full bg-secondary/15 flex items-center justify-center">
+                <card.icon className={`w-4 h-4 ${card.color}`} />
               </div>
-              
-              <Link to={`/machinery/request/${machine._id}`} className="mt-auto">
-                <Button className="w-full" disabled={!machine.isAvailable}>
-                  {machine.isAvailable ? "Request Permission / Book Slot" : "Currently Unavailable"}
-                </Button>
-              </Link>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      <Tabs defaultValue="dashboard" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="bg-muted/50 p-1 rounded-lg border">
+          <TabsTrigger value="dashboard" className="rounded-md gap-1.5"><History className="w-4 h-4" /> Student Dashboard</TabsTrigger>
+          <TabsTrigger value="machines" className="rounded-md gap-1.5"><Settings className="w-4 h-4" /> Available Machinery</TabsTrigger>
+          <TabsTrigger value="materials" className="rounded-md gap-1.5"><Database className="w-4 h-4" /> Material Stock Check</TabsTrigger>
+          <TabsTrigger value="history" className="rounded-md gap-1.5"><History className="w-4 h-4" /> Request History & PDF</TabsTrigger>
+        </TabsList>
+
+        {/* Tab 1: Dashboard Overview */}
+        <TabsContent value="dashboard" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* Quick Actions Card */}
+            <Card className="lg:col-span-1 shadow-sm border-border/75">
+              <CardHeader><CardTitle className="text-base font-bold">Quick Actions</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                <Link to="/machinery/request/new" className="block">
+                  <Button variant="outline" className="w-full justify-start gap-3 text-sm py-5 font-semibold text-primary hover:bg-primary/5 border-primary/20">
+                    <PlusCircle className="w-4 h-4 text-primary" /> Apply for Materials / Machines
+                  </Button>
+                </Link>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setActiveTab("machines")} 
+                  className="w-full justify-start gap-3 text-sm py-5 font-semibold"
+                >
+                  <Settings className="w-4 h-4 text-slate-500" /> Book Machine Slots
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setActiveTab("history")} 
+                  className="w-full justify-start gap-3 text-sm py-5 font-semibold"
+                >
+                  <Download className="w-4 h-4 text-slate-500" /> Download Approved PDF Letters
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setActiveTab("materials")} 
+                  className="w-full justify-start gap-3 text-sm py-5 font-semibold"
+                >
+                  <Database className="w-4 h-4 text-slate-500" /> Live Inventory Availability
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Recent Requests list */}
+            <Card className="lg:col-span-2 shadow-sm border-border/75">
+              <CardHeader className="flex flex-row justify-between items-center pb-3">
+                <div>
+                  <CardTitle className="text-base font-bold">Recent Resource Applications</CardTitle>
+                  <CardDescription className="text-xs">Your latest submissions and approvals</CardDescription>
+                </div>
+                <Button variant="link" size="sm" onClick={() => setActiveTab("history")} className="text-primary font-semibold">
+                  View All <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {requests.slice(0, 4).length === 0 ? (
+                  <p className="text-muted-foreground text-center py-6 text-sm">No requests filed yet.</p>
+                ) : (
+                  requests.slice(0, 4).map((req) => (
+                    <div key={req._id} className="p-3 border rounded-lg bg-card hover:bg-secondary/5 flex flex-col md:flex-row justify-between gap-3 items-start md:items-center transition-all text-xs">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-primary">{req.requestId}</span>
+                          <span className="text-muted-foreground">•</span>
+                          <span className="font-semibold text-foreground">{req.projectName}</span>
+                        </div>
+                        <div className="text-muted-foreground mt-1 font-medium">
+                          {req.requestedMachines?.length > 0 && `Machines: ${req.requestedMachines.map(m => m.machineName).join(', ')}`}
+                          {req.requestedMachines?.length > 0 && req.requestedMaterials?.length > 0 && ` | `}
+                          {req.requestedMaterials?.length > 0 && `Materials: ${req.requestedMaterials.map(m => m.materialName).join(', ')}`}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 self-end md:self-auto">
+                        <Badge variant="outline" className={`font-bold uppercase tracking-wider text-[10px] ${getStatusColor(req.status)}`}>
+                          {req.status}
+                        </Badge>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => { setSelectedRequest(req); setShowDetailDialog(true); }}
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4 text-slate-500 hover:text-primary" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
+          </div>
+        </TabsContent>
+
+        {/* Tab 2: Available Machinery */}
+        <TabsContent value="machines" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {machines.map((machine) => (
+              <Card key={machine._id} className={`flex flex-col hover:shadow-md transition-shadow border-border/75 ${!machine.isAvailable ? 'opacity-75 border-dashed' : ''}`}>
+                <div className="relative h-44 w-full bg-muted">
+                  {machine.imageUrl ? (
+                    <img src={machine.imageUrl} alt={machine.name} className="w-full h-full object-cover rounded-t-lg" />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-xs font-semibold">No Image</div>
+                  )}
+                  <span className={`absolute top-2 right-2 text-white text-[10px] font-bold px-2 py-0.5 rounded-full ${machine.isAvailable ? 'bg-green-500' : 'bg-red-500'}`}>
+                    {machine.isAvailable ? "Available" : "Unavailable"}
+                  </span>
+                </div>
+                
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base font-bold">{machine.name}</CardTitle>
+                  <CardDescription className="text-xs line-clamp-2">{machine.description}</CardDescription>
+                </CardHeader>
+                
+                <CardContent className="pt-2 flex-grow flex flex-col gap-4 text-xs">
+                  <div className="bg-secondary/10 p-3 rounded border space-y-1">
+                    <p><strong>Limit Capacity:</strong> {machine.capacity} Students per slot</p>
+                    <div className="pt-1.5 mt-1 border-t border-border/40">
+                      <p className="font-semibold text-foreground mb-1">Weekly Standard Hours:</p>
+                      <ul className="text-muted-foreground space-y-0.5 list-disc pl-3 text-3xs font-medium">
+                        {machine.timeSlots.slice(0, 3).map((slot, i) => (
+                          <li key={i}>{slot.day}: {formatTime12Hour(slot.startTime)} - {formatTime12Hour(slot.endTime)}</li>
+                        ))}
+                        {machine.timeSlots.length > 3 && <li>+{machine.timeSlots.length - 3} more days</li>}
+                      </ul>
+                    </div>
+                  </div>
+
+                  <Link to={`/machinery/request/new?machineId=${machine._id}`} className="mt-auto block">
+                    <Button className="w-full text-xs font-semibold" variant={machine.isAvailable ? "default" : "outline"} disabled={!machine.isAvailable}>
+                      {machine.isAvailable ? "Request Booking / Check Slots" : "Slot Booking Disabled"}
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        {/* Tab 3: Material Inventory */}
+        <TabsContent value="materials" className="space-y-6">
+          <Card className="shadow-sm border-border/75">
+            <CardHeader>
+              <CardTitle className="text-base font-bold">IDEA Hub Material Inventory</CardTitle>
+              <CardDescription className="text-xs">Live stock tracking for prototype and project consumables</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {materials.map((mat) => {
+                  const isLow = mat.remainingQuantity <= mat.lowStockThreshold;
+                  
+                  return (
+                    <Card key={mat._id} className={`p-4 border shadow-2xs hover:shadow-sm flex flex-col ${isLow ? 'border-amber-200 bg-amber-50/10' : ''}`}>
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <Badge variant="secondary" className="text-[9px] uppercase tracking-wider font-semibold mb-1">
+                            {mat.category}
+                          </Badge>
+                          <h4 className="font-bold text-sm text-foreground">{mat.name}</h4>
+                        </div>
+                        {isLow && (
+                          <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-[8px] font-bold shrink-0">
+                            LOW STOCK
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-3xs text-muted-foreground mb-4 flex-grow font-medium leading-relaxed">
+                        {mat.description || "Consumable material resource for laboratory prototype assembly."}
+                      </p>
+                      
+                      <div className="grid grid-cols-3 gap-2 border-t pt-3 text-center">
+                        <div className="bg-slate-50 p-1.5 rounded border border-border/40">
+                          <p className="text-[8px] font-bold text-muted-foreground uppercase">Current</p>
+                          <p className="font-bold text-xs font-mono text-slate-800">{mat.currentStock}</p>
+                        </div>
+                        <div className="bg-slate-50 p-1.5 rounded border border-border/40">
+                          <p className="text-[8px] font-bold text-muted-foreground uppercase">Allocated</p>
+                          <p className="font-bold text-xs font-mono text-indigo-700">{mat.allocatedQuantity}</p>
+                        </div>
+                        <div className="bg-slate-50 p-1.5 rounded border border-border/40">
+                          <p className="text-[8px] font-bold text-muted-foreground uppercase">Avail Qty</p>
+                          <p className={`font-bold text-xs font-mono ${mat.remainingQuantity <= 0 ? 'text-red-600' : 'text-green-700'}`}>
+                            {mat.remainingQuantity}
+                          </p>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+
+        {/* Tab 5: Request History */}
+        <TabsContent value="history" className="space-y-6">
+          {/* Advanced Search & Filters Card */}
+          <Card className="shadow-sm border-border/60 bg-muted/10">
+            <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 text-xs">
+              
+              {/* Search Bar */}
+              <div className="space-y-1 md:col-span-2">
+                <Label>Search Request</Label>
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-3 text-muted-foreground" />
+                  <Input 
+                    placeholder="Search query..." 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-8 h-8 text-xs bg-background"
+                  />
+                </div>
+              </div>
+
+              {/* Search Field selector */}
+              <div className="space-y-1">
+                <Label>Search By</Label>
+                <select 
+                  className="w-full h-8 rounded-md border border-input bg-background px-2 py-1 text-xs focus:ring-1 focus:ring-primary"
+                  value={searchField}
+                  onChange={(e) => setSearchField(e.target.value)}
+                >
+                  <option value="projectName">Project Name</option>
+                  <option value="requestId">Request ID</option>
+                  <option value="teamName">Team Name</option>
+                </select>
+              </div>
+
+              {/* Status Filter */}
+              <div className="space-y-1">
+                <Label>Status</Label>
+                <select 
+                  className="w-full h-8 rounded-md border border-input bg-background px-2 py-1 text-xs focus:ring-1 focus:ring-primary"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="pending">Pending Review</option>
+                  <option value="approved">Approved</option>
+                  <option value="Changes Requested">Changes Requested</option>
+                  <option value="Completed">Completed</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+
+              {/* Resource Type Filter */}
+              <div className="space-y-1">
+                <Label>Resource Type</Label>
+                <select 
+                  className="w-full h-8 rounded-md border border-input bg-background px-2 py-1 text-xs focus:ring-1 focus:ring-primary"
+                  value={resourceTypeFilter}
+                  onChange={(e) => setResourceTypeFilter(e.target.value)}
+                >
+                  <option value="all">All Resources</option>
+                  <option value="machine">Machines only</option>
+                  <option value="material">Materials only</option>
+                </select>
+              </div>
+
+            </CardContent>
+          </Card>
+
+          {/* History Requests Table */}
+          <div className="border rounded-xl overflow-hidden shadow-xs bg-card">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left border-collapse">
+                <thead className="bg-slate-50 text-slate-700 font-bold uppercase tracking-wider text-[10px] border-b">
+                  <tr>
+                    <th className="px-4 py-3">Request ID</th>
+                    <th className="px-4 py-3">Project Name</th>
+                    <th className="px-4 py-3">Resources Requested</th>
+                    <th className="px-4 py-3">Date Submitted</th>
+                    <th className="px-4 py-3">Workflow Status</th>
+                    <th className="px-4 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y text-slate-700">
+                  {filteredRequests.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground font-medium">
+                        No requests found matching the current search filters.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredRequests.map((req) => {
+                      const isApproved = ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Completed'].includes(req.status);
+                      
+                      return (
+                        <tr key={req._id} className="hover:bg-slate-50/40">
+                          <td className="px-4 py-3 font-mono font-bold text-primary">{req.requestId}</td>
+                          <td className="px-4 py-3 font-semibold text-foreground">{req.projectName}</td>
+                          <td className="px-4 py-3 text-muted-foreground font-medium max-w-xs truncate">
+                            {req.requestedMachines?.map(m => m.machineName).concat(req.requestedMaterials?.map(m => m.materialName)).filter(Boolean).join(', ')}
+                          </td>
+                          <td className="px-4 py-3 font-medium">
+                            {new Date(req.applicationDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge variant="outline" className={`font-bold text-[9px] px-2 py-0.5 rounded uppercase ${getStatusColor(req.status)}`}>
+                              {req.status}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3 text-right flex items-center justify-end gap-1.5">
+                            {/* View details */}
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => { setSelectedRequest(req); setShowDetailDialog(true); }}
+                              title="View Details"
+                              className="h-8 w-8 text-slate-500 hover:text-primary"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+
+                            {/* Edit request if draft or changes requested */}
+                            {['Draft', 'Changes Requested'].includes(req.status) && (
+                              <Link to={`/machinery/request/edit/${req._id}`}>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  title="Edit Application"
+                                  className="h-8 w-8 text-amber-600 hover:text-amber-700"
+                                >
+                                  <PlusCircle className="w-4 h-4" />
+                                </Button>
+                              </Link>
+                            )}
+
+                            {/* Download PDF Permission Letter */}
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              disabled={!isApproved || downloadingId === req._id}
+                              onClick={() => downloadPdf(req._id, req.requestId)}
+                              title={isApproved ? "Download PDF Permission Letter" : "Unapproved"}
+                              className="h-8 w-8 text-slate-500 hover:text-primary disabled:opacity-35"
+                            >
+                              {downloadingId === req._id ? (
+                                <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-primary"></div>
+                              ) : (
+                                <Download className="w-4 h-4" />
+                              )}
+                            </Button>
+
+                            {/* Print Action */}
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              disabled={!isApproved}
+                              onClick={() => printPdf(req._id)}
+                              title={isApproved ? "Print Permission Letter" : "Unapproved"}
+                              className="h-8 w-8 text-slate-500 hover:text-primary disabled:opacity-35"
+                            >
+                              <Printer className="w-4 h-4" />
+                            </Button>
+
+                            {/* Share Action */}
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => shareRequest(req)}
+                              title="Share Verification Link"
+                              className="h-8 w-8 text-slate-500 hover:text-primary"
+                            >
+                              <Share2 className="w-4 h-4" />
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* Detailed Request Modal Drawer */}
+      {selectedRequest && showDetailDialog && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <Card className="w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-card shadow-2xl border border-border/80">
+            <CardHeader className="border-b bg-slate-50/50 pb-4">
+              <div className="flex justify-between items-start gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold text-sm text-primary">{selectedRequest.requestId}</span>
+                    <span className="text-muted-foreground">•</span>
+                    <Badge variant="outline" className={`font-bold text-[9px] uppercase ${getStatusColor(selectedRequest.status)}`}>
+                      {selectedRequest.status}
+                    </Badge>
+                  </div>
+                  <CardTitle className="text-base font-extrabold mt-1">{selectedRequest.projectName}</CardTitle>
+                  <CardDescription className="text-3xs mt-0.5">Submitted on: {new Date(selectedRequest.applicationDate).toLocaleString()}</CardDescription>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => setShowDetailDialog(false)} className="text-muted-foreground hover:text-foreground font-bold text-sm">
+                  ✕
+                </Button>
+              </div>
+            </CardHeader>
+            
+            <CardContent className="p-6 space-y-6 text-xs text-slate-700">
+              {/* Timeline Status Tracker */}
+              <div>
+                <h4 className="font-bold text-primary mb-2 flex items-center gap-1.5 uppercase tracking-wider text-[10px]">
+                  Application Progress Tracker
+                </h4>
+                <div className="p-3 border rounded-lg bg-slate-50">
+                  {renderTimeline(selectedRequest.status)}
+                </div>
+              </div>
+
+              {/* Resource Split details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="font-bold text-primary mb-2 uppercase tracking-wider text-[10px]">Requested Machinery</h4>
+                  <div className="border rounded-md p-3 bg-secondary/5 space-y-2">
+                    {selectedRequest.requestedMachines?.length === 0 ? (
+                      <p className="text-muted-foreground text-3xs italic">No machine bookings requested.</p>
+                    ) : (
+                      selectedRequest.requestedMachines.map((m, i) => (
+                        <div key={i} className="border-b pb-2 last:border-0 last:pb-0">
+                          <p className="font-bold text-foreground">• {m.machineName}</p>
+                          <p className="text-3xs text-muted-foreground mt-0.5">
+                            <b>Date:</b> {m.usageDate ? new Date(m.usageDate).toLocaleDateString() : 'N/A'} | <b>Slot:</b> {m.startTime} - {m.endTime} ({m.usageHours} hrs)
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-bold text-primary mb-2 uppercase tracking-wider text-[10px]">Requested Material Allocation</h4>
+                  <div className="border rounded-md p-3 bg-secondary/5 space-y-2">
+                    {selectedRequest.requestedMaterials?.length === 0 ? (
+                      <p className="text-muted-foreground text-3xs italic">No raw materials requested.</p>
+                    ) : (
+                      selectedRequest.requestedMaterials.map((m, i) => (
+                        <div key={i} className="flex justify-between items-center py-1 border-b last:border-0">
+                          <span className="font-semibold">• {m.materialName}</span>
+                          <span className="bg-slate-200 text-slate-800 font-bold px-2 py-0.5 rounded font-mono text-[10px]">Qty: {m.quantityRequired}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Material Allocation Details */}
+              {selectedRequest.materialAllocations?.length > 0 && (
+                <div>
+                  <h4 className="font-bold text-primary mb-2 uppercase tracking-wider text-[10px]">Material Issue & Return tracking</h4>
+                  <div className="border rounded-lg overflow-hidden border-border/80">
+                    <table className="w-full text-center border-collapse text-3xs">
+                      <thead className="bg-slate-50 font-bold uppercase tracking-wider text-slate-700 border-b">
+                        <tr>
+                          <th className="px-3 py-2 text-left">Material</th>
+                          <th className="px-3 py-2">Requested</th>
+                          <th className="px-3 py-2 text-indigo-700">Issued</th>
+                          <th className="px-3 py-2 text-green-700">Returned</th>
+                          <th className="px-3 py-2 text-red-600">Balance</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y font-semibold">
+                        {selectedRequest.materialAllocations.map((a: any, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50/20">
+                            <td className="px-3 py-2 text-left text-foreground font-bold">{a.materialId?.name || "Material"}</td>
+                            <td className="px-3 py-2">{a.quantityRequested}</td>
+                            <td className="px-3 py-2 text-indigo-700">{a.quantityIssued}</td>
+                            <td className="px-3 py-2 text-green-700">{a.returnedQuantity}</td>
+                            <td className="px-3 py-2 text-red-600">{a.balanceQuantity}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Returns records */}
+              {selectedRequest.returns?.length > 0 && (
+                <div>
+                  <h4 className="font-bold text-primary mb-2 uppercase tracking-wider text-[10px]">Resource Returns History Log</h4>
+                  <div className="space-y-2">
+                    {selectedRequest.returns.map((ret: any, idx: number) => (
+                      <div key={idx} className="p-2.5 border border-border/40 rounded bg-slate-50/50 space-y-1">
+                        <div className="flex justify-between items-center text-3xs font-bold text-slate-700">
+                          <span>Return Action: {ret.resourceName} ({ret.resourceType})</span>
+                          <span className="text-muted-foreground">{new Date(ret.returnDate).toLocaleString()}</span>
+                        </div>
+                        <p className="text-3xs text-muted-foreground">
+                          <b>Quantity Returned:</b> {ret.returnedQuantity} | <b>Condition:</b> {ret.condition}
+                        </p>
+                        {ret.remarks && <p className="text-3xs text-slate-500 italic mt-0.5">"Remarks: {ret.remarks}"</p>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Project description details */}
+              <div>
+                <h4 className="font-bold text-primary mb-2 uppercase tracking-wider text-[10px]">Project Description & expected outcomes</h4>
+                <div className="border rounded-md p-3 bg-secondary/5 space-y-2 font-medium">
+                  <p><strong>Objectives:</strong> {selectedRequest.projectObjectives}</p>
+                  <p><strong>Outcome:</strong> {selectedRequest.expectedOutcome}</p>
+                </div>
+              </div>
+
+              {/* Approval History logs */}
+              {selectedRequest.approvalHistory?.length > 0 && (
+                <div>
+                  <h4 className="font-bold text-primary mb-2 uppercase tracking-wider text-[10px]">Approval History & Logs</h4>
+                  <div className="space-y-2 border rounded-md p-3 bg-slate-50/50">
+                    {selectedRequest.approvalHistory.map((h, i) => (
+                      <div key={i} className="flex justify-between items-start border-b border-border/40 pb-2 last:border-0 last:pb-0">
+                        <div>
+                          <div className="font-semibold text-foreground flex items-center gap-1.5">
+                            <Badge variant="secondary" className="text-[8px] uppercase tracking-wide font-bold">{h.role}</Badge>
+                            <span>{h.action}</span>
+                          </div>
+                          {h.remarks && <p className="text-3xs text-muted-foreground mt-0.5 font-medium">Remarks: {h.remarks}</p>}
+                        </div>
+                        <span className="text-[10px] text-muted-foreground font-mono self-center">
+                          {new Date(h.date).toLocaleDateString()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Actions Footer inside modal */}
+              <div className="flex gap-2 justify-end border-t pt-4 bg-slate-50/30 p-2 rounded-b-lg">
+                <Button 
+                  variant="outline" 
+                  disabled={!['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Completed'].includes(selectedRequest.status)}
+                  onClick={() => downloadPdf(selectedRequest._id, selectedRequest.requestId)}
+                  className="text-xs font-semibold"
+                >
+                  <Download className="w-3.5 h-3.5 mr-1.5" /> PDF
+                </Button>
+                <Button 
+                  variant="outline" 
+                  disabled={!['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Completed'].includes(selectedRequest.status)}
+                  onClick={() => printPdf(selectedRequest._id)}
+                  className="text-xs font-semibold"
+                >
+                  <Printer className="w-3.5 h-3.5 mr-1.5" /> Print
+                </Button>
+                <Button variant="default" onClick={() => setShowDetailDialog(false)} className="text-xs font-semibold">
+                  Close Details
+                </Button>
+              </div>
+
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
     </div>
   );
 };

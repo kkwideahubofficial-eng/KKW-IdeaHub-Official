@@ -42,6 +42,7 @@ import SpecialRoomPermission from "./pages/SpecialRoomPermission";
 import ManageRoomPermissions from "./pages/coordinator/ManageRoomPermissions";
 import HeadRoomPermissions from "./pages/head/HeadRoomPermissions";
 import VerifyRoomPermission from "./pages/VerifyRoomPermission";
+import VerifyRequest from "./pages/VerifyRequest";
 import FacultyVerification from "./pages/FacultyVerification";
 
 
@@ -277,6 +278,7 @@ const App = () => (
                 }
               />
               <Route path="/verify-room-permission/:requestId" element={<VerifyRoomPermission />} />
+              <Route path="/verify-request/:requestId" element={<VerifyRequest />} />
               <Route path="/verify-faculty/:requestId" element={<FacultyVerification />} />
               <Route path="/achievements" element={<Achievements />} />
               <Route path="/achievements/:id" element={<AchievementDetail />} />

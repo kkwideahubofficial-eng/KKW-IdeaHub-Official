@@ -855,24 +855,27 @@ const Events = () => {
                   {registrations.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center pl-0 border-l-0">No timeline milestones available.</p>
                   ) : (
-                    registrations.map((reg) => (
-                      <div key={reg._id} className="relative">
-                        {/* Dot */}
-                        <div className={`absolute -left-[30px] top-1 h-3 w-3 rounded-full border-2 bg-background ${
-                          reg.attendance === 'present' ? 'border-emerald-500 bg-emerald-500' :
-                          reg.status === 'approved' ? 'border-primary bg-primary' : 'border-amber-500 bg-amber-500'
-                        }`} />
-                        
-                        <div className="space-y-1">
-                          <p className="text-xs font-semibold text-muted-foreground">{new Date(reg.registrationDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</p>
-                          <h4 className="font-bold text-sm text-foreground line-clamp-1">{reg.event?.title}</h4>
-                          <p className="text-xs text-muted-foreground">
-                            Status: <span className="capitalize font-semibold text-foreground">{reg.status}</span>
-                            {reg.attendance === 'present' && " • Attended"}
-                          </p>
+                    registrations.map((reg) => {
+                      const wasAttended = reg.teamMembers?.some(m => m.attendance === 'present');
+                      return (
+                        <div key={reg._id} className="relative">
+                          {/* Dot */}
+                          <div className={`absolute -left-[30px] top-1 h-3 w-3 rounded-full border-2 bg-background ${
+                            wasAttended ? 'border-emerald-500 bg-emerald-500' :
+                            reg.status === 'approved' ? 'border-primary bg-primary' : 'border-amber-500 bg-amber-500'
+                          }`} />
+                          
+                          <div className="space-y-1">
+                            <p className="text-xs font-semibold text-muted-foreground">{new Date(reg.registrationDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                            <h4 className="font-bold text-sm text-foreground line-clamp-1">{reg.event?.title}</h4>
+                            <p className="text-xs text-muted-foreground">
+                              Status: <span className="capitalize font-semibold text-foreground">{reg.status}</span>
+                              {wasAttended && " • Attended"}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </Card>

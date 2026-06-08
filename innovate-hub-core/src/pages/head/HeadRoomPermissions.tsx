@@ -273,11 +273,11 @@ const HeadRoomPermissions = () => {
               <CardDescription className="text-2xs">Review color-coded schedule overview.</CardDescription>
             </div>
             <div className="flex items-center gap-1">
-              <Button variant="outline" size="xs" onClick={() => handleMonthChange(-1)}><ChevronLeft className="w-3.5 h-3.5" /></Button>
+              <Button variant="outline" size="sm" onClick={() => handleMonthChange(-1)}><ChevronLeft className="w-3.5 h-3.5" /></Button>
               <span className="font-bold text-xs w-28 text-center">
                 {currentDate.toLocaleString('default', { month: 'short', year: 'numeric' })}
               </span>
-              <Button variant="outline" size="xs" onClick={() => handleMonthChange(1)}><ChevronRight className="w-3.5 h-3.5" /></Button>
+              <Button variant="outline" size="sm" onClick={() => handleMonthChange(1)}><ChevronRight className="w-3.5 h-3.5" /></Button>
             </div>
           </CardHeader>
           <CardContent className="pt-4">
@@ -451,7 +451,7 @@ const HeadRoomPermissions = () => {
                         </span>
                       </td>
                       <td className="p-4 text-right">
-                        <Button variant="outline" size="xs" onClick={() => { setSelectedRequest(req); setConfirmAction(null); }}>
+                        <Button variant="outline" size="sm" onClick={() => { setSelectedRequest(req); setConfirmAction(null); }}>
                           Review Request
                         </Button>
                       </td>
@@ -602,9 +602,9 @@ const HeadRoomPermissions = () => {
                       Are you sure you want to {confirmAction === 'approve' ? 'approve' : confirmAction === 'reject' ? 'reject' : confirmAction === 'conditional' ? 'conditionally approve' : confirmAction === 'forward_back' ? 'return to Coordinator' : 'request changes for'} this request?
                     </div>
                     <div className="flex gap-2">
-                      <Button size="xs" variant="outline" onClick={() => setConfirmAction(null)}>Cancel</Button>
+                      <Button size="sm" variant="outline" onClick={() => setConfirmAction(null)}>Cancel</Button>
                       <Button 
-                        size="xs" 
+                        size="sm" 
                         className={confirmAction === 'reject' ? 'bg-red-600 hover:bg-red-700 text-white' : confirmAction === 'approve' ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-amber-500 hover:bg-amber-600 text-white'}
                         onClick={() => {
                           handleHeadDecision(selectedRequest._id, confirmAction);

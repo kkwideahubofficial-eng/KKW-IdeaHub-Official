@@ -266,85 +266,125 @@ const generateRoomPdf = async (doc, data) => {
   drawFooter(doc);
 };
 
-const generateMachineryPdf = async (doc, data) => {
-  let cy = drawHeader(doc, 'MACHINERY REQUEST APPLICATION', data.status, MARGIN);
 
+const generateMachineryPdf = async (doc, data) => {
+  // Page header for K.K. Wagh IDEA Lab
+  let cy = drawHeader(doc, 'PERMISSION FOR MATERIAL / MACHINERY USAGE', data.status, MARGIN);
   const sLabel = statusDisplay(data.status);
 
+  // Section 1: Application Info
   cy = drawSectionTitle(doc, 'APPLICATION INFORMATION', cy);
   cy = drawInfoCard(doc, [
-    { label: 'Application ID', value: data.header.applicationId || 'N/A' },
-    { label: 'Request Date', value: data.header.requestDate || 'N/A' },
-    { label: 'Status', value: sLabel },
+    { label: 'Request ID', value: data.header.applicationId || 'N/A' },
+    { label: 'Project Name', value: data.header.projectName || 'N/A' },
+    { label: 'Project Category', value: data.header.projectCategory || 'N/A' },
+    { label: 'Application Date', value: data.header.applicationDate || 'N/A' },
+    { label: 'Faculty Guide', value: data.header.guideName || 'N/A' },
   ], cy);
 
-  cy = drawSectionTitle(doc, 'STUDENT DETAILS', cy);
-  const sf = [
-    { label: 'Name', value: data.student.name || 'N/A' },
-    { label: 'Email', value: data.student.email || 'N/A' },
-    { label: 'Mobile', value: data.student.mobile || 'N/A' },
-    { label: 'Branch', value: data.student.branch || 'N/A' },
-    { label: 'Year', value: data.student.year || 'N/A' },
-  ];
-  if (data.student.prn) sf.push({ label: 'PRN/Roll Number', value: data.student.prn });
-  cy = drawInfoCard(doc, sf, cy);
-
-  cy = drawSectionTitle(doc, 'MACHINERY DETAILS', cy);
+  // Section 2: Applicant Student Details
+  cy = drawSectionTitle(doc, 'APPLICANT DETAILS', cy);
   cy = drawInfoCard(doc, [
-    { label: 'Machine Name', value: data.machinery.name || 'N/A' },
-    { label: 'Date of Usage', value: data.machinery.usageDate || 'N/A' },
-    { label: 'Time Slot', value: data.machinery.timeSlot || 'N/A' },
-    { label: 'Purpose', value: data.machinery.purpose || 'N/A' },
-    { label: 'Students', value: String(data.machinery.numberOfStudents || 'N/A') },
+    { label: 'Full Name', value: data.student.name || 'N/A' },
+    { label: 'PRN / Roll Number', value: data.student.prn || 'N/A' },
+    { label: 'Email Address', value: data.student.email || 'N/A' },
+    { label: 'Mobile Number', value: data.student.mobile || 'N/A' },
+    { label: 'Branch & Year', value: `${data.student.branch || 'N/A'} / ${data.student.year || 'N/A'}` },
   ], cy);
 
-  if (data.machinery.teamMembers && data.machinery.teamMembers.length > 0) {
+  // Section 3: Team Members
+  if (data.teamMembers && data.teamMembers.length > 0) {
     cy = drawSectionTitle(doc, 'TEAM MEMBERS', cy);
-    const rows = data.machinery.teamMembers.map((m, i) => [
-      String(i + 1), m.name || 'N/A', m.branch || 'N/A', m.year || 'N/A',
+    const rows = data.teamMembers.map(m => [
+      String(m.index),
+      m.name || 'N/A',
+      m.prn || 'N/A',
+      m.branch || 'N/A',
+      m.year || 'N/A',
     ]);
-    cy = drawTable(doc, ['Sr. No.', 'Name', 'Branch', 'Year'], rows, cy);
+    cy = drawTable(doc, ['Sr.', 'Name', 'PRN', 'Branch', 'Year'], rows, cy);
   }
 
-  cy = drawSectionTitle(doc, 'DOCUMENTS', cy);
-  cy = drawInfoCard(doc, [
-    { label: 'Group Photo / Selfie', value: data.documents?.groupPhoto ? 'Attached' : 'Not Provided' },
-    { label: 'Supporting Document', value: data.documents?.supportingDocument ? 'Attached' : 'Not Provided' },
-  ], cy);
+  // Section 4: Requested Machines (Separate UI/Section)
+  if (data.requestedMachines && data.requestedMachines.length > 0) {
+    cy = drawSectionTitle(doc, 'REQUESTED MACHINERY BOOKINGS', cy);
+    const rows = data.requestedMachines.map((m, i) => [
+      String(i + 1),
+      m.name || 'N/A',
+      m.usageDate || 'N/A',
+      m.timeSlot || 'N/A',
+      `${m.hours || 0} hrs`,
+      m.purpose || 'N/A'
+    ]);
+    cy = drawTable(doc, ['Sr.', 'Machine Name', 'Usage Date', 'Time Slot', 'Duration', 'Purpose'], rows, cy);
+  }
 
-  cy = drawSectionTitle(doc, 'DECLARATION', cy);
-  cy = ensurePage(doc, cy, 50);
-  doc.roundedRect(MARGIN, cy, CONTENT_WIDTH, 40, 4).fill(COLORS.lightBg).stroke(COLORS.border);
-  doc.fillColor(COLORS.text).font('Helvetica-Oblique').fontSize(8)
-     .text('We agree that if any damage occurs due to improper handling of the machinery, the student/team will be responsible according to institute rules.',
-       MARGIN + 8, cy + 10, { width: CONTENT_WIDTH - 16, align: 'center' });
-  cy += 48;
+  // Section 5: Requested Materials (Separate UI/Section)
+  if (data.requestedMaterials && data.requestedMaterials.length > 0) {
+    cy = drawSectionTitle(doc, 'REQUESTED MATERIALS ALLOCATION', cy);
+    const rows = data.requestedMaterials.map((m, i) => [
+      String(i + 1),
+      m.name || 'N/A',
+      String(m.quantity || 1),
+      m.purpose || 'N/A'
+    ]);
+    cy = drawTable(doc, ['Sr.', 'Material Name', 'Qty Required', 'Purpose'], rows, cy);
+  }
 
-  cy = drawSectionTitle(doc, 'APPROVAL DETAILS', cy);
-  const af = [{ label: 'Status', value: sLabel }];
-  if (data.approvedBy) af.push({ label: 'Approved By', value: data.approvedBy });
-  if (data.approvalDate) af.push({ label: 'Approved Date', value: data.approvalDate });
-  if (data.remarks) af.push({ label: 'Remarks', value: data.remarks });
-  cy = drawInfoCard(doc, af, cy);
+  // Section 6: Approval Details
+  cy = drawSectionTitle(doc, 'APPROVALS & REMARKS', cy);
+  const isApproved = ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Completed'].includes(data.status);
+  const approvalFields = [
+    { label: 'Workflow Status', value: sLabel },
+    { label: 'Coordinator Approval', value: isApproved ? '✓ APPROVED' : 'PENDING / REJECTED' },
+    { label: 'Lab Head Approval', value: isApproved ? '✓ APPROVED' : 'PENDING / REJECTED' }
+  ];
+  if (data.approvedBy) approvalFields.push({ label: 'Final Approved By', value: data.approvedBy });
+  if (data.approvalDate) approvalFields.push({ label: 'Action Date', value: data.approvalDate });
+  if (data.remarks) approvalFields.push({ label: 'Reviewer Remarks', value: data.remarks });
+  if (data.conditions) approvalFields.push({ label: 'Conditional Terms', value: data.conditions });
+  
+  cy = drawInfoCard(doc, approvalFields, cy);
 
-  cy = drawSectionTitle(doc, 'SIGNATURES', cy);
-  cy = ensurePage(doc, cy, 65);
+  // Section 7: Declarations & Signatures
+  cy = drawSectionTitle(doc, 'DECLARATION & SIGNATURES', cy);
+  cy = ensurePage(doc, cy, 100);
+
+  doc.fillColor(COLORS.text).font('Helvetica-Oblique').fontSize(7.5)
+     .text('We agree that we will follow all safety guidelines. Any damage occurring due to improper resource usage will be the responsibility of the students/team.',
+       MARGIN + 8, cy, { width: CONTENT_WIDTH - 16, align: 'center' });
+  cy += 24;
 
   const sigY = cy;
-  doc.moveTo(MARGIN + 20, sigY + 16).lineTo(MARGIN + 170, sigY + 16).stroke(COLORS.border);
-  doc.fillColor(COLORS.textLight).font('Helvetica').fontSize(8)
-     .text('Student Signature', MARGIN + 20, sigY + 20, { width: 150, align: 'center' });
+  
+  // Coordinator Sign Block
+  doc.moveTo(MARGIN + 10, sigY + 35).lineTo(MARGIN + 140, sigY + 35).stroke(COLORS.border);
+  doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(8)
+     .text(isApproved ? '✓ SIGNED' : 'PENDING', MARGIN + 10, sigY + 12, { width: 130, align: 'center' });
+  doc.fillColor(COLORS.textLight).font('Helvetica').fontSize(8.5)
+     .text('Coordinator Signature', MARGIN + 10, sigY + 39, { width: 130, align: 'center' });
 
-  doc.moveTo(MARGIN + CONTENT_WIDTH - 170, sigY + 16).lineTo(MARGIN + CONTENT_WIDTH - 20, sigY + 16).stroke(COLORS.border);
-  doc.fillColor(COLORS.textLight).font('Helvetica').fontSize(8)
-     .text('Coordinator Signature', MARGIN + CONTENT_WIDTH - 170, sigY + 20, { width: 150, align: 'center' });
+  // Head Sign Block
+  doc.moveTo(MARGIN + 160, sigY + 35).lineTo(MARGIN + 290, sigY + 35).stroke(COLORS.border);
+  doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(8)
+     .text(isApproved ? '✓ SIGNED' : 'PENDING', MARGIN + 160, sigY + 12, { width: 130, align: 'center' });
+  doc.fillColor(COLORS.textLight).font('Helvetica').fontSize(8.5)
+     .text('IDEA Lab Head Signature', MARGIN + 160, sigY + 39, { width: 130, align: 'center' });
 
-  if (data.qrData && remaining(cy) >= 75) {
+  // Seal Area
+  doc.roundedRect(MARGIN + 310, sigY, 70, 48, 5).stroke(COLORS.border);
+  doc.fillColor(COLORS.textLight).font('Helvetica').fontSize(7.5)
+     .text('OFFICIAL\nSEAL', MARGIN + 310, sigY + 16, { width: 70, align: 'center' });
+
+  // QR Code Verification
+  if (data.qrData) {
     try {
-      const qrBuffer = await QRCode.toBuffer(data.qrData, { width: 100, margin: 2 });
-      doc.image(qrBuffer, PAGE_WIDTH - MARGIN - 70, sigY - 8, { width: 60, height: 60 });
+      const qrBuffer = await QRCode.toBuffer(data.qrData, { width: 90, margin: 1 });
+      doc.image(qrBuffer, PAGE_WIDTH - MARGIN - 80, sigY - 10, { width: 75, height: 75 });
+      doc.fillColor(COLORS.textLight).font('Helvetica').fontSize(6.5)
+         .text('Scan to Verify Link', PAGE_WIDTH - MARGIN - 80, sigY + 67, { width: 75, align: 'center' });
     } catch (e) {
-      console.error('QR error:', e);
+      console.error('QR code render error:', e);
     }
   }
 

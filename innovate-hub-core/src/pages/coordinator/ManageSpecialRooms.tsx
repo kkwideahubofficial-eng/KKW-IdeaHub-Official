@@ -433,10 +433,10 @@ const ManageSpecialRooms = () => {
                         )}
 
                         <div className="grid grid-cols-2 gap-2 w-full pt-1">
-                          <Button variant="secondary" size="xs" onClick={() => handleEditClick(room)} className="text-xs">
+                          <Button variant="secondary" size="sm" onClick={() => handleEditClick(room)} className="text-xs">
                               <Edit2 className="h-3 w-3 mr-1.5" /> Edit details
                           </Button>
-                          <Button variant="outline" size="xs" onClick={() => handleDeleteRoom(room._id)} className="text-xs text-destructive hover:bg-destructive/5 hover:text-destructive">
+                          <Button variant="outline" size="sm" onClick={() => handleDeleteRoom(room._id)} className="text-xs text-destructive hover:bg-destructive/5 hover:text-destructive">
                               <Trash2 className="h-3 w-3 mr-1.5" /> Delete
                           </Button>
                         </div>
