@@ -915,6 +915,30 @@ const Events = () => {
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground">{notif.body}</p>
+                      
+                      {notif.type && notif.type.startsWith('machinery_completion_reminder:') && !notif.isRead && (
+                        <div className="flex gap-2 pt-2">
+                          <Link to={`/machinery?complete=${notif.type.split(':')[1]}`}>
+                            <Button 
+                              size="sm" 
+                              className="bg-green-600 hover:bg-green-700 text-white font-bold text-[10px] h-7 px-3 rounded-lg"
+                              onClick={() => markAsRead(notif._id)}
+                            >
+                              Yes, Work Completed
+                            </Button>
+                          </Link>
+                          <Link to={`/machinery?extend=${notif.type.split(':')[1]}`}>
+                            <Button 
+                              size="sm" 
+                              className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-[10px] h-7 px-3 rounded-lg"
+                              onClick={() => markAsRead(notif._id)}
+                            >
+                              Extend Usage Request
+                            </Button>
+                          </Link>
+                        </div>
+                      )}
+
                       <p className="text-[10px] text-muted-foreground font-semibold pt-1">
                         {new Date(notif.createdAt).toLocaleString()}
                       </p>

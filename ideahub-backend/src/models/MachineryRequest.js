@@ -144,6 +144,9 @@ const machineryRequestSchema = new Schema(
         'Approved With Conditions',
         'Material Allocated',
         'Machine Scheduled',
+        'Active Booking',
+        'Work Completed',
+        'Closed',
         'Completed',
         'Cancelled'
       ],
@@ -209,6 +212,49 @@ const machineryRequestSchema = new Schema(
     actualExitTime: {
       type: Date,
       default: null,
+    },
+
+    isWorkCompleted: {
+      type: Boolean,
+      default: false,
+    },
+    completedAt: {
+      type: Date,
+      default: null,
+    },
+    completedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    completionRemarks: {
+      type: String,
+      default: '',
+    },
+    actualUsageHours: {
+      type: Number,
+      default: 0,
+    },
+    machineReleased: {
+      type: Boolean,
+      default: false,
+    },
+    extensionEndTime: {
+      type: String,
+      default: null,
+    },
+    extensionReason: {
+      type: String,
+      default: null,
+    },
+    extensionStatus: {
+      type: String,
+      enum: ['Pending', 'Approved', 'Rejected', null],
+      default: null,
+    },
+    completionReminderSent: {
+      type: Boolean,
+      default: false,
     },
 
     approvalHistory: [{

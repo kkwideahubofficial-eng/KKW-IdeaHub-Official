@@ -70,6 +70,30 @@ const seedData = async () => {
              console.log('Student User exists:', studentEmail);
         }
 
+        // 2.1 Create Team Member User (Requested by User)
+        const teamMemberEmail = 'teammember@gmail.com';
+        let teamMemberUser = await User.findOne({ email: teamMemberEmail });
+        if (!teamMemberUser) {
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash('123456', salt);
+            teamMemberUser = await User.create({
+                name: 'Team Member',
+                email: teamMemberEmail,
+                passwordHash: hashedPassword,
+                role: 'team',
+                teamName: 'Team Beta',
+                phone: '1234567890'
+            });
+            console.log('Created Team Member User:', teamMemberEmail);
+        } else {
+            // Update the password to ensure it is '123456'
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash('123456', salt);
+            teamMemberUser.passwordHash = hashedPassword;
+            await teamMemberUser.save();
+            console.log('Updated Team Member User password to 123456:', teamMemberEmail);
+        }
+
         // 2.5 Create Coordinator User
         const coordEmail = 'coordinator@ideahub.com';
         let coordUser = await User.findOne({ email: coordEmail });
@@ -113,10 +137,28 @@ const seedData = async () => {
 
         // 4. Create Requests
         
+        // Clean up previously seeded requests to prevent duplicate key errors on re-run
+        await MachineryRequest.deleteMany({ requestId: { $in: ['MAT-SEED-001', 'MAT-SEED-002', 'MAT-SEED-003', 'MAT-SEED-004', 'MAT-SEED-005'] } });
+
         // Request A: Completed Yesterday
         const successReq = await MachineryRequest.create({
+            requestId: 'MAT-SEED-001',
+            projectName: 'Prototype Printing',
+            projectCategory: 'Academic Project',
+            projectDescription: 'Printing prototype parts for robotics course',
+            projectObjectives: 'Assemble working chassis',
+            expectedOutcome: 'Robot chassis',
             machineryId: printer._id,
             studentId: studentUser._id,
+            students: [{
+                name: 'Alice Innovator',
+                prn: 'PRN123456',
+                branch: 'CSE',
+                year: 'TE',
+                division: 'A',
+                mobile: '9876543210',
+                email: 'student@test.com'
+            }],
             teamMembers: [{ name: 'Alice', branch: 'CSE', year: '3rd' }, { name: 'Bob', branch: 'ME', year: '3rd' }],
             usageDate: new Date(new Date().setDate(new Date().getDate() - 1)), // Yesterday
             startTime: '10:00',
@@ -124,7 +166,7 @@ const seedData = async () => {
             purpose: 'Printing prototype for project X',
             consentAgreed: true,
             groupPhotoUrl: 'https://placehold.co/100x100',
-            status: 'approved',
+            status: 'Work Completed',
             approvedBy: headUser._id,
             actualEntryTime: new Date(new Date().setDate(new Date().getDate() - 1)).setHours(10, 5), // Yesterday 10:05
             actualExitTime: new Date(new Date().setDate(new Date().getDate() - 1)).setHours(12, 10), // Yesterday 12:10
@@ -133,8 +175,23 @@ const seedData = async () => {
 
         // Request B: Approved for Today (Not yet started)
         const todayReq = await MachineryRequest.create({
+            requestId: 'MAT-SEED-002',
+            projectName: 'Small Part Printing',
+            projectCategory: 'Academic Project',
+            projectDescription: 'Printing structural joiner',
+            projectObjectives: 'Complete frame joint',
+            expectedOutcome: 'Joint part',
             machineryId: printer._id,
             studentId: studentUser._id,
+            students: [{
+                name: 'Alice Innovator',
+                prn: 'PRN123456',
+                branch: 'CSE',
+                year: 'TE',
+                division: 'A',
+                mobile: '9876543210',
+                email: 'student@test.com'
+            }],
             teamMembers: [{ name: 'Alice', branch: 'CSE', year: '3rd' }],
             usageDate: new Date(),
             startTime: '14:00',
@@ -142,15 +199,30 @@ const seedData = async () => {
             purpose: 'Printing small part',
             consentAgreed: true,
             groupPhotoUrl: 'https://placehold.co/100x100',
-            status: 'approved',
+            status: 'Approved',
             approvedBy: headUser._id
         });
          console.log('Created Approved Request (Today)');
 
         // Request C: Pending
         const pendingReq = await MachineryRequest.create({
+            requestId: 'MAT-SEED-003',
+            projectName: 'Urgent Printing Task',
+            projectCategory: 'Academic Project',
+            projectDescription: 'Fabricate custom enclosures',
+            projectObjectives: 'House PCB boards securely',
+            expectedOutcome: 'ABS housing box',
             machineryId: printer._id,
             studentId: studentUser._id,
+            students: [{
+                name: 'Alice Innovator',
+                prn: 'PRN123456',
+                branch: 'CSE',
+                year: 'TE',
+                division: 'A',
+                mobile: '9876543210',
+                email: 'student@test.com'
+            }],
             teamMembers: [{ name: 'Alice', branch: 'CSE', year: '3rd' }],
             usageDate: new Date(new Date().setDate(new Date().getDate() + 1)), // Tomorrow
             startTime: '09:00',
@@ -158,13 +230,101 @@ const seedData = async () => {
             purpose: 'Urgent printing',
             consentAgreed: true,
             groupPhotoUrl: 'https://placehold.co/100x100',
-            status: 'pending'
+            status: 'Submitted'
         });
         console.log('Created Pending Request (Tomorrow)');
 
+        // Request D: PAST slot (8:00 AM - 8:05 AM today) - for testing completion reminder flow
+        // This slot is already past, so the scheduler should send a completion reminder
+        const scheduledReq = await MachineryRequest.create({
+            requestId: 'MAT-SEED-004',
+            projectName: 'Morning Robotics Print',
+            projectCategory: 'Academic Project',
+            projectDescription: 'Morning printing session for prototype assembly',
+            projectObjectives: 'Finalize parts fabrication',
+            expectedOutcome: 'Assembled prototype',
+            machineryId: printer._id,
+            studentId: studentUser._id,
+            students: [{
+                name: 'Alice Innovator',
+                prn: 'PRN123456',
+                branch: 'CSE',
+                year: 'TE',
+                division: 'A',
+                mobile: '9876543210',
+                email: 'student@test.com'
+            }],
+            teamMembers: [{ name: 'Alice', branch: 'CSE', year: '3rd' }],
+            requestedMachines: [{
+                machineId: printer._id,
+                machineName: printer.name,
+                usageDate: new Date(),
+                startTime: '08:00',
+                endTime: '08:05',
+                usageHours: 0.08,
+                purposeOfUsage: 'Morning printing run for prototype assembly'
+            }],
+            usageDate: new Date(),
+            startTime: '08:00',
+            endTime: '08:05',
+            purpose: 'Morning printing run for prototype assembly',
+            consentAgreed: true,
+            groupPhotoUrl: 'https://placehold.co/100x100',
+            status: 'Machine Scheduled',
+            completionReminderSent: false,
+            approvedBy: headUser._id
+        });
+        console.log('Created Scheduled Request (PAST: 8:00-8:05 AM today) for completion reminder testing');
+
+        // Request E: 9:10 PM - 9:15 PM TODAY - Approved by coordinator and head (future slot, user-requested)
+        const eveningReq = await MachineryRequest.create({
+            requestId: 'MAT-SEED-005',
+            projectName: 'Final Robotics Assembly',
+            projectCategory: 'Academic Project',
+            projectDescription: 'Final printing run for prototype assembly',
+            projectObjectives: 'Finalize parts fabrication',
+            expectedOutcome: 'Assembled prototype',
+            machineryId: printer._id,
+            studentId: studentUser._id,
+            students: [{
+                name: 'Alice Innovator',
+                prn: 'PRN123456',
+                branch: 'CSE',
+                year: 'TE',
+                division: 'A',
+                mobile: '9876543210',
+                email: 'student@test.com'
+            }],
+            teamMembers: [{ name: 'Alice', branch: 'CSE', year: '3rd' }],
+            requestedMachines: [{
+                machineId: printer._id,
+                machineName: printer.name,
+                usageDate: new Date(),
+                startTime: '21:10',
+                endTime: '21:15',
+                usageHours: 0.08,
+                purposeOfUsage: 'Final printing run for prototype assembly'
+            }],
+            usageDate: new Date(),
+            startTime: '21:10',
+            endTime: '21:15',
+            purpose: 'Final printing run for prototype assembly',
+            consentAgreed: true,
+            groupPhotoUrl: 'https://placehold.co/100x100',
+            status: 'Machine Scheduled',
+            completionReminderSent: false,
+            approvedBy: headUser._id
+        });
+        console.log('Created Scheduled Request (FUTURE: 9:10-9:15 PM today) - MAT-SEED-005');
+
         console.log('--- SEEDING COMPLETE ---');
-        console.log('Head Creds: head@ideahub.com / head1234');
-        console.log('Student Creds: student@test.com / student1');
+        console.log('Head Creds:        head@ideahub.com / head1234');
+        console.log('Student Creds:     student@test.com / student1');
+        console.log('Team Member Creds: teammember@gmail.com / 123456');
+        console.log('Coordinator Creds: coordinator@ideahub.com / coord1234');
+        console.log('');
+        console.log('MAT-SEED-004 => status: Machine Scheduled | slot: 8:00-8:05 AM TODAY (PAST - for completion reminder test)');
+        console.log('MAT-SEED-005 => status: Machine Scheduled | slot: 9:10-9:15 PM TODAY (FUTURE - approved by coord+head)');
         process.exit(0);
 
     } catch (error) {

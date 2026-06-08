@@ -1,6 +1,8 @@
 import cron from 'node-cron';
 import axios from 'axios';
 import RoomPermissionRequest from './models/RoomPermissionRequest.js';
+import MachineryRequest from './models/MachineryRequest.js';
+import EventNotification from './models/EventNotification.js';
 import sendEmail from './utils/sendEmail.js';
 
 // URL provided by the user
@@ -95,6 +97,56 @@ const task = () => {
             }
             if (reminderCount > 0) {
                 console.log(`[Scheduler] Sent ${reminderCount} booking reminders.`);
+            }
+
+            // 3. Machinery Booking - Auto completion reminders
+            const activeMachBookings = await MachineryRequest.find({
+                status: { $in: ['Machine Scheduled', 'Active Booking'] },
+                completionReminderSent: { $ne: true }
+            }).populate('studentId');
+
+            let machineryReminderCount = 0;
+            for (const req of activeMachBookings) {
+                const primaryMachine = req.requestedMachines?.[0];
+                if (primaryMachine && primaryMachine.usageDate && primaryMachine.endTime) {
+                    const usageDateStr = new Date(primaryMachine.usageDate).toISOString().split('T')[0];
+                    const scheduledEnd = new Date(`${usageDateStr}T${primaryMachine.endTime}:00`);
+
+                    if (now > scheduledEnd) {
+                        try {
+                            // Send in-app notification with type 'machinery_completion_reminder'
+                            await EventNotification.create({
+                                user: req.studentId._id || req.studentId,
+                                title: 'Have you completed your machine work?',
+                                body: `Your booking for "${primaryMachine.machineName}" was scheduled to end at ${primaryMachine.endTime}. Please mark your work as completed or request an extension.`,
+                                type: `machinery_completion_reminder:${req._id}`
+                            });
+
+                            // Send email
+                            if (req.studentId?.email) {
+                                await sendEmail(
+                                    req.studentId.email,
+                                    `Machinery Booking Completion Reminder - ${req.requestId}`,
+                                    `<h2>Dear ${req.studentId.name},</h2>
+                                     <p>Your booking slot for the machine <b>${primaryMachine.machineName}</b> has ended.</p>
+                                     <p><b>Scheduled Time:</b> ${primaryMachine.startTime} - ${primaryMachine.endTime} on ${new Date(primaryMachine.usageDate).toLocaleDateString()}</p>
+                                     <br/>
+                                     <p>Please log in to the IDEA Hub portal and confirm if your work is completed to release the machine, or request a booking extension if you need more time.</p>
+                                     <br/><p>Regards,<br/>IDEA Hub Team</p>`
+                                );
+                            }
+
+                            req.completionReminderSent = true;
+                            await req.save();
+                            machineryReminderCount++;
+                        } catch (err) {
+                            console.error(`[Scheduler] Failed to process machinery reminder for ${req.requestId}:`, err);
+                        }
+                    }
+                }
+            }
+            if (machineryReminderCount > 0) {
+                console.log(`[Scheduler] Sent ${machineryReminderCount} machinery completion reminders.`);
             }
 
         } catch (error) {

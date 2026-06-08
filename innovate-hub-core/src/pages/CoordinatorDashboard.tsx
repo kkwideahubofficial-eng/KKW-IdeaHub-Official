@@ -9,13 +9,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { 
   Calendar, Check, X, Clock, Users, Loader2, Database, ShieldAlert, 
-  Settings, FileDown, Eye, RefreshCw, Layers, Printer, Search, Download
+  Settings, FileDown, Eye, RefreshCw, Layers, Printer, Search, Download, SendHorizonal
 } from "lucide-react";
 import { toast } from "sonner";
 import api from "../lib/axios";
+import { formatTime12Hour } from "../lib/dateUtils";
+import NotificationCenter from "../components/NotificationCenter";
 const axios = api;
 
 // Room booking types
@@ -90,6 +92,12 @@ interface ResourceRequest {
   teamName?: string;
   actualEntryTime?: string;
   actualExitTime?: string;
+  completedAt?: string;
+  completedBy?: string;
+  isWorkCompleted?: boolean;
+  completionRemarks?: string;
+  actualUsageHours?: number;
+  machineReleased?: boolean;
 }
 
 interface Material {
@@ -197,8 +205,23 @@ const BookingList: React.FC<BookingListProps> = ({
 };
 
 const CoordinatorDashboard = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  
   // Outer Tabs: room_bookings vs materials_machinery
-  const [dashboardTab, setDashboardTab] = useState("room_bookings");
+  const [dashboardTab, setDashboardTab] = useState(searchParams.get("tab") || "room_bookings");
+
+  // Sync state with URL
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab && tab !== dashboardTab) {
+      setDashboardTab(tab);
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (value: string) => {
+    setDashboardTab(value);
+    setSearchParams({ tab: value }, { replace: true });
+  };
 
   // Room Booking State
   const [pendingBookings, setPendingBookings] = useState<BookingRequest[]>([]);
@@ -243,6 +266,47 @@ const CoordinatorDashboard = () => {
 
   // Seeding loader
   const [seeding, setSeeding] = useState(false);
+
+  // Machine completion states
+  const [completionRequest, setCompletionRequest] = useState<ResourceRequest | null>(null);
+  const [showCompletionDialog, setShowCompletionDialog] = useState(false);
+  const [confirmCheckbox, setConfirmCheckbox] = useState(false);
+  const [completing, setCompleting] = useState(false);
+
+  // Decision submission loading state
+  const [submittingDecision, setSubmittingDecision] = useState(false);
+
+  const handleCompleteWork = async () => {
+    if (!completionRequest) return;
+    if (!confirmCheckbox) {
+      toast.error("Please confirm that machine usage is complete.");
+      return;
+    }
+
+    setCompleting(true);
+    try {
+      await api.post(`/machinery/requests/${completionRequest._id}/complete-work`);
+      toast.success("Work completion recorded successfully!");
+      setShowCompletionDialog(false);
+      setConfirmCheckbox(false);
+      setCompletionRequest(null);
+      fetchResourcePortalData();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to complete work.");
+    } finally {
+      setCompleting(false);
+    }
+  };
+
+  const handleExtensionDecision = async (id: string, status: 'Approved' | 'Rejected') => {
+    try {
+      await api.post(`/machinery/requests/${id}/handle-extension`, { status });
+      toast.success(`Booking extension ${status.toLowerCase()} successfully!`);
+      fetchResourcePortalData();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || `Failed to ${status.toLowerCase()} extension.`);
+    }
+  };
 
   useEffect(() => {
     fetchRoomBookings();
@@ -325,6 +389,7 @@ const CoordinatorDashboard = () => {
     if (decision === "reject") nextStatus = "Coordinator Rejected";
     if (decision === "request_changes") nextStatus = "Changes Requested";
 
+    setSubmittingDecision(true);
     try {
       await api.patch(`/machinery/requests/${selectedResRequest._id}/status`, {
         status: nextStatus,
@@ -338,6 +403,8 @@ const CoordinatorDashboard = () => {
       fetchResourcePortalData();
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Failed to update status.");
+    } finally {
+      setSubmittingDecision(false);
     }
   };
 
@@ -444,23 +511,34 @@ const CoordinatorDashboard = () => {
 
   const resStats = {
     pending: resourceRequests.filter(r => ['Submitted', 'Coordinator Review', 'Student Resubmitted'].includes(r.status)).length,
-    approved: resourceRequests.filter(r => ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled'].includes(r.status)).length,
+    approved: resourceRequests.filter(r => ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Active Booking'].includes(r.status)).length,
     lowStock: materials.filter(m => m.remainingQuantity <= m.lowStockThreshold).length,
     allocated: materials.reduce((acc, m) => acc + m.allocatedQuantity, 0),
   };
 
+  const todayStr = new Date().toDateString();
+  const machineStats = {
+    activeBookings: resourceRequests.filter(r => r.status === 'Active Booking').length,
+    completedToday: resourceRequests.filter(r => r.status === 'Work Completed' && r.completedAt && new Date(r.completedAt).toDateString() === todayStr).length,
+    machinesReleased: resourceRequests.filter(r => r.machineReleased === true).length,
+    pendingCompletion: resourceRequests.filter(r => ['Machine Scheduled', 'Active Booking'].includes(r.status)).length
+  };
+
   return (
-    <Tabs value={dashboardTab} onValueChange={setDashboardTab} className="w-full">
+    <Tabs value={dashboardTab} onValueChange={handleTabChange} className="w-full">
       <div className="container mx-auto px-4 py-8 max-w-7xl space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-extrabold text-foreground tracking-tight">Coordinator Dashboard</h1>
             <p className="text-muted-foreground text-sm">Review applications, coordinate reservations, and track inventory allocation.</p>
           </div>
-          <TabsList className="bg-muted/30 p-1 rounded-lg border border-border/60">
-            <TabsTrigger value="room_bookings" className="rounded-md text-xs font-semibold">Room Bookings</TabsTrigger>
-            <TabsTrigger value="materials_machinery" className="rounded-md text-xs font-semibold">Materials & Machinery</TabsTrigger>
-          </TabsList>
+          <div className="flex items-center gap-4">
+            <TabsList className="bg-muted/30 p-1 rounded-lg border border-border/60">
+              <TabsTrigger value="room_bookings" className="rounded-md text-xs font-semibold">Room Bookings</TabsTrigger>
+              <TabsTrigger value="materials_machinery" className="rounded-md text-xs font-semibold">Materials & Machinery</TabsTrigger>
+            </TabsList>
+            <NotificationCenter />
+          </div>
         </div>
 
       {/* TABS CONTENT: ROOM BOOKINGS */}
@@ -533,6 +611,7 @@ const CoordinatorDashboard = () => {
           <TabsList className="bg-muted/50 p-1 border rounded-lg">
             <TabsTrigger value="resource_pending" className="text-xs">Pending Reviews ({resStats.pending})</TabsTrigger>
             <TabsTrigger value="resource_approved" className="text-xs">Approved Permissions</TabsTrigger>
+            <TabsTrigger value="machine_bookings" className="text-xs">Machine Bookings ({machineStats.pendingCompletion})</TabsTrigger>
             <TabsTrigger value="material_stock" className="text-xs">Material Inventory Manager</TabsTrigger>
           </TabsList>
 
@@ -761,8 +840,238 @@ const CoordinatorDashboard = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Machine Bookings Manager Tab */}
+          <TabsContent value="machine_bookings" className="space-y-6">
+            {/* Machine Stats Bar */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+              {[
+                { label: "Active Machine Bookings", value: machineStats.activeBookings, color: "text-green-600" },
+                { label: "Completed Today", value: machineStats.completedToday, color: "text-emerald-600" },
+                { label: "Machines Released", value: machineStats.machinesReleased, color: "text-blue-600" },
+                { label: "Pending Completion", value: machineStats.pendingCompletion, color: "text-amber-600" }
+              ].map((item, idx) => (
+                <Card key={idx}>
+                  <CardContent className="pt-6">
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">{item.label}</p>
+                    <p className={`text-2xl font-bold mt-1 ${item.color}`}>{item.value}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Pending Extension Requests Card */}
+            {resourceRequests.filter(r => r.extensionStatus === 'Pending').length > 0 && (
+              <Card className="border-amber-200 bg-amber-50/10">
+                <CardHeader>
+                  <CardTitle className="text-base font-bold text-amber-800 flex items-center gap-1.5">
+                    <ShieldAlert className="w-5 h-5 text-amber-600" /> Pending Booking Extensions
+                  </CardTitle>
+                  <CardDescription className="text-xs text-amber-700/80">Students requiring more time on booked machinery slots</CardDescription>
+                </CardHeader>
+                <CardContent className="overflow-x-auto text-xs">
+                  <table className="w-full text-left border-collapse border border-amber-200/60 rounded-xl bg-white">
+                    <thead className="bg-amber-50/50 uppercase text-[9px] tracking-wider text-amber-800 font-bold border-b border-amber-200/50">
+                      <tr>
+                        <th className="px-4 py-3">Request ID</th>
+                        <th className="px-4 py-3">Machine</th>
+                        <th className="px-4 py-3">Team / Applicant</th>
+                        <th className="px-4 py-3">Original End Time</th>
+                        <th className="px-4 py-3 text-amber-700">Requested End Time</th>
+                        <th className="px-4 py-3">Reason</th>
+                        <th className="px-4 py-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-amber-100 font-medium text-slate-700">
+                      {resourceRequests.filter(r => r.extensionStatus === 'Pending').map((req) => (
+                        <tr key={req._id} className="hover:bg-amber-50/30">
+                          <td className="px-4 py-3 font-mono font-bold text-primary">{req.requestId}</td>
+                          <td className="px-4 py-3 font-bold text-foreground">
+                            {req.requestedMachines?.[0]?.machineName || "N/A"}
+                          </td>
+                          <td className="px-4 py-3">{req.teamName || req.students?.[0]?.name || "N/A"}</td>
+                          <td className="px-4 py-3 font-mono">
+                            {req.requestedMachines?.[0]?.endTime ? formatTime12Hour(req.requestedMachines[0].endTime) : 'N/A'}
+                          </td>
+                          <td className="px-4 py-3 font-mono font-bold text-amber-700">
+                            {req.extensionEndTime ? formatTime12Hour(req.extensionEndTime) : 'N/A'}
+                          </td>
+                          <td className="px-4 py-3 italic max-w-xs truncate" title={req.extensionReason}>
+                            "{req.extensionReason || 'No reason provided'}"
+                          </td>
+                          <td className="px-4 py-3 text-right flex justify-end gap-2">
+                            <Button 
+                              size="sm" 
+                              onClick={() => handleExtensionDecision(req._id, 'Rejected')}
+                              className="text-3xs h-7 font-bold border-destructive text-destructive hover:bg-destructive hover:text-white"
+                              variant="outline"
+                            >
+                              Reject
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              onClick={() => handleExtensionDecision(req._id, 'Approved')}
+                              className="text-3xs h-7 font-bold bg-green-600 hover:bg-green-700 text-white"
+                            >
+                              Approve
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Booking Table Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base font-bold">Machine Work Completion System</CardTitle>
+                <CardDescription className="text-xs">Manage active and completed machine usage bookings</CardDescription>
+              </CardHeader>
+              <CardContent className="overflow-x-auto text-xs">
+                <table className="w-full text-left border-collapse border rounded-xl">
+                  <thead className="bg-slate-50 uppercase text-[9px] tracking-wider text-slate-700 font-bold border-b">
+                    <tr>
+                      <th className="px-4 py-3">Request ID</th>
+                      <th className="px-4 py-3">Machine Name</th>
+                      <th className="px-4 py-3">Team Name</th>
+                      <th className="px-4 py-3">Booking Date</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3">Completion Time</th>
+                      <th className="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y font-medium text-slate-700">
+                    {resourceRequests.filter(r => r.requestedMachines && r.requestedMachines.length > 0).length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="text-center py-6 text-muted-foreground font-semibold">No machine bookings found.</td>
+                      </tr>
+                    ) : (
+                      resourceRequests.filter(r => r.requestedMachines && r.requestedMachines.length > 0).map((req) => (
+                        <tr key={req._id} className="hover:bg-slate-50/20">
+                          <td className="px-4 py-3 font-mono font-bold text-primary">{req.requestId}</td>
+                          <td className="px-4 py-3 font-bold text-foreground">
+                            {req.requestedMachines?.[0]?.machineName || "N/A"}
+                          </td>
+                          <td className="px-4 py-3">{req.teamName || req.students?.[0]?.name || "N/A"}</td>
+                          <td className="px-4 py-3">
+                            {req.requestedMachines?.[0]?.usageDate ? new Date(req.requestedMachines[0].usageDate).toLocaleDateString() : 'N/A'}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge className="text-[8px] font-bold uppercase" variant={req.status === 'Work Completed' ? 'default' : 'outline'}>
+                              {req.status}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3 font-mono text-3xs text-muted-foreground">
+                            {req.completedAt ? new Date(req.completedAt).toLocaleString() : 'N/A'}
+                          </td>
+                          <td className="px-4 py-3 text-right flex justify-end gap-2">
+                            {/* View Action */}
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => { setSelectedResRequest(req); setShowResReviewDialog(true); }}
+                              className="text-3xs h-7 font-bold"
+                            >
+                              View
+                            </Button>
+
+                            {/* Work Completed Action */}
+                            {['Machine Scheduled', 'Active Booking'].includes(req.status) && (
+                              <Button 
+                                size="sm" 
+                                onClick={() => {
+                                  setCompletionRequest(req);
+                                  setShowCompletionDialog(true);
+                                }}
+                                className="text-3xs h-7 font-bold bg-green-600 text-white hover:bg-green-700"
+                              >
+                                Work Completed
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </TabsContent>
+
+      {/* Confirmation Dialog for Machine Completion */}
+      {showCompletionDialog && completionRequest && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <Card className="w-full max-w-md bg-card shadow-2xl border border-border/80">
+            <CardHeader className="border-b pb-3 bg-slate-50/50">
+              <CardTitle className="text-sm font-extrabold text-foreground">Complete Machine Usage</CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 space-y-4 text-xs text-slate-700">
+              <p className="font-semibold text-slate-600">Are you sure you have finished using this machine?</p>
+              
+              <div className="bg-secondary/10 p-3 rounded-lg border space-y-2 font-medium">
+                <div>
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold">Machine:</span>
+                  <p className="font-bold text-foreground">{completionRequest.requestedMachines?.[0]?.machineName || "N/A"}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold">Project:</span>
+                  <p className="font-bold text-foreground">{completionRequest.projectName}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold">Booking Date:</span>
+                  <p className="font-bold text-foreground">
+                    {completionRequest.requestedMachines?.[0]?.usageDate ? new Date(completionRequest.requestedMachines[0].usageDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A'}
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-[10px] text-muted-foreground uppercase font-bold">Start Time:</span>
+                    <p className="font-bold text-foreground">{completionRequest.requestedMachines?.[0]?.startTime ? formatTime12Hour(completionRequest.requestedMachines[0].startTime) : 'N/A'}</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-muted-foreground uppercase font-bold">End Time:</span>
+                    <p className="font-bold text-foreground">{completionRequest.requestedMachines?.[0]?.endTime ? formatTime12Hour(completionRequest.requestedMachines[0].endTime) : 'N/A'}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2 pt-2">
+                <Checkbox 
+                  id="confirm-complete" 
+                  checked={confirmCheckbox} 
+                  onCheckedChange={(c) => setConfirmCheckbox(!!c)} 
+                />
+                <Label htmlFor="confirm-complete" className="font-bold text-xs leading-none cursor-pointer text-slate-700">
+                  I confirm that machine usage is complete.
+                </Label>
+              </div>
+
+              <div className="flex gap-2 pt-3 border-t justify-end">
+                <Button 
+                  variant="outline" 
+                  onClick={() => { setShowCompletionDialog(false); setConfirmCheckbox(false); setCompletionRequest(null); }}
+                  className="font-bold text-xs h-9 px-4"
+                  disabled={completing}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleCompleteWork}
+                  className="font-bold text-xs h-9 px-4 bg-green-600 text-white hover:bg-green-700"
+                  disabled={completing}
+                >
+                  {completing ? "Completing..." : "Confirm Completion"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* DIALOG: Coordinator Review Checks Checklist */}
       {selectedResRequest && showResReviewDialog && (
@@ -879,9 +1188,26 @@ const CoordinatorDashboard = () => {
 
             </div>
             <DialogFooter className="pt-4 border-t flex flex-wrap gap-2 justify-end">
-              <Button variant="outline" className="font-bold" onClick={() => handleResourceRequestDecision("request_changes")}>Request Changes</Button>
-              <Button variant="destructive" className="font-bold" onClick={() => handleResourceRequestDecision("reject")}>Reject request</Button>
-              <Button variant="default" className="font-bold bg-primary hover:bg-primary/95 text-white" onClick={() => handleResourceRequestDecision("approve")}>Approve & Forward to Head</Button>
+              <Button variant="outline" className="font-bold" disabled={submittingDecision} onClick={() => handleResourceRequestDecision("request_changes")}>Request Changes</Button>
+              <Button variant="destructive" className="font-bold" disabled={submittingDecision} onClick={() => handleResourceRequestDecision("reject")}>Reject request</Button>
+              <Button
+                variant="default"
+                className="font-bold bg-primary hover:bg-primary/95 text-white min-w-[190px] gap-2"
+                disabled={submittingDecision}
+                onClick={() => handleResourceRequestDecision("approve")}
+              >
+                {submittingDecision ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Forwarding to Head...
+                  </>
+                ) : (
+                  <>
+                    <SendHorizonal className="w-4 h-4" />
+                    Approve & Forward to Head
+                  </>
+                )}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

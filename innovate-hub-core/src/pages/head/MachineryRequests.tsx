@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Check, X, Eye, FileDown, Loader2, Calendar, Clock, AlertTriangle, ShieldCheck } from "lucide-react";
+import { Check, X, Eye, FileDown, Loader2, Calendar, Clock, AlertTriangle, ShieldCheck, CheckCircle2 } from "lucide-react";
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return "";
@@ -49,6 +49,7 @@ const MachineryRequests = () => {
   });
   const [decisionRemarks, setDecisionRemarks] = useState("");
   const [conditionsText, setConditionsText] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   // View details state
   const [viewDialog, setViewDialog] = useState<{ open: boolean; request: Request | null }>({ open: false, request: null });
@@ -71,11 +72,11 @@ const MachineryRequests = () => {
 
   const handleDecisionSubmit = async () => {
     if (!decisionDialog.id || !decisionDialog.action) return;
-    
+    setSubmitting(true);
     try {
       await api.patch(`/machinery/requests/${decisionDialog.id}/status`, {
         status: decisionDialog.action,
-        remarks: decisionRemarks,
+        remarks: decisionDialog.action === 'Approved' ? undefined : decisionRemarks,
         conditions: decisionDialog.action === 'Approved With Conditions' ? conditionsText : undefined
       });
       
@@ -90,6 +91,8 @@ const MachineryRequests = () => {
       }
     } catch {
       toast.error("Failed to update status");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -230,42 +233,104 @@ const MachineryRequests = () => {
         )}
       </div>
 
-      {/* Decision Remarks/Conditions Dialog */}
-      {decisionDialog.open && (
+      {/* ── APPROVE: compact one-click confirmation ─────────────────────── */}
+      {decisionDialog.open && decisionDialog.action === 'Approved' && (
+        <Dialog open={decisionDialog.open} onOpenChange={(val) => setDecisionDialog({ ...decisionDialog, open: val })}>
+          <DialogContent className="max-w-sm text-xs text-slate-700">
+            <DialogHeader>
+              <DialogTitle className="text-base font-extrabold flex items-center gap-2 text-green-700">
+                <CheckCircle2 className="w-5 h-5" /> Confirm Approval
+              </DialogTitle>
+            </DialogHeader>
+            <div className="py-3">
+              <p className="text-sm text-slate-600 font-medium">
+                Are you sure you want to <span className="font-bold text-green-700">approve</span> this request?
+              </p>
+              <p className="text-3xs text-muted-foreground mt-2">
+                The request will be marked as <b>Approved</b> and the student will be notified immediately.
+              </p>
+            </div>
+            <DialogFooter className="gap-2">
+              <Button
+                variant="outline"
+                disabled={submitting}
+                onClick={() => setDecisionDialog({ open: false, id: null, action: null })}
+              >
+                Cancel
+              </Button>
+              <Button
+                disabled={submitting}
+                onClick={handleDecisionSubmit}
+                className="bg-green-600 hover:bg-green-700 text-white font-bold gap-2 min-w-[140px]"
+              >
+                {submitting ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Approving...</> : <><Check className="w-3.5 h-3.5" /> Confirm Approval</>}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* ── REJECT / APPROVE WITH CONDITIONS: full remarks form ──────────── */}
+      {decisionDialog.open && decisionDialog.action !== 'Approved' && (
         <Dialog open={decisionDialog.open} onOpenChange={(val) => setDecisionDialog({ ...decisionDialog, open: val })}>
           <DialogContent className="max-w-md text-xs text-slate-700">
             <DialogHeader>
-              <DialogTitle className="text-base font-extrabold capitalize">Action: {decisionDialog.action}</DialogTitle>
+              <DialogTitle className={`text-base font-extrabold flex items-center gap-2 ${
+                decisionDialog.action === 'Rejected' ? 'text-red-700' : 'text-yellow-700'
+              }`}>
+                {decisionDialog.action === 'Rejected'
+                  ? <><X className="w-5 h-5" /> Reject Request</>
+                  : <><AlertTriangle className="w-5 h-5" /> Approve With Conditions</>
+                }
+              </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-2">
               {decisionDialog.action === 'Approved With Conditions' && (
                 <div className="space-y-1">
-                  <Label>Approval Conditions / Constraints</Label>
+                  <Label className="font-bold">Approval Conditions / Constraints <span className="text-red-500">*</span></Label>
                   <Input 
                     value={conditionsText} 
                     onChange={(e) => setConditionsText(e.target.value)} 
                     placeholder="Must be returned by 5 PM, Wear safety gear..."
-                    required
                   />
                 </div>
               )}
               <div className="space-y-1">
-                <Label>Decision Remarks</Label>
+                <Label className="font-bold">
+                  {decisionDialog.action === 'Rejected' ? 'Rejection Reason' : 'Remarks / Notes'}
+                  {decisionDialog.action === 'Rejected' && <span className="text-red-500 ml-1">*</span>}
+                </Label>
                 <Textarea 
-                  placeholder="Explain reasoning, notes, or remarks..." 
+                  placeholder={decisionDialog.action === 'Rejected' ? 'Explain why this request is being rejected...' : 'Optional notes or remarks...'}
                   value={decisionRemarks} 
                   onChange={(e) => setDecisionRemarks(e.target.value)} 
                   rows={3}
                 />
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDecisionDialog({ open: false, id: null, action: null })}>Cancel</Button>
-              <Button 
-                onClick={handleDecisionSubmit}
-                className={decisionDialog.action === 'Rejected' ? 'bg-red-600 hover:bg-red-700 text-white font-bold' : 'bg-primary text-white font-bold'}
+            <DialogFooter className="gap-2">
+              <Button
+                variant="outline"
+                disabled={submitting}
+                onClick={() => setDecisionDialog({ open: false, id: null, action: null })}
               >
-                Confirm Decision
+                Cancel
+              </Button>
+              <Button 
+                disabled={submitting}
+                onClick={handleDecisionSubmit}
+                className={`font-bold gap-2 min-w-[150px] ${
+                  decisionDialog.action === 'Rejected'
+                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                    : 'bg-yellow-500 hover:bg-yellow-600 text-white'
+                }`}
+              >
+                {submitting
+                  ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Processing...</>
+                  : decisionDialog.action === 'Rejected'
+                    ? <><X className="w-3.5 h-3.5" /> Confirm Rejection</>
+                    : <><Check className="w-3.5 h-3.5" /> Confirm Approval</>
+                }
               </Button>
             </DialogFooter>
           </DialogContent>

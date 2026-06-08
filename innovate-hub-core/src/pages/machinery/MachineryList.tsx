@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/axios";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Calendar as CalendarIcon, Clock, CheckCircle, XCircle, AlertTriangle, 
   FileText, Search, ArrowRight, PlusCircle, History, BookOpen, Layers,
@@ -98,14 +99,162 @@ interface ResourceRequest {
   teamName?: string;
   projectObjectives?: string;
   expectedOutcome?: string;
+  completedAt?: string;
+  completedBy?: string;
+  isWorkCompleted?: boolean;
+  completionRemarks?: string;
+  actualUsageHours?: number;
+  machineReleased?: boolean;
+  extensionEndTime?: string;
+  extensionReason?: string;
+  extensionStatus?: string;
 }
 
+// Helpers for 12-hour time dropdowns
+const parseTime24To12 = (time24: string) => {
+  if (!time24) return { hour12: '12', minute: '00', period: 'AM' };
+  const [hStr, mStr] = time24.split(':');
+  const h = parseInt(hStr, 10);
+  const period = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return {
+    hour12: String(h12).padStart(2, '0'),
+    minute: mStr || '00',
+    period
+  };
+};
+
+const formatTime12To24 = (hour12: string, minute: string, period: string) => {
+  let h = parseInt(hour12, 10);
+  if (period === 'PM' && h !== 12) h += 12;
+  if (period === 'AM' && h === 12) h = 0;
+  const hStr = String(h).padStart(2, '0');
+  const mStr = minute.padStart(2, '0');
+  return `${hStr}:${mStr}`;
+};
+
+const TimeSelectGroup = ({ 
+  value, 
+  onChange 
+}: { 
+  value: string; 
+  onChange: (val: string) => void; 
+}) => {
+  const { hour12, minute, period } = parseTime24To12(value);
+
+  const handleValChange = (field: 'hour12' | 'minute' | 'period', newVal: string) => {
+    let h = hour12;
+    let m = minute;
+    let p = period;
+    if (field === 'hour12') h = newVal;
+    if (field === 'minute') m = newVal;
+    if (field === 'period') p = newVal;
+    onChange(formatTime12To24(h, m, p));
+  };
+
+  return (
+    <div className="flex items-center gap-1 mt-1">
+      <select
+        value={hour12}
+        onChange={(e) => handleValChange('hour12', e.target.value)}
+        className="h-9 flex-1 rounded-md border border-input bg-background px-2 py-1 text-xs shadow-xs focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+      >
+        {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(h => (
+          <option key={h} value={h}>{h}</option>
+        ))}
+      </select>
+      <span className="text-muted-foreground">:</span>
+      <select
+        value={minute}
+        onChange={(e) => handleValChange('minute', e.target.value)}
+        className="h-9 flex-1 rounded-md border border-input bg-background px-2 py-1 text-xs shadow-xs focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+      >
+        {Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')).map(m => (
+          <option key={m} value={m}>{m}</option>
+        ))}
+      </select>
+      <select
+        value={period}
+        onChange={(e) => handleValChange('period', e.target.value)}
+        className="h-9 w-[60px] rounded-md border border-input bg-background px-2 py-1 text-xs shadow-xs focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring cursor-pointer font-bold"
+      >
+        <option value="AM">AM</option>
+        <option value="PM">PM</option>
+      </select>
+    </div>
+  );
+};
+
 const MachineryList = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const extendId = searchParams.get("extend");
+  const completeId = searchParams.get("complete");
+
   const [activeTab, setActiveTab] = useState("dashboard");
   const [machines, setMachines] = useState<Machine[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [requests, setRequests] = useState<ResourceRequest[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Machine completion states
+  const [completionRequest, setCompletionRequest] = useState<ResourceRequest | null>(null);
+  const [showCompletionDialog, setShowCompletionDialog] = useState(false);
+  const [confirmCheckbox, setConfirmCheckbox] = useState(false);
+  const [completing, setCompleting] = useState(false);
+
+  const handleCompleteWork = async () => {
+    if (!completionRequest) return;
+    if (!confirmCheckbox) {
+      toast.error("Please confirm that machine usage is complete.");
+      return;
+    }
+
+    setCompleting(true);
+    try {
+      await api.post(`/machinery/requests/${completionRequest._id}/complete-work`);
+      toast.success("Work completion recorded successfully!");
+      setShowCompletionDialog(false);
+      setConfirmCheckbox(false);
+      setCompletionRequest(null);
+      fetchInitialData();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to complete work.");
+    } finally {
+      setCompleting(false);
+    }
+  };
+
+  // Machine extension states
+  const [extensionRequest, setExtensionRequest] = useState<ResourceRequest | null>(null);
+  const [showExtensionDialog, setShowExtensionDialog] = useState(false);
+  const [extensionEndTime, setExtensionEndTime] = useState("14:00");
+  const [extensionReason, setExtensionReason] = useState("");
+  const [extending, setExtending] = useState(false);
+
+  const handleRequestExtension = async () => {
+    if (!extensionRequest) return;
+    if (!extensionEndTime || !extensionReason) {
+      toast.error("Please enter end time and extension reason.");
+      return;
+    }
+
+    setExtending(true);
+    try {
+      await api.post(`/machinery/requests/${extensionRequest._id}/request-extension`, {
+        extensionEndTime,
+        reason: extensionReason
+      });
+      toast.success("Extension request submitted successfully!");
+      setShowExtensionDialog(false);
+      setExtensionRequest(null);
+      setExtensionReason("");
+      fetchInitialData();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to submit extension request.");
+    } finally {
+      setExtending(false);
+    }
+  };
 
   // Search & Filter state for History Tab
   const [searchTerm, setSearchTerm] = useState("");
@@ -122,6 +271,31 @@ const MachineryList = () => {
   useEffect(() => {
     fetchInitialData();
   }, []);
+
+  useEffect(() => {
+    if (extendId && requests.length > 0) {
+      const target = requests.find(r => r._id === extendId);
+      if (target && ['Machine Scheduled', 'Active Booking'].includes(target.status)) {
+        setExtensionRequest(target);
+        setExtensionEndTime(target.requestedMachines?.[0]?.endTime || "14:00");
+        setShowExtensionDialog(true);
+        searchParams.delete("extend");
+        setSearchParams(searchParams);
+      }
+    }
+  }, [extendId, requests]);
+
+  useEffect(() => {
+    if (completeId && requests.length > 0) {
+      const target = requests.find(r => r._id === completeId);
+      if (target && ['Machine Scheduled', 'Active Booking'].includes(target.status)) {
+        setCompletionRequest(target);
+        setShowCompletionDialog(true);
+        searchParams.delete("complete");
+        setSearchParams(searchParams);
+      }
+    }
+  }, [completeId, requests]);
 
   const fetchInitialData = async () => {
     setLoading(true);
@@ -196,11 +370,11 @@ const MachineryList = () => {
   const stats = {
     total: requests.length,
     pending: requests.filter(r => ['Submitted', 'Coordinator Review', 'Head Review', 'Student Resubmitted'].includes(r.status)).length,
-    approved: requests.filter(r => ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled'].includes(r.status)).length,
+    approved: requests.filter(r => ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Active Booking'].includes(r.status)).length,
     rejected: requests.filter(r => ['Rejected', 'Coordinator Rejected'].includes(r.status)).length,
     issued: requests.filter(r => r.status === 'Material Allocated' || r.materialAllocations?.some(a => a.quantityIssued > 0)).length,
-    bookings: requests.filter(r => r.status === 'Machine Scheduled' || r.requestedMachines?.length > 0).length,
-    completed: requests.filter(r => r.status === 'Completed').length,
+    bookings: requests.filter(r => ['Machine Scheduled', 'Active Booking'].includes(r.status) || r.requestedMachines?.length > 0).length,
+    completed: requests.filter(r => ['Completed', 'Work Completed', 'Closed'].includes(r.status)).length,
   };
 
   // Filters application
@@ -223,7 +397,7 @@ const MachineryList = () => {
       if (statusFilter === "pending") {
         matchesStatus = ['Submitted', 'Coordinator Review', 'Head Review', 'Student Resubmitted'].includes(r.status);
       } else if (statusFilter === "approved") {
-        matchesStatus = ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled'].includes(r.status);
+        matchesStatus = ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Active Booking'].includes(r.status);
       } else if (statusFilter === "rejected") {
         matchesStatus = ['Rejected', 'Coordinator Rejected'].includes(r.status);
       } else {
@@ -255,6 +429,7 @@ const MachineryList = () => {
       case 'Approved':
       case 'Machine Scheduled':
       case 'Material Allocated':
+      case 'Active Booking':
         return 'bg-green-100 text-green-800 border-green-200';
       case 'Approved With Conditions':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
@@ -267,7 +442,10 @@ const MachineryList = () => {
       case 'Changes Requested':
         return 'bg-amber-100 text-amber-800 border-amber-200';
       case 'Completed':
+      case 'Closed':
         return 'bg-slate-100 text-slate-800 border-slate-200';
+      case 'Work Completed':
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
       case 'Rejected':
       case 'Coordinator Rejected':
         return 'bg-red-100 text-red-800 border-red-200';
@@ -278,13 +456,13 @@ const MachineryList = () => {
 
   const renderTimeline = (status: string) => {
     const steps = [
-      { name: "Submitted", active: ['Submitted', 'Coordinator Review', 'Changes Requested', 'Student Resubmitted', 'Coordinator Approved', 'Head Review', 'Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Completed'].includes(status) },
-      { name: "Coord Review", active: ['Coordinator Review', 'Student Resubmitted', 'Coordinator Approved', 'Head Review', 'Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Completed'].includes(status) },
-      { name: "Coord Approved", active: ['Coordinator Approved', 'Head Review', 'Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Completed'].includes(status) },
-      { name: "Head Review", active: ['Head Review', 'Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Completed'].includes(status) },
-      { name: "Approved", active: ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Completed'].includes(status) },
-      { name: "Allocated", active: ['Material Allocated', 'Machine Scheduled', 'Completed'].includes(status) },
-      { name: "Completed", active: status === 'Completed' }
+      { name: "Submitted", active: ['Submitted', 'Coordinator Review', 'Changes Requested', 'Student Resubmitted', 'Coordinator Approved', 'Head Review', 'Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Active Booking', 'Work Completed', 'Closed', 'Completed'].includes(status) },
+      { name: "Coord Review", active: ['Coordinator Review', 'Student Resubmitted', 'Coordinator Approved', 'Head Review', 'Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Active Booking', 'Work Completed', 'Closed', 'Completed'].includes(status) },
+      { name: "Coord Approved", active: ['Coordinator Approved', 'Head Review', 'Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Active Booking', 'Work Completed', 'Closed', 'Completed'].includes(status) },
+      { name: "Head Review", active: ['Head Review', 'Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Active Booking', 'Work Completed', 'Closed', 'Completed'].includes(status) },
+      { name: "Approved", active: ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Active Booking', 'Work Completed', 'Closed', 'Completed'].includes(status) },
+      { name: "Allocated", active: ['Material Allocated', 'Machine Scheduled', 'Active Booking', 'Work Completed', 'Closed', 'Completed'].includes(status) },
+      { name: "Completed", active: ['Completed', 'Work Completed', 'Closed'].includes(status) }
     ];
 
     if (status === 'Rejected' || status === 'Coordinator Rejected') {
@@ -457,9 +635,45 @@ const MachineryList = () => {
                       </div>
                       
                       <div className="flex items-center gap-2 self-end md:self-auto">
-                        <Badge variant="outline" className={`font-bold uppercase tracking-wider text-[10px] ${getStatusColor(req.status)}`}>
-                          {req.status}
-                        </Badge>
+                        {['Machine Scheduled', 'Active Booking'].includes(req.status) && (
+                          <div className="flex gap-1.5 items-center">
+                            <Button 
+                              className="bg-green-600 hover:bg-green-700 text-white font-bold h-8 text-[10px] gap-1 px-2.5 py-1"
+                              onClick={() => { setCompletionRequest(req); setShowCompletionDialog(true); }}
+                            >
+                              <Check className="w-3.5 h-3.5" /> Work Completed
+                            </Button>
+                            {req.extensionStatus === 'Pending' ? (
+                              <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200 uppercase font-bold text-[9px] px-2 py-1.5 h-8 flex items-center">
+                                Ext Pending
+                              </Badge>
+                            ) : (
+                              <Button 
+                                className="bg-amber-600 hover:bg-amber-700 text-white font-bold h-8 text-[10px] px-2.5 py-1"
+                                onClick={() => { setExtensionRequest(req); setExtensionEndTime(req.requestedMachines?.[0]?.endTime || "14:00"); setShowExtensionDialog(true); }}
+                              >
+                                Extend
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                        {req.status === 'Work Completed' && (
+                          <div className="flex flex-col items-end gap-0.5">
+                            <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 uppercase font-bold text-[9px] px-2 py-0.5 rounded">
+                              ✓ Work Completed
+                            </Badge>
+                            {req.completedAt && (
+                              <span className="text-[9px] text-muted-foreground font-semibold">
+                                Completed: {new Date(req.completedAt).toLocaleString()}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {req.status !== 'Work Completed' && !['Machine Scheduled', 'Active Booking'].includes(req.status) && (
+                          <Badge variant="outline" className={`font-bold uppercase tracking-wider text-[10px] ${getStatusColor(req.status)}`}>
+                            {req.status}
+                          </Badge>
+                        )}
                         <Button 
                           variant="ghost" 
                           size="icon" 
@@ -684,11 +898,50 @@ const MachineryList = () => {
                             {new Date(req.applicationDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </td>
                           <td className="px-4 py-3">
-                            <Badge variant="outline" className={`font-bold text-[9px] px-2 py-0.5 rounded uppercase ${getStatusColor(req.status)}`}>
-                              {req.status}
-                            </Badge>
+                            {req.status === 'Work Completed' && req.completedAt ? (
+                              <div className="flex flex-col gap-0.5">
+                                <Badge variant="outline" className={`font-bold text-[9px] px-2 py-0.5 rounded uppercase ${getStatusColor(req.status)}`}>
+                                  {req.status}
+                                </Badge>
+                                <span className="text-[9px] text-muted-foreground font-semibold">
+                                  {new Date(req.completedAt).toLocaleString()}
+                                </span>
+                              </div>
+                            ) : (
+                              <Badge variant="outline" className={`font-bold text-[9px] px-2 py-0.5 rounded uppercase ${getStatusColor(req.status)}`}>
+                                {req.status}
+                              </Badge>
+                            )}
                           </td>
                           <td className="px-4 py-3 text-right flex items-center justify-end gap-1.5">
+                            {/* Work Completed Action inside Table */}
+                            {['Machine Scheduled', 'Active Booking'].includes(req.status) && (
+                              <div className="flex gap-1.5 items-center">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => { setCompletionRequest(req); setShowCompletionDialog(true); }}
+                                  className="h-8 text-[10px] font-bold border-green-500 text-green-700 hover:bg-green-50 px-2.5"
+                                >
+                                  ✓ Work Completed
+                                </Button>
+                                {req.extensionStatus === 'Pending' ? (
+                                  <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200 uppercase font-bold text-[9px] px-2 py-1 h-8 flex items-center">
+                                    Ext Pending
+                                  </Badge>
+                                ) : (
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => { setExtensionRequest(req); setExtensionEndTime(req.requestedMachines?.[0]?.endTime || "14:00"); setShowExtensionDialog(true); }}
+                                    className="h-8 text-[10px] font-bold border-amber-500 text-amber-700 hover:bg-amber-50 px-2.5"
+                                  >
+                                    Extend
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+
                             {/* View details */}
                             <Button 
                               variant="ghost" 
@@ -942,6 +1195,142 @@ const MachineryList = () => {
                 </Button>
               </div>
 
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Confirmation Dialog for Machine Completion */}
+      {showCompletionDialog && completionRequest && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <Card className="w-full max-w-md bg-card shadow-2xl border border-border/80">
+            <CardHeader className="border-b pb-3 bg-slate-50/50">
+              <CardTitle className="text-sm font-extrabold text-foreground">Complete Machine Usage</CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 space-y-4 text-xs text-slate-700">
+              <p className="font-semibold text-slate-600">Are you sure you have finished using this machine?</p>
+              
+              <div className="bg-secondary/10 p-3 rounded-lg border space-y-2 font-medium">
+                <div>
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold">Machine:</span>
+                  <p className="font-bold text-foreground">{completionRequest.requestedMachines?.[0]?.machineName || "N/A"}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold">Project:</span>
+                  <p className="font-bold text-foreground">{completionRequest.projectName}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold">Booking Date:</span>
+                  <p className="font-bold text-foreground">
+                    {completionRequest.requestedMachines?.[0]?.usageDate ? new Date(completionRequest.requestedMachines[0].usageDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A'}
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-[10px] text-muted-foreground uppercase font-bold">Start Time:</span>
+                    <p className="font-bold text-foreground">{completionRequest.requestedMachines?.[0]?.startTime ? formatTime12Hour(completionRequest.requestedMachines[0].startTime) : 'N/A'}</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-muted-foreground uppercase font-bold">End Time:</span>
+                    <p className="font-bold text-foreground">{completionRequest.requestedMachines?.[0]?.endTime ? formatTime12Hour(completionRequest.requestedMachines[0].endTime) : 'N/A'}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2 pt-2">
+                <Checkbox 
+                  id="confirm-complete" 
+                  checked={confirmCheckbox} 
+                  onCheckedChange={(c) => setConfirmCheckbox(!!c)} 
+                />
+                <Label htmlFor="confirm-complete" className="font-bold text-xs leading-none cursor-pointer text-slate-700">
+                  I confirm that machine usage is complete.
+                </Label>
+              </div>
+
+              <div className="flex gap-2 pt-3 border-t justify-end">
+                <Button 
+                  variant="outline" 
+                  onClick={() => { setShowCompletionDialog(false); setConfirmCheckbox(false); setCompletionRequest(null); }}
+                  className="font-bold text-xs h-9 px-4"
+                  disabled={completing}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleCompleteWork}
+                  className="font-bold text-xs h-9 px-4 bg-green-600 text-white hover:bg-green-700"
+                  disabled={completing}
+                >
+                  {completing ? "Completing..." : "Confirm Completion"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Request Extension Dialog */}
+      {showExtensionDialog && extensionRequest && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <Card className="w-full max-w-md bg-card shadow-2xl border border-border/80 text-xs">
+            <CardHeader className="border-b pb-3 bg-slate-50/50">
+              <CardTitle className="text-sm font-extrabold text-foreground">Request Booking Extension</CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 space-y-4 text-slate-700">
+              <div className="bg-secondary/10 p-3 rounded-lg border space-y-2 font-medium">
+                <div>
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold">Machine:</span>
+                  <p className="font-bold text-foreground">{extensionRequest.requestedMachines?.[0]?.machineName || "N/A"}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold">Project:</span>
+                  <p className="font-bold text-foreground">{extensionRequest.projectName}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold">Current Booking:</span>
+                  <p className="font-bold text-foreground">
+                    {extensionRequest.requestedMachines?.[0]?.startTime ? formatTime12Hour(extensionRequest.requestedMachines[0].startTime) : 'N/A'} - {extensionRequest.requestedMachines?.[0]?.endTime ? formatTime12Hour(extensionRequest.requestedMachines[0].endTime) : 'N/A'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="font-bold text-xs">New End Time</Label>
+                <TimeSelectGroup 
+                  value={extensionEndTime} 
+                  onChange={setExtensionEndTime} 
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="font-bold text-xs">Reason for Extension</Label>
+                <textarea 
+                  value={extensionReason}
+                  onChange={(e) => setExtensionReason(e.target.value)}
+                  className="w-full h-20 rounded-md border border-input bg-background px-3 py-2 text-xs focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring font-medium"
+                  placeholder="Explain why you need extra time..."
+                  required
+                />
+              </div>
+
+              <div className="flex gap-2 pt-3 border-t justify-end">
+                <Button 
+                  variant="outline" 
+                  onClick={() => { setShowExtensionDialog(false); setExtensionRequest(null); setExtensionReason(""); }}
+                  className="font-bold text-xs h-9 px-4"
+                  disabled={extending}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleRequestExtension}
+                  className="font-bold text-xs h-9 px-4 bg-primary text-primary-foreground hover:bg-primary/90"
+                  disabled={extending}
+                >
+                  {extending ? "Submitting..." : "Submit Extension"}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>

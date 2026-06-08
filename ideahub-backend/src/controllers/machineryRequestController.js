@@ -85,7 +85,7 @@ export const checkMachineAvailability = async (req, res) => {
     // Get all approved bookings for this machine on this day
     const query = {
       'requestedMachines.machineId': machineId,
-      status: { $in: ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled'] },
+      status: { $in: ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Active Booking'] },
       'requestedMachines.usageDate': { $gte: startOfDay, $lte: endOfDay }
     };
     if (excludeRequestId) {
@@ -184,6 +184,16 @@ export const createRequest = async (req, res) => {
 
     // Check material stocks first if submitting
     if (status !== 'Draft') {
+      const activeRequest = await MachineryRequest.findOne({
+        studentId,
+        status: { $in: ['Submitted', 'Coordinator Review', 'Coordinator Approved', 'Head Review', 'Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Active Booking'] }
+      });
+      if (activeRequest) {
+        return res.status(400).json({
+          message: `Active Request Block: You already have an active request (${activeRequest.requestId}) in progress. Please complete your current booking before submitting a new request.`
+        });
+      }
+
       for (const mat of (requestedMaterials || [])) {
         if (mat.materialId) {
           const material = await Material.findById(mat.materialId);
@@ -209,7 +219,7 @@ export const createRequest = async (req, res) => {
 
             const bookings = await MachineryRequest.find({
               'requestedMachines.machineId': mach.machineId,
-              status: { $in: ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled'] },
+              status: { $in: ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Active Booking'] },
               'requestedMachines.usageDate': { $gte: startD, $lte: endD }
             });
 
@@ -558,7 +568,7 @@ export const updateRequestStatus = async (req, res) => {
       'Draft', 'Submitted', 'Coordinator Review', 'Coordinator Approved', 
       'Coordinator Rejected', 'Changes Requested', 'Student Resubmitted', 
       'Head Review', 'Approved', 'Rejected', 'Approved With Conditions', 
-      'Material Allocated', 'Machine Scheduled', 'Completed', 'Cancelled'
+      'Material Allocated', 'Machine Scheduled', 'Active Booking', 'Work Completed', 'Closed', 'Completed', 'Cancelled'
     ];
     if (status && !allowedStatuses.includes(status)) {
       return res.status(400).json({ message: 'Invalid status value' });
@@ -606,8 +616,8 @@ export const updateRequestStatus = async (req, res) => {
 
     // Handle Material Reservation/Stock Updates
     // Transitioning INTO Approved or Allocated state: reserve/allocate material stock
-    const isApprovedState = ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled'].includes(status);
-    const wasApprovedState = ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled'].includes(oldStatus);
+    const isApprovedState = ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Active Booking', 'Work Completed', 'Closed'].includes(status);
+    const wasApprovedState = ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Active Booking', 'Work Completed', 'Closed'].includes(oldStatus);
 
     if (isApprovedState && !wasApprovedState) {
       // Deduct stock levels by adding to allocatedQuantity
@@ -634,7 +644,7 @@ export const updateRequestStatus = async (req, res) => {
     }
 
     // Transitioning OUT OF Approved/Allocated to Cancelled/Rejected/Completed: release allocation
-    const isReleasedState = ['Completed', 'Cancelled', 'Rejected', 'Coordinator Rejected'].includes(status);
+    const isReleasedState = ['Completed', 'Cancelled', 'Rejected', 'Coordinator Rejected', 'Work Completed', 'Closed'].includes(status);
     if (isReleasedState && wasApprovedState) {
       for (const mat of request.requestedMaterials) {
         if (mat.materialId) {
@@ -643,7 +653,7 @@ export const updateRequestStatus = async (req, res) => {
             materialItem.allocatedQuantity = Math.max(0, materialItem.allocatedQuantity - mat.quantityRequired);
             
             // If completed, deduct the actually issued/consumed materials permanently from stock
-            if (status === 'Completed') {
+            if (['Completed', 'Work Completed', 'Closed'].includes(status)) {
               const allocationRecord = request.materialAllocations.find(a => a.materialId.toString() === mat.materialId.toString());
               const consumedQty = allocationRecord ? (allocationRecord.quantityIssued - allocationRecord.returnedQuantity) : mat.quantityRequired;
               materialItem.currentStock = Math.max(0, materialItem.currentStock - consumedQty);
@@ -952,6 +962,224 @@ export const verifyPublicRequest = async (req, res) => {
     res.status(200).json(request);
   } catch (error) {
     res.status(500).json({ message: 'Error verifying request', error: error.message });
+  }
+};
+
+// Student / Staff Action: complete machine work
+export const completeWorkRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { remarks } = req.body || {};
+    const request = await MachineryRequest.findById(id);
+    if (!request) return res.status(404).json({ message: 'Request not found' });
+
+    // Check if user is the student who made the request or coordinator/head/admin
+    const isOwner = request.studentId.toString() === req.user._id.toString();
+    const isStaff = ['coordinator', 'head', 'admin'].includes(req.user.role);
+    if (!isOwner && !isStaff) {
+      return res.status(403).json({ message: 'Unauthorized action' });
+    }
+
+    // Allowed statuses for completing work
+    if (!['Machine Scheduled', 'Active Booking'].includes(request.status)) {
+      return res.status(400).json({ message: 'Work completion is only allowed for scheduled or active bookings.' });
+    }
+
+    request.status = 'Work Completed';
+    request.isWorkCompleted = true;
+    request.completedAt = new Date();
+    request.completedBy = req.user._id;
+    request.machineReleased = true;
+    request.completionRemarks = remarks || 'Student marked machine work as completed.';
+
+    // Calculate actual usage hours
+    let actualHours = 0;
+    if (request.actualEntryTime) {
+      const diffMs = new Date() - new Date(request.actualEntryTime);
+      actualHours = Number((diffMs / (1000 * 60 * 60)).toFixed(2));
+    } else {
+      // Fallback to scheduled startTime
+      const primaryMachine = request.requestedMachines?.[0];
+      if (primaryMachine && primaryMachine.usageDate && primaryMachine.startTime) {
+        const usageDateStr = new Date(primaryMachine.usageDate).toISOString().split('T')[0];
+        const scheduledStart = new Date(`${usageDateStr}T${primaryMachine.startTime}:00`);
+        if (!isNaN(scheduledStart)) {
+          const diffMs = new Date() - scheduledStart;
+          actualHours = Math.max(0, Number((diffMs / (1000 * 60 * 60)).toFixed(2)));
+        }
+      }
+    }
+    if (isNaN(actualHours) || actualHours < 0) {
+      actualHours = 0;
+    }
+    request.actualUsageHours = actualHours;
+
+    // Audit log entry
+    request.approvalHistory.push({
+      date: new Date(),
+      role: req.user.role.toUpperCase(),
+      action: 'Work Completed',
+      remarks: request.completionRemarks,
+      byName: req.user.name
+    });
+
+    // Handle early release: shorten booked time if finished early
+    const primaryMachine = request.requestedMachines?.[0];
+    if (primaryMachine && primaryMachine.usageDate) {
+      const now = new Date();
+      const usageDateStr = new Date(primaryMachine.usageDate).toISOString().split('T')[0];
+      const scheduledEnd = new Date(`${usageDateStr}T${primaryMachine.endTime}:00`);
+      if (now < scheduledEnd) {
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        const endTimeStr = minutesToTimeStr(currentMinutes);
+        primaryMachine.endTime = endTimeStr;
+      }
+    }
+
+    const saved = await request.save();
+
+    // Send notifications
+    await createInAppNotification(
+      request.studentId,
+      'Machine Work Completed',
+      `Machine usage completed and released for Request ${request.requestId}.`
+    );
+    
+    const coordinators = await User.find({ role: 'coordinator' });
+    for (const coord of coordinators) {
+      await createInAppNotification(
+        coord._id,
+        'Machine Work Completed',
+        `Student ${req.user.name} completed work for Request ${request.requestId}.`
+      );
+    }
+
+    res.status(200).json(saved);
+  } catch (error) {
+    console.error('Error completing work request:', error);
+    res.status(500).json({ message: 'Error completing work request', error: error.message });
+  }
+};
+
+// Student action: request booking extension
+export const requestExtension = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { extensionEndTime, reason } = req.body;
+
+    if (!extensionEndTime || !reason) {
+      return res.status(400).json({ message: 'Extension end time and reason are required' });
+    }
+
+    const request = await MachineryRequest.findById(id);
+    if (!request) return res.status(404).json({ message: 'Request not found' });
+
+    // Ensure user is owner or staff
+    const isOwner = request.studentId.toString() === req.user._id.toString();
+    const isStaff = ['coordinator', 'head', 'admin'].includes(req.user.role);
+    if (!isOwner && !isStaff) {
+      return res.status(403).json({ message: 'Unauthorized action' });
+    }
+
+    // Allowed statuses for extension
+    if (!['Machine Scheduled', 'Active Booking'].includes(request.status)) {
+      return res.status(400).json({ message: 'Extensions can only be requested for scheduled or active bookings.' });
+    }
+
+    request.extensionEndTime = extensionEndTime;
+    request.extensionReason = reason;
+    request.extensionStatus = 'Pending';
+
+    request.approvalHistory.push({
+      date: new Date(),
+      role: req.user.role.toUpperCase(),
+      action: 'Extension Requested',
+      remarks: `Requested extension to ${extensionEndTime}. Reason: ${reason}`,
+      byName: req.user.name
+    });
+
+    const saved = await request.save();
+
+    // Notify coordinators
+    const coordinators = await User.find({ role: 'coordinator' });
+    for (const coord of coordinators) {
+      await createInAppNotification(
+        coord._id,
+        'Extension Requested',
+        `Request ${request.requestId} has requested an extension to ${extensionEndTime}.`
+      );
+    }
+
+    res.status(200).json(saved);
+  } catch (error) {
+    console.error('Error requesting extension:', error);
+    res.status(500).json({ message: 'Error requesting extension', error: error.message });
+  }
+};
+
+// Coordinator action: Approve/Reject booking extension
+export const handleExtension = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, remarks } = req.body; // status: 'Approved' or 'Rejected'
+
+    if (!['Approved', 'Rejected'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid extension status decision' });
+    }
+
+    const request = await MachineryRequest.findById(id);
+    if (!request) return res.status(404).json({ message: 'Request not found' });
+
+    // Validate Coordinator/Admin role
+    if (!['coordinator', 'head', 'admin'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Permission denied' });
+    }
+
+    if (request.extensionStatus !== 'Pending') {
+      return res.status(400).json({ message: 'No pending extension request found' });
+    }
+
+    request.extensionStatus = status;
+
+    if (status === 'Approved') {
+      // Update primary machine slot's end time
+      const primaryMachine = request.requestedMachines?.[0];
+      if (primaryMachine) {
+        primaryMachine.endTime = request.extensionEndTime;
+        // Recalculate usageHours
+        if (primaryMachine.startTime) {
+          const diffMins = parseTimeToMinutes(primaryMachine.endTime) - parseTimeToMinutes(primaryMachine.startTime);
+          primaryMachine.usageHours = Math.max(0, Number((diffMins / 60).toFixed(2)));
+        }
+      }
+      // Reset reminder flag and extension status details so they can request another later if needed
+      request.completionReminderSent = false;
+      request.extensionStatus = null;
+      request.extensionEndTime = null;
+      request.extensionReason = null;
+    }
+
+    request.approvalHistory.push({
+      date: new Date(),
+      role: req.user.role.toUpperCase(),
+      action: `Extension ${status}`,
+      remarks: remarks || `Extension request was ${status.toLowerCase()} by coordinator.`,
+      byName: req.user.name
+    });
+
+    const saved = await request.save();
+
+    // Notify student
+    await createInAppNotification(
+      request.studentId,
+      `Extension ${status}`,
+      `Your extension request for ${request.requestId} was ${status.toLowerCase()}.`
+    );
+
+    res.status(200).json(saved);
+  } catch (error) {
+    console.error('Error handling extension:', error);
+    res.status(500).json({ message: 'Error handling extension', error: error.message });
   }
 };
 

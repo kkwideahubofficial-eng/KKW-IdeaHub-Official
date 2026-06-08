@@ -28,17 +28,18 @@ interface Booking {
 
 interface MachineryRequest {
   _id: string;
-  machineryId: {
-    _id: string;
-    name: string;
-    imageUrl?: string;
-  };
-  usageDate: string;
-  startTime: string;
-  endTime: string;
-  purpose: string;
-  status: 'pending' | 'approved' | 'rejected';
+  projectName: string;
+  projectDescription: string;
+  status: 'pending' | 'approved' | 'rejected' | string;
   rejectionReason?: string;
+  requestedMachines?: {
+    machineId: any;
+    machineName: string;
+    usageDate: string;
+    startTime: string;
+    endTime: string;
+    purposeOfUsage: string;
+  }[];
 }
 
 const MyBookings = () => {
@@ -104,7 +105,7 @@ const MyBookings = () => {
 
   const getNormalizedDate = (item: any): Date => {
     if ('slotDate' in item) return new Date(item.slotDate);
-    if ('usageDate' in item) return new Date(item.usageDate);
+    if ('requestedMachines' in item && item.requestedMachines?.length > 0) return new Date(item.requestedMachines[0].usageDate);
     return new Date();
   };
 
@@ -206,7 +207,13 @@ const MyBookings = () => {
                      ))
                 ) : (
                     filterData(machineryRequests, key).length === 0 ? <p className="text-muted-foreground p-4">No {key === 'all' ? '' : key} requests found.</p> :
-                    filterData(machineryRequests, key).map((req) => (
+                    filterData(machineryRequests, key).map((req) => {
+                        const machine = req.requestedMachines?.[0];
+                        const usageDate = machine?.usageDate ? new Date(machine.usageDate) : new Date();
+                        const machineName = machine?.machineName || req.projectName || 'Machinery Request';
+                        const purpose = machine?.purposeOfUsage || req.projectDescription || '';
+
+                        return (
                         <Card key={req._id} className="overflow-hidden border-none shadow-sm ring-1 ring-border/50 h-full">
                             <CardContent className="p-6">
                                 <div className="flex justify-between items-start mb-4">
@@ -214,29 +221,29 @@ const MyBookings = () => {
                                         {req.status}
                                     </Badge>
                                     <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                        <Loader2 className="w-3 h-3" /> {format(new Date(req.usageDate), 'dd/MM/yyyy')}
+                                        <Loader2 className="w-3 h-3" /> {format(usageDate, 'dd/MM/yyyy')}
                                     </span>
                                 </div>
 
                                 <div className="mb-6">
-                                    <h3 className="text-xl font-bold tracking-tight text-foreground">{req.machineryId?.name || 'Unknown Machine'}</h3>
+                                    <h3 className="text-xl font-bold tracking-tight text-foreground">{machineName}</h3>
                                     <p className="text-sm text-muted-foreground">Machinery Request</p>
                                 </div>
 
                                 <div className="bg-muted/30 rounded-lg p-4 grid grid-cols-2 gap-4 mb-6">
                                     <div>
                                         <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Date</p>
-                                        <p className="text-sm font-medium">{format(new Date(req.usageDate), 'dd/MM/yyyy')}</p>
+                                        <p className="text-sm font-medium">{format(usageDate, 'dd/MM/yyyy')}</p>
                                     </div>
                                     <div>
                                         <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Time</p>
-                                        <p className="text-sm font-medium">{req.startTime} - {req.endTime}</p>
+                                        <p className="text-sm font-medium">{machine?.startTime || 'N/A'} - {machine?.endTime || 'N/A'}</p>
                                     </div>
                                 </div>
 
                                 <div>
                                     <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Purpose</p>
-                                    <p className="text-sm text-foreground italic">"{req.purpose}"</p>
+                                    <p className="text-sm text-foreground italic">"{purpose}"</p>
                                 </div>
 
                                 {req.status === 'rejected' && req.rejectionReason && (
@@ -251,7 +258,7 @@ const MyBookings = () => {
                                     size="sm"
                                     className="w-full gap-2"
                                     disabled={downloadingId === req._id}
-                                    onClick={() => downloadPdf('machinery', req._id, req.machineryId?.name || 'MachineryRequest')}
+                                    onClick={() => downloadPdf('machinery', req._id, machineName)}
                                   >
                                     {downloadingId === req._id ? (
                                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -263,7 +270,7 @@ const MyBookings = () => {
                                 </div>
                             </CardContent>
                         </Card>
-                    ))
+                    )})
                 )}
             </div>
         </TabsContent>

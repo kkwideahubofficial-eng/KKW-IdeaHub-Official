@@ -50,6 +50,15 @@ router.post('/requests/:id/checkin', requireAuth, requireCoordinator, requestCon
 // Check-out student (Coordinator)
 router.post('/requests/:id/checkout', requireAuth, requireCoordinator, requestController.checkOutStudent);
 
+// Student action: complete work
+router.post('/requests/:id/complete-work', requireAuth, requestController.completeWorkRequest);
+
+// Student action: request booking extension
+router.post('/requests/:id/request-extension', requireAuth, requestController.requestExtension);
+
+// Coordinator action: Approve/Reject booking extension
+router.post('/requests/:id/handle-extension', requireAuth, requireCoordinator, requestController.handleExtension);
+
 // Download machinery/material request PDF
 router.get('/requests/:id/pdf', requireAuth, requestController.downloadMachineryPdf);
 

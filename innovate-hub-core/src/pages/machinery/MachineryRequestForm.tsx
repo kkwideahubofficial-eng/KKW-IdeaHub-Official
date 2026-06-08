@@ -14,6 +14,7 @@ import {
   Clock, ShieldAlert, Award, FileText, User, Users, Server, Database,
   ChevronDown, ChevronUp
 } from "lucide-react";
+import { formatTime12Hour } from "@/lib/dateUtils";
 
 interface Machine {
   _id: string;
@@ -29,6 +30,81 @@ interface Material {
   currentStock: number;
   allocatedQuantity: number;
 }
+
+// Helpers for 12-hour time dropdowns
+const parseTime24To12 = (time24: string) => {
+  if (!time24) return { hour12: '12', minute: '00', period: 'AM' };
+  const [hStr, mStr] = time24.split(':');
+  const h = parseInt(hStr, 10);
+  const period = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return {
+    hour12: String(h12).padStart(2, '0'),
+    minute: mStr || '00',
+    period
+  };
+};
+
+const formatTime12To24 = (hour12: string, minute: string, period: string) => {
+  let h = parseInt(hour12, 10);
+  if (period === 'PM' && h !== 12) h += 12;
+  if (period === 'AM' && h === 12) h = 0;
+  const hStr = String(h).padStart(2, '0');
+  const mStr = minute.padStart(2, '0');
+  return `${hStr}:${mStr}`;
+};
+
+const TimeSelectGroup = ({ 
+  value, 
+  onChange 
+}: { 
+  value: string; 
+  onChange: (val: string) => void; 
+}) => {
+  const { hour12, minute, period } = parseTime24To12(value);
+
+  const handleValChange = (field: 'hour12' | 'minute' | 'period', newVal: string) => {
+    let h = hour12;
+    let m = minute;
+    let p = period;
+    if (field === 'hour12') h = newVal;
+    if (field === 'minute') m = newVal;
+    if (field === 'period') p = newVal;
+    onChange(formatTime12To24(h, m, p));
+  };
+
+  return (
+    <div className="flex items-center gap-1 mt-1">
+      <select
+        value={hour12}
+        onChange={(e) => handleValChange('hour12', e.target.value)}
+        className="h-9 flex-1 rounded-md border border-input bg-background px-2 py-1 text-xs shadow-xs focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+      >
+        {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(h => (
+          <option key={h} value={h}>{h}</option>
+        ))}
+      </select>
+      <span className="text-muted-foreground">:</span>
+      <select
+        value={minute}
+        onChange={(e) => handleValChange('minute', e.target.value)}
+        className="h-9 flex-1 rounded-md border border-input bg-background px-2 py-1 text-xs shadow-xs focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+      >
+        {Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')).map(m => (
+          <option key={m} value={m}>{m}</option>
+        ))}
+      </select>
+      <select
+        value={period}
+        onChange={(e) => handleValChange('period', e.target.value)}
+        className="h-9 w-[60px] rounded-md border border-input bg-background px-2 py-1 text-xs shadow-xs focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring cursor-pointer font-bold"
+      >
+        <option value="AM">AM</option>
+        <option value="PM">PM</option>
+      </select>
+    </div>
+  );
+};
 
 const MachineryRequestForm = () => {
   const { id } = useParams(); // 'new' or request ID to edit
@@ -737,22 +813,16 @@ const MachineryRequestForm = () => {
                           </div>
                           <div>
                             <Label className="text-2xs">Start Time</Label>
-                            <Input 
-                              type="time" 
+                            <TimeSelectGroup 
                               value={details.startTime} 
-                              onChange={(e) => handleMachineDetailsChange(mId, 'startTime', e.target.value)} 
-                              className="h-9 mt-1"
-                              required 
+                              onChange={(val) => handleMachineDetailsChange(mId, 'startTime', val)} 
                             />
                           </div>
                           <div>
                             <Label className="text-2xs">End Time</Label>
-                            <Input 
-                              type="time" 
+                            <TimeSelectGroup 
                               value={details.endTime} 
-                              onChange={(e) => handleMachineDetailsChange(mId, 'endTime', e.target.value)} 
-                              className="h-9 mt-1"
-                              required 
+                              onChange={(val) => handleMachineDetailsChange(mId, 'endTime', val)} 
                             />
                           </div>
                           <div className="bg-slate-100 p-2 rounded flex flex-col justify-center text-center border">

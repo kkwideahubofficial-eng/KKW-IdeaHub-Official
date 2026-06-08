@@ -333,7 +333,7 @@ const generateMachineryPdf = async (doc, data) => {
 
   // Section 6: Approval Details
   cy = drawSectionTitle(doc, 'APPROVALS & REMARKS', cy);
-  const isApproved = ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Completed'].includes(data.status);
+  const isApproved = ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Active Booking', 'Work Completed', 'Closed', 'Completed'].includes(data.status);
   const approvalFields = [
     { label: 'Workflow Status', value: sLabel },
     { label: 'Coordinator Approval', value: isApproved ? '✓ APPROVED' : 'PENDING / REJECTED' },
