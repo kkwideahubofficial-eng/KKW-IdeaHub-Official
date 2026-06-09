@@ -241,6 +241,17 @@ const Events = () => {
     return { upcoming, ongoing, past, total };
   }, [events]);
 
+  const handleOverviewFilter = (status: string) => {
+    setActiveTab("browse");
+    setStatusFilter(status);
+    setTimeout(() => {
+      const el = document.getElementById("events-tabs");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 100);
+  };
+
 
   return (
     <div className="container mx-auto px-4 py-4 sm:py-8">
@@ -254,33 +265,30 @@ const Events = () => {
       <div className="bg-[#F8FAFC] border border-slate-200/60 rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8 shadow-sm">
         <h2 className="text-base sm:text-lg font-bold text-slate-800 mb-3 sm:mb-4 font-sans">Event Status Overview</h2>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1 - Upcoming Events */}
           <div 
-            className="flex flex-col justify-between min-h-[130px] sm:h-[180px] p-4 sm:p-6 rounded-[16px] border bg-[#EFF6FF] border-[#BFDBFE] text-[#2563EB] shadow-sm hover:-translate-y-1 sm:hover:-translate-y-[2px] hover:shadow-md transition-all duration-300 font-sans cursor-pointer group"
-            onClick={() => {
-              setActiveTab("browse");
-              setStatusFilter("upcoming");
-            }}
+            className="flex flex-col justify-between w-full min-h-[120px] sm:h-[180px] p-4 sm:p-6 rounded-[16px] border bg-[#EFF6FF] border-[#BFDBFE] text-[#2563EB] shadow-sm hover:-translate-y-1 sm:hover:-translate-y-[2px] hover:shadow-md transition-all duration-300 font-sans cursor-pointer group"
+            onClick={() => handleOverviewFilter("upcoming")}
           >
             {/* Mobile View */}
             <div className="flex sm:hidden flex-col items-center justify-between h-full w-full text-center py-0.5">
               <span className="font-semibold text-sm text-[#2563EB]">Upcoming Events</span>
               <div className="flex flex-col items-center">
-                <span className="text-[28px] font-extrabold text-slate-900 leading-none">
+                <span className="text-3xl font-bold text-slate-900 leading-none">
                   {String(overviewStats.upcoming).padStart(2, '0')}
                 </span>
-                <span className="text-[12px] text-slate-500 mt-1 font-medium">
+                <span className="text-xs text-slate-500 mt-1 font-medium">
                   Scheduled
                 </span>
               </div>
               <Button 
+                size="sm"
                 variant="outline" 
                 className="h-8 px-3 text-xs border-[#2563EB] text-[#2563EB] bg-white hover:bg-[#2563EB]/10 rounded-lg font-bold shadow-sm"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setActiveTab("browse");
-                  setStatusFilter("upcoming");
+                  handleOverviewFilter("upcoming");
                 }}
               >
                 View All
@@ -311,8 +319,7 @@ const Events = () => {
                   className="h-8 px-4 py-1 text-xs border-[#2563EB] text-[#2563EB] bg-white hover:bg-[#2563EB]/10 rounded-lg font-bold shadow-sm shrink-0 min-h-[32px]"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setActiveTab("browse");
-                    setStatusFilter("upcoming");
+                    handleOverviewFilter("upcoming");
                   }}
                 >
                   View All
@@ -323,30 +330,27 @@ const Events = () => {
 
           {/* Card 2 - Ongoing Events */}
           <div 
-            className="flex flex-col justify-between min-h-[130px] sm:h-[180px] p-4 sm:p-6 rounded-[16px] border bg-[#F0FDF4] border-[#BBF7D0] text-[#22C55E] shadow-sm hover:-translate-y-1 sm:hover:-translate-y-[2px] hover:shadow-md transition-all duration-300 font-sans cursor-pointer group"
-            onClick={() => {
-              setActiveTab("browse");
-              setStatusFilter("ongoing");
-            }}
+            className="flex flex-col justify-between w-full min-h-[120px] sm:h-[180px] p-4 sm:p-6 rounded-[16px] border bg-[#F0FDF4] border-[#BBF7D0] text-[#22C55E] shadow-sm hover:-translate-y-1 sm:hover:-translate-y-[2px] hover:shadow-md transition-all duration-300 font-sans cursor-pointer group"
+            onClick={() => handleOverviewFilter("ongoing")}
           >
             {/* Mobile View */}
             <div className="flex sm:hidden flex-col items-center justify-between h-full w-full text-center py-0.5">
               <span className="font-semibold text-sm text-[#22C55E]">Ongoing Events</span>
               <div className="flex flex-col items-center">
-                <span className="text-[28px] font-extrabold text-slate-900 leading-none">
+                <span className="text-3xl font-bold text-slate-900 leading-none">
                   {String(overviewStats.ongoing).padStart(2, '0')}
                 </span>
-                <span className="text-[12px] text-slate-500 mt-1 font-medium">
+                <span className="text-xs text-slate-500 mt-1 font-medium">
                   In Progress
                 </span>
               </div>
               <Button 
+                size="sm"
                 variant="outline" 
                 className="h-8 px-3 text-xs border-[#22C55E] text-[#22C55E] bg-white hover:bg-[#22C55E]/10 rounded-lg font-bold shadow-sm"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setActiveTab("browse");
-                  setStatusFilter("ongoing");
+                  handleOverviewFilter("ongoing");
                 }}
               >
                 View All
@@ -377,8 +381,7 @@ const Events = () => {
                   className="h-8 px-4 py-1 text-xs border-[#22C55E] text-[#22C55E] bg-white hover:bg-[#22C55E]/10 rounded-lg font-bold shadow-sm shrink-0 min-h-[32px]"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setActiveTab("browse");
-                    setStatusFilter("ongoing");
+                    handleOverviewFilter("ongoing");
                   }}
                 >
                   View All
@@ -389,30 +392,27 @@ const Events = () => {
 
           {/* Card 3 - Past Events */}
           <div 
-            className="flex flex-col justify-between min-h-[130px] sm:h-[180px] p-4 sm:p-6 rounded-[16px] border bg-[#FFFBEB] border-[#FDE68A] text-[#F59E0B] shadow-sm hover:-translate-y-1 sm:hover:-translate-y-[2px] hover:shadow-md transition-all duration-300 font-sans cursor-pointer group"
-            onClick={() => {
-              setActiveTab("browse");
-              setStatusFilter("past");
-            }}
+            className="flex flex-col justify-between w-full min-h-[120px] sm:h-[180px] p-4 sm:p-6 rounded-[16px] border bg-[#FFFBEB] border-[#FDE68A] text-[#F59E0B] shadow-sm hover:-translate-y-1 sm:hover:-translate-y-[2px] hover:shadow-md transition-all duration-300 font-sans cursor-pointer group"
+            onClick={() => handleOverviewFilter("past")}
           >
             {/* Mobile View */}
             <div className="flex sm:hidden flex-col items-center justify-between h-full w-full text-center py-0.5">
               <span className="font-semibold text-sm text-[#F59E0B]">Past Events</span>
               <div className="flex flex-col items-center">
-                <span className="text-[28px] font-extrabold text-slate-900 leading-none">
+                <span className="text-3xl font-bold text-slate-900 leading-none">
                   {String(overviewStats.past).padStart(2, '0')}
                 </span>
-                <span className="text-[12px] text-slate-500 mt-1 font-medium">
+                <span className="text-xs text-slate-500 mt-1 font-medium">
                   Completed
                 </span>
               </div>
               <Button 
+                size="sm"
                 variant="outline" 
                 className="h-8 px-3 text-xs border-[#F59E0B] text-[#F59E0B] bg-white hover:bg-[#F59E0B]/10 rounded-lg font-bold shadow-sm"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setActiveTab("browse");
-                  setStatusFilter("past");
+                  handleOverviewFilter("past");
                 }}
               >
                 View All
@@ -443,8 +443,7 @@ const Events = () => {
                   className="h-8 px-4 py-1 text-xs border-[#F59E0B] text-[#F59E0B] bg-white hover:bg-[#F59E0B]/10 rounded-lg font-bold shadow-sm shrink-0 min-h-[32px]"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setActiveTab("browse");
-                    setStatusFilter("past");
+                    handleOverviewFilter("past");
                   }}
                 >
                   View All
@@ -455,30 +454,27 @@ const Events = () => {
 
           {/* Card 4 - Total Events */}
           <div 
-            className="flex flex-col justify-between min-h-[130px] sm:h-[180px] p-4 sm:p-6 rounded-[16px] border bg-[#FAF5FF] border-[#E9D5FF] text-[#9333EA] shadow-sm hover:-translate-y-1 sm:hover:-translate-y-[2px] hover:shadow-md transition-all duration-300 font-sans cursor-pointer group"
-            onClick={() => {
-              setActiveTab("browse");
-              setStatusFilter("all");
-            }}
+            className="flex flex-col justify-between w-full min-h-[120px] sm:h-[180px] p-4 sm:p-6 rounded-[16px] border bg-[#FAF5FF] border-[#E9D5FF] text-[#9333EA] shadow-sm hover:-translate-y-1 sm:hover:-translate-y-[2px] hover:shadow-md transition-all duration-300 font-sans cursor-pointer group"
+            onClick={() => handleOverviewFilter("all")}
           >
             {/* Mobile View */}
             <div className="flex sm:hidden flex-col items-center justify-between h-full w-full text-center py-0.5">
               <span className="font-semibold text-sm text-[#9333EA]">Total Events</span>
               <div className="flex flex-col items-center">
-                <span className="text-[28px] font-extrabold text-slate-900 leading-none">
+                <span className="text-3xl font-bold text-slate-900 leading-none">
                   {String(overviewStats.total).padStart(2, '0')}
                 </span>
-                <span className="text-[12px] text-slate-500 mt-1 font-medium">
+                <span className="text-xs text-slate-500 mt-1 font-medium">
                   All Time
                 </span>
               </div>
               <Button 
+                size="sm"
                 variant="outline" 
                 className="h-8 px-3 text-xs border-[#9333EA] text-[#9333EA] bg-white hover:bg-[#9333EA]/10 rounded-lg font-bold shadow-sm"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setActiveTab("browse");
-                  setStatusFilter("all");
+                  handleOverviewFilter("all");
                 }}
               >
                 View All
@@ -509,8 +505,7 @@ const Events = () => {
                   className="h-8 px-4 py-1 text-xs border-[#9333EA] text-[#9333EA] bg-white hover:bg-[#9333EA]/10 rounded-lg font-bold shadow-sm shrink-0 min-h-[32px]"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setActiveTab("browse");
-                    setStatusFilter("all");
+                    handleOverviewFilter("all");
                   }}
                 >
                   View All
@@ -522,7 +517,7 @@ const Events = () => {
       </div>
 
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-8">
+      <Tabs id="events-tabs" value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-8">
         <div className="border-b pb-3 sm:pb-4 overflow-hidden">
           <div 
             className="w-full overflow-x-auto [&::-webkit-scrollbar]:hidden"

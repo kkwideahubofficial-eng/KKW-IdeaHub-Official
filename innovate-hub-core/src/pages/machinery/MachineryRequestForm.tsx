@@ -867,20 +867,39 @@ const MachineryRequestForm = () => {
                 <h3 className="font-bold text-slate-800 border-b pb-1 text-xs">Project Document Uploads</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {[
-                    { label: "Upload Design File", field: "designFileUrl" },
-                    { label: "Upload CAD File (STL/STEP/DWG)", field: "cadFileUrl" },
-                    { label: "Upload Circuit Diagram", field: "circuitDiagramUrl" },
-                    { label: "Upload Supporting Documents (PDF/ZIP)", field: "supportingDocsUrl" }
+                    { 
+                      label: "Upload Design File", 
+                      field: "designFileUrl", 
+                      hint: "Accepts PDF, DOCX, or image/screenshot (JPG, JPEG, PNG, GIF, WebP, AVIF, SVG)" 
+                    },
+                    { 
+                      label: "Upload CAD File", 
+                      field: "cadFileUrl", 
+                      hint: "Accepts STL, STEP, DWG, DXF, or image/screenshot (JPG, JPEG, PNG, GIF, WebP, AVIF, SVG)" 
+                    },
+                    { 
+                      label: "Upload Circuit Diagram", 
+                      field: "circuitDiagramUrl", 
+                      hint: "Accepts PDF, or image/screenshot (JPG, JPEG, PNG, GIF, WebP, AVIF, SVG)" 
+                    },
+                    { 
+                      label: "Upload Supporting Documents", 
+                      field: "supportingDocsUrl", 
+                      hint: "Accepts PDF, ZIP, or image/screenshot (JPG, JPEG, PNG, GIF, WebP, AVIF, SVG)" 
+                    }
                   ].map((fileObj) => (
                     <div key={fileObj.field} className="p-3.5 border rounded-lg bg-slate-50/40 space-y-2">
                       <Label className="font-semibold text-2xs">{fileObj.label}</Label>
+                      <p className="text-[10px] text-muted-foreground leading-normal mt-0.5">
+                        {fileObj.hint}
+                      </p>
                       <div className="flex gap-2">
                         <Input 
                           type="file" 
-                          accept=".pdf,.docx,.stl,.step,.step,.dwg,.dxf,.zip,image/*"
+                          accept=".pdf,.docx,.stl,.step,.dwg,.dxf,.zip,.jpg,.jpeg,.png,.gif,.webp,.avif,.svg"
                           onChange={(e) => handleFileUpload(e, fileObj.field)}
                           disabled={uploadingField !== null}
-                          className="bg-background h-8 py-0.5 text-2xs cursor-pointer"
+                          className="bg-background h-8 py-0.5 text-2xs cursor-pointer mt-1"
                         />
                       </div>
                       {uploadingField === fileObj.field && <span className="text-[10px] text-muted-foreground animate-pulse">Uploading file...</span>}

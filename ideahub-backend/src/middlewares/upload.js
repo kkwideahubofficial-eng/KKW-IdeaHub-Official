@@ -6,7 +6,11 @@ const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'ideahub',
-    allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
+    resource_type: 'auto',
+    allowed_formats: [
+      'jpg', 'png', 'jpeg', 'webp', 'gif', 'avif', 'svg',
+      'pdf', 'docx', 'zip', 'stl', 'step', 'dwg', 'dxf'
+    ],
   },
 });
 

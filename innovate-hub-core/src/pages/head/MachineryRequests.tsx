@@ -408,31 +408,46 @@ const MachineryRequests = () => {
                 </div>
               </div>
 
-              {/* Project Attachment downloads */}
+              {/* Project Attachment previews/downloads */}
               {viewDialog.request.uploadedFiles && Object.values(viewDialog.request.uploadedFiles).some(Boolean) && (
-                <div className="border-t pt-4">
+                <div className="border-t pt-4 space-y-3">
                   <h3 className="font-bold text-primary mb-2 uppercase tracking-wider text-[10px]">Project Attachments</h3>
-                  <div className="flex flex-wrap gap-2 text-3xs">
-                    {viewDialog.request.uploadedFiles.designFileUrl && (
-                      <a href={viewDialog.request.uploadedFiles.designFileUrl} target="_blank" rel="noreferrer">
-                        <Button size="sm" variant="outline" className="h-7 text-3xs gap-1 font-semibold"><Eye className="w-3.5 h-3.5" /> View Design File</Button>
-                      </a>
-                    )}
-                    {viewDialog.request.uploadedFiles.cadFileUrl && (
-                      <a href={viewDialog.request.uploadedFiles.cadFileUrl} target="_blank" rel="noreferrer">
-                        <Button size="sm" variant="outline" className="h-7 text-3xs gap-1 font-semibold"><FileDown className="w-3.5 h-3.5" /> Download CAD File</Button>
-                      </a>
-                    )}
-                    {viewDialog.request.uploadedFiles.circuitDiagramUrl && (
-                      <a href={viewDialog.request.uploadedFiles.circuitDiagramUrl} target="_blank" rel="noreferrer">
-                        <Button size="sm" variant="outline" className="h-7 text-3xs gap-1 font-semibold"><FileDown className="w-3.5 h-3.5" /> Download Circuit Diagram</Button>
-                      </a>
-                    )}
-                    {viewDialog.request.uploadedFiles.supportingDocsUrl && (
-                      <a href={viewDialog.request.uploadedFiles.supportingDocsUrl} target="_blank" rel="noreferrer">
-                        <Button size="sm" variant="outline" className="h-7 text-3xs gap-1 font-semibold"><FileDown className="w-3.5 h-3.5" /> Download Supporting Docs</Button>
-                      </a>
-                    )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {[
+                      { label: "Design File", url: viewDialog.request.uploadedFiles.designFileUrl },
+                      { label: "CAD File", url: viewDialog.request.uploadedFiles.cadFileUrl },
+                      { label: "Circuit Diagram", url: viewDialog.request.uploadedFiles.circuitDiagramUrl },
+                      { label: "Supporting Documents", url: viewDialog.request.uploadedFiles.supportingDocsUrl }
+                    ].map((item) => {
+                      if (!item.url) return null;
+                      const isImage = /\.(jpg|jpeg|png|gif|webp|avif|svg)(\?.*)?$/i.test(item.url);
+                      return (
+                        <div key={item.label} className="p-3 border rounded-lg bg-slate-50/60 flex flex-col justify-between space-y-3 hover:bg-slate-100/40 transition-colors">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="space-y-0.5 min-w-0">
+                              <span className="font-bold text-slate-800 text-xs">{item.label}</span>
+                              <span className="text-[10px] text-muted-foreground truncate block" title={item.url}>
+                                {item.url.split('/').pop()}
+                              </span>
+                            </div>
+                            {isImage ? (
+                              <div className="w-12 h-12 rounded bg-white border overflow-hidden shrink-0 flex items-center justify-center shadow-2xs">
+                                <img src={item.url} alt={item.label} className="object-cover w-full h-full" />
+                              </div>
+                            ) : (
+                              <div className="w-12 h-12 rounded bg-white border shrink-0 flex items-center justify-center text-primary font-bold text-[10px] shadow-2xs">
+                                {item.url.split('.').pop()?.toUpperCase() || 'FILE'}
+                              </div>
+                            )}
+                          </div>
+                          <a href={item.url} target="_blank" rel="noreferrer" className="w-full">
+                            <Button size="sm" variant="outline" className="w-full h-7 text-[10px] gap-1 font-semibold justify-center">
+                              <Eye className="w-3.5 h-3.5" /> View / Download
+                            </Button>
+                          </a>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
