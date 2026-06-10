@@ -177,21 +177,40 @@ export const createRequest = async (req, res) => {
       uploadedFiles,
       benefits,
       declaration,
-      status // 'Draft' or 'Submitted' / 'Student Resubmitted'
+      status, // 'Draft' or 'Submitted' / 'Student Resubmitted'
+      applicantType, // 'Internal' or 'External'
+      externalFullName,
+      externalCollegeOrg,
+      externalDept,
+      externalDesignation,
+      externalWebsite,
+      externalCity,
+      externalState,
+      externalEmail,
+      externalMobile,
+      externalIdentityProof,
+      externalApplicantType,
+      externalTeamMembers
     } = req.body;
 
-    const studentId = req.user._id;
+    const isExternal = applicantType === 'External' || !req.user;
+    if (applicantType === 'Internal' && req.user && req.user.userType === 'EXTERNAL') {
+      return res.status(403).json({ message: 'Access Restricted. External users cannot submit Internal student requests.' });
+    }
+    const studentId = req.user ? req.user._id : null;
 
     // Check material stocks first if submitting
     if (status !== 'Draft') {
-      const activeRequest = await MachineryRequest.findOne({
-        studentId,
-        status: { $in: ['Submitted', 'Coordinator Review', 'Coordinator Approved', 'Head Review', 'Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Active Booking'] }
-      });
-      if (activeRequest) {
-        return res.status(400).json({
-          message: `Active Request Block: You already have an active request (${activeRequest.requestId}) in progress. Please complete your current booking before submitting a new request.`
+      if (!isExternal) {
+        const activeRequest = await MachineryRequest.findOne({
+          studentId,
+          status: { $in: ['Submitted', 'Coordinator Review', 'Coordinator Approved', 'Head Review', 'Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Active Booking'] }
         });
+        if (activeRequest) {
+          return res.status(400).json({
+            message: `Active Request Block: You already have an active request (${activeRequest.requestId}) in progress. Please complete your current booking before submitting a new request.`
+          });
+        }
       }
 
       for (const mat of (requestedMaterials || [])) {
@@ -246,9 +265,9 @@ export const createRequest = async (req, res) => {
       }
     }
 
-    // Auto-generate Request ID e.g., MAT-2026-001
+    // Auto-generate Request ID e.g., MAT-2026-001 or EXT-2026-001
     let requestId = '';
-    const prefix = 'MAT-2026-';
+    const prefix = isExternal ? 'EXT-2026-' : 'MAT-2026-';
     const lastRequest = await MachineryRequest.findOne({ requestId: { $regex: `^${prefix}` } }).sort({ createdAt: -1 });
     if (lastRequest) {
       const numStr = lastRequest.requestId.replace(prefix, '');
@@ -260,16 +279,17 @@ export const createRequest = async (req, res) => {
 
     // Prepare compatibility variables
     const primaryMachine = requestedMachines && requestedMachines.length > 0 ? requestedMachines[0] : null;
-    const teamMems = (students || []).slice(1).map(s => ({
+    const teamMems = !isExternal ? (students || []).slice(1).map(s => ({
       name: s.name,
       branch: s.branch,
       year: s.year,
       mobile: s.mobile,
       email: s.email
-    }));
+    })) : [];
 
     const newRequest = new MachineryRequest({
       requestId,
+      applicantType: isExternal ? 'External' : 'Internal',
       projectName,
       projectCategory,
       projectDescription,
@@ -277,7 +297,7 @@ export const createRequest = async (req, res) => {
       expectedOutcome,
       teamName,
       numberOfStudents: Number(numberOfStudents) || 1,
-      students: students || [],
+      students: isExternal ? [] : (students || []),
       facultyGuide: facultyGuide || {},
       requestedMachines: requestedMachines || [],
       requestedMaterials: requestedMaterials || [],
@@ -286,11 +306,26 @@ export const createRequest = async (req, res) => {
       declaration: declaration || {},
       status: status || 'Submitted',
       studentId: studentId,
+      
+      // External fields
+      externalFullName: isExternal ? (externalFullName || '') : '',
+      externalCollegeOrg: isExternal ? (externalCollegeOrg || '') : '',
+      externalDept: isExternal ? (externalDept || '') : '',
+      externalDesignation: isExternal ? (externalDesignation || '') : '',
+      externalWebsite: isExternal ? (externalWebsite || '') : '',
+      externalCity: isExternal ? (externalCity || '') : '',
+      externalState: isExternal ? (externalState || '') : '',
+      externalEmail: isExternal ? (externalEmail || '') : '',
+      externalMobile: isExternal ? (externalMobile || '') : '',
+      externalIdentityProof: isExternal ? (externalIdentityProof || '') : '',
+      externalApplicantType: isExternal ? (externalApplicantType || 'Individual') : 'Individual',
+      externalTeamMembers: isExternal ? (externalTeamMembers || []) : [],
+
       approvalHistory: status !== 'Draft' ? [{
-        role: 'Student',
+        role: isExternal ? 'External Applicant' : 'Student',
         action: 'Submitted',
         remarks: 'Request submitted for Coordinator Review.',
-        byName: req.user.name,
+        byName: isExternal ? (externalFullName || 'External User') : req.user.name,
         date: new Date()
       }] : [],
 
@@ -307,8 +342,8 @@ export const createRequest = async (req, res) => {
 
     const saved = await newRequest.save();
 
-    // Trigger profile updates
-    if (students && students.length > 0) {
+    // Trigger profile updates for internal students
+    if (!isExternal && students && students.length > 0) {
       const lead = students[0];
       const updates = {};
       if (lead.mobile) updates.mobile = lead.mobile;
@@ -324,25 +359,43 @@ export const createRequest = async (req, res) => {
       await User.findByIdAndUpdate(studentId, updates);
     }
 
-    // Trigger Notification for Coordinator
+    // Trigger Notification for Coordinator & User
     if (status !== 'Draft') {
-      await createInAppNotification(
-        studentId,
-        'Permission Request Submitted',
-        `Your request ${requestId} has been submitted successfully.`
-      );
+      if (!isExternal) {
+        await createInAppNotification(
+          studentId,
+          'Permission Request Submitted',
+          `Your request ${requestId} has been submitted successfully.`
+        );
+      } else if (externalEmail) {
+        // Email external applicant with tracking details
+        const trackUrl = `${req.protocol}://${req.get('host')}`.replace('5000', '8080') + `/verify-request/${requestId}`;
+        const subject = `IDEA Hub: Request Submitted Successfully - ${requestId}`;
+        const bodyText = `<p>Dear ${externalFullName},</p>
+                          <p>Your machinery/material request has been submitted successfully to KK Wagh AICTE IDEA Lab.</p>
+                          <p><b>Request ID:</b> ${requestId}</p>
+                          <p><b>Project Name:</b> ${projectName}</p>
+                          <p>You can track the live status of your request here: <a href="${trackUrl}">${trackUrl}</a></p>
+                          <p>Please note that external requests are subject to verification of your uploaded Identity Proof and machinery usage charges.</p>
+                          <p>Regards,<br/>IDEA Hub Team</p>`;
+        try {
+          await sendEmail(externalEmail, subject, bodyText);
+        } catch (err) {
+          console.error('Failed to send email to external user:', err);
+        }
+      }
       
       const coordinators = await User.find({ role: 'coordinator' });
       for (const coord of coordinators) {
         await createInAppNotification(
           coord._id,
           'New Request Awaiting Review',
-          `New request ${requestId} for project "${projectName}" submitted by ${req.user.name}.`
+          `New request ${requestId} for project "${projectName}" submitted by ${isExternal ? (externalFullName || 'External User') : req.user.name}.`
         );
         await sendPushNotification(
           coord._id,
           'New Material/Machinery Request',
-          `${req.user.name} submitted request ${requestId}`
+          `${isExternal ? (externalFullName || 'External User') : req.user.name} submitted request ${requestId}`
         );
       }
     }
@@ -469,7 +522,7 @@ export const updateRequest = async (req, res) => {
 export const getRequests = async (req, res) => {
   try {
     const { role, _id } = req.user;
-    const { search, status, machine, material, date } = req.query;
+    const { search, status, machine, material, date, applicantType, email, mobile } = req.query;
 
     let query = {};
 
@@ -479,18 +532,14 @@ export const getRequests = async (req, res) => {
       query.studentId = _id;
     }
 
-    // Advanced search
-    if (search) {
-      query.$or = [
-        { requestId: { $regex: search, $options: 'i' } },
-        { projectName: { $regex: search, $options: 'i' } },
-        { teamName: { $regex: search, $options: 'i' } }
-      ];
-    }
-
     // Status filtering
     if (status) {
       query.status = status;
+    }
+
+    // Applicant Type filtering
+    if (applicantType) {
+      query.applicantType = applicantType;
     }
 
     // Machine filtering
@@ -509,6 +558,40 @@ export const getRequests = async (req, res) => {
       const start = new Date(targetDate.setHours(0,0,0,0));
       const end = new Date(targetDate.setHours(23,59,59,999));
       query['requestedMachines.usageDate'] = { $gte: start, $lte: end };
+    }
+
+    // Compound queries
+    const andClauses = [];
+
+    if (search) {
+      andClauses.push({
+        $or: [
+          { requestId: { $regex: search, $options: 'i' } },
+          { projectName: { $regex: search, $options: 'i' } },
+          { teamName: { $regex: search, $options: 'i' } },
+          { externalFullName: { $regex: search, $options: 'i' } },
+          { externalCollegeOrg: { $regex: search, $options: 'i' } }
+        ]
+      });
+    }
+
+    if (email || mobile) {
+      const emailMobileOr = [];
+      if (email) {
+        emailMobileOr.push({ externalEmail: email });
+        emailMobileOr.push({ 'students.email': email });
+      }
+      if (mobile) {
+        emailMobileOr.push({ externalMobile: mobile });
+        emailMobileOr.push({ 'students.mobile': mobile });
+      }
+      if (emailMobileOr.length > 0) {
+        andClauses.push({ $or: emailMobileOr });
+      }
+    }
+
+    if (andClauses.length > 0) {
+      query.$and = andClauses;
     }
 
     const requests = await MachineryRequest.find(query)
@@ -540,6 +623,14 @@ export const getRequestById = async (req, res) => {
       return res.status(404).json({ message: 'Request not found' });
     }
 
+    // Verify request ownership for standard users
+    const { role, _id } = req.user;
+    if (role !== 'head' && role !== 'coordinator' && role !== 'admin') {
+      if (request.studentId && request.studentId._id.toString() !== _id.toString()) {
+        return res.status(403).json({ message: 'Access denied: You do not own this request' });
+      }
+    }
+
     res.status(200).json(request);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching request details', error: error.message });
@@ -550,7 +641,7 @@ export const getRequestById = async (req, res) => {
 export const updateRequestStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, remarks, checks, conditions } = req.body;
+    const { status, remarks, checks, conditions, identityVerification, machineCharges, materialCharges, paymentStatus } = req.body;
     const { role, name } = req.user;
 
     const request = await MachineryRequest.findById(id)
@@ -587,6 +678,21 @@ export const updateRequestStatus = async (req, res) => {
       } else {
         request.coordinatorRemarks = remarks;
       }
+    }
+
+    // Apply external details if provided
+    if (identityVerification) {
+      request.identityVerification = identityVerification;
+    }
+    if (machineCharges !== undefined) {
+      request.machineCharges = Number(machineCharges) || 0;
+    }
+    if (materialCharges !== undefined) {
+      request.materialCharges = Number(materialCharges) || 0;
+    }
+    request.totalCharges = (request.machineCharges || 0) + (request.materialCharges || 0);
+    if (paymentStatus) {
+      request.paymentStatus = paymentStatus;
     }
 
     // Record Coordinator Review checks
@@ -671,7 +777,7 @@ export const updateRequestStatus = async (req, res) => {
 
     const saved = await request.save();
 
-    // Trigger real-time notifications to the Student
+    // Trigger real-time notifications to the Student/External User
     if (request.studentId && request.studentId.email) {
       const studentEmail = request.studentId.email;
       const studentName = request.studentId.name;
@@ -679,7 +785,7 @@ export const updateRequestStatus = async (req, res) => {
       
       let subject = `IDEA Hub: Request Status Updated - ${request.requestId}`;
       let bodyText = `<p>Dear ${studentName},</p>
-                      <p>Your Request <b>${request.requestId}</b> for <b>${machineNames}</b> has been updated to <b>${status}</b>.</p>`;
+                      <p>Your Request <b>${request.requestId}</b> for <b>${machineNames}</b> has been updated to <b>${status || request.status}</b>.</p>`;
 
       if (remarks) bodyText += `<p><b>Remarks:</b> ${remarks}</p>`;
       if (conditions) bodyText += `<p><b>Approval Conditions:</b> ${conditions}</p>`;
@@ -688,10 +794,34 @@ export const updateRequestStatus = async (req, res) => {
 
       try {
         await sendEmail(studentEmail, subject, bodyText);
-        await createInAppNotification(request.studentId._id, `Request Status: ${status}`, `Your request ${request.requestId} was updated to ${status} by ${name}.`);
-        await sendPushNotification(request.studentId._id, `Request ${status}`, `Request ${request.requestId} updated to ${status}.`);
+        await createInAppNotification(request.studentId._id, `Request Status: ${status || request.status}`, `Your request ${request.requestId} was updated to ${status || request.status} by ${name}.`);
+        await sendPushNotification(request.studentId._id, `Request ${status || request.status}`, `Request ${request.requestId} updated to ${status || request.status}.`);
       } catch (err) {
         console.error('Failed to trigger notifications:', err);
+      }
+    } else if (request.applicantType === 'External' && request.externalEmail) {
+      const externalEmail = request.externalEmail;
+      const externalName = request.externalFullName;
+      const machineNames = request.requestedMachines.map(m => m.machineName).join(', ') || 'IDEA Lab Resources';
+      
+      let subject = `IDEA Hub: Request Status Updated - ${request.requestId}`;
+      let bodyText = `<p>Dear ${externalName},</p>
+                      <p>Your Request <b>${request.requestId}</b> for <b>${machineNames}</b> has been updated to <b>${status || request.status}</b>.</p>`;
+
+      if (remarks) bodyText += `<p><b>Remarks:</b> ${remarks}</p>`;
+      if (conditions) bodyText += `<p><b>Approval Conditions:</b> ${conditions}</p>`;
+      if (request.totalCharges > 0 || request.machineCharges > 0 || request.materialCharges > 0) {
+        bodyText += `<p><b>External Usage Charges:</b> ₹${request.totalCharges} (Machine: ₹${request.machineCharges}, Material: ₹${request.materialCharges})</p>
+                     <p><b>Payment Status:</b> ${request.paymentStatus}</p>`;
+      }
+      bodyText += `<br/><p>You can track updates and verify your request details using this link: 
+                  <a href="${req.protocol}://${req.get('host')}`.replace('5000', '8080') + `/verify-request/${request.requestId}">Track Request</a></p>
+                  <p>Regards,<br/>IDEA Hub Team</p>`;
+
+      try {
+        await sendEmail(externalEmail, subject, bodyText);
+      } catch (err) {
+        console.error('Failed to trigger email notification to external user:', err);
       }
     }
 
@@ -873,6 +1003,14 @@ export const downloadMachineryPdf = async (req, res) => {
 
     if (!request) {
       return res.status(404).json({ message: 'Request not found' });
+    }
+
+    // Verify request ownership for standard users
+    const { role, _id } = req.user;
+    if (role !== 'head' && role !== 'coordinator' && role !== 'admin') {
+      if (request.studentId && request.studentId._id.toString() !== _id.toString()) {
+        return res.status(403).json({ message: 'Access denied: You do not own this request' });
+      }
     }
 
     const baseUrl = `${req.protocol}://${req.get('host')}`;

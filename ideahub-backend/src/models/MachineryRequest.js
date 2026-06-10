@@ -304,6 +304,88 @@ const machineryRequestSchema = new Schema(
     rejectionReason: {
       type: String,
       default: '',
+    },
+
+    // --- External User Fields ---
+    applicantType: {
+      type: String,
+      enum: ['Internal', 'External'],
+      default: 'Internal',
+      index: true
+    },
+    identityVerification: {
+      type: String,
+      enum: ['Pending', 'Verified', 'Rejected'],
+      default: 'Pending'
+    },
+    externalFullName: {
+      type: String,
+      default: ''
+    },
+    externalCollegeOrg: {
+      type: String,
+      default: ''
+    },
+    externalDept: {
+      type: String,
+      default: ''
+    },
+    externalDesignation: {
+      type: String,
+      default: ''
+    },
+    externalWebsite: {
+      type: String,
+      default: ''
+    },
+    externalCity: {
+      type: String,
+      default: ''
+    },
+    externalState: {
+      type: String,
+      default: ''
+    },
+    externalEmail: {
+      type: String,
+      default: '',
+      index: true
+    },
+    externalMobile: {
+      type: String,
+      default: '',
+      index: true
+    },
+    externalIdentityProof: {
+      type: String,
+      default: ''
+    },
+    externalApplicantType: {
+      type: String,
+      enum: ['Individual', 'Team'],
+      default: 'Individual'
+    },
+    externalTeamMembers: [{
+      name: { type: String },
+      email: { type: String },
+      mobile: { type: String }
+    }],
+    machineCharges: {
+      type: Number,
+      default: 0
+    },
+    materialCharges: {
+      type: Number,
+      default: 0
+    },
+    totalCharges: {
+      type: Number,
+      default: 0
+    },
+    paymentStatus: {
+      type: String,
+      enum: ['Pending', 'Paid', 'Waived'],
+      default: 'Pending'
     }
   },
   { timestamps: true }

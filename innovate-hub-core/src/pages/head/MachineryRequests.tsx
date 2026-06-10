@@ -35,11 +35,30 @@ interface Request {
   approvalHistory?: { date: string; role: string; action: string; remarks: string; byName: string }[];
   coordinatorRemarks?: string;
   coordinatorChecks?: { machineAvailability: boolean; materialAvailability: boolean; projectFeasibility: boolean; studentEligibility: boolean; previousUsageHistory: boolean };
+  applicantType?: string;
+  externalFullName?: string;
+  externalDesignation?: string;
+  externalDept?: string;
+  externalCollegeOrg?: string;
+  externalCity?: string;
+  externalState?: string;
+  externalEmail?: string;
+  externalMobile?: string;
+  externalIdentityProof?: string;
+  identityVerification?: string;
+  externalApplicantType?: string;
+  externalTeamMembers?: { name: string; email: string; mobile: string }[];
+  totalCharges?: number;
+  paymentStatus?: string;
+  machineCharges?: number;
+  materialCharges?: number;
+  headConditions?: string;
 }
 
 const MachineryRequests = () => {
-  const [requests, setRequests] = useState<Request[]>([]);
+  const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [applicantTypeFilter, setApplicantTypeFilter] = useState<"All" | "Internal" | "External">("All");
   
   // Rejection & Decision state
   const [decisionDialog, setDecisionDialog] = useState<{ open: boolean; id: string | null; action: 'Approved' | 'Rejected' | 'Approved With Conditions' | null }>({
@@ -146,32 +165,69 @@ const MachineryRequests = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
-      <h1 className="text-3xl font-extrabold tracking-tight mb-6 text-foreground">Machinery & Material Requests</h1>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Machinery & Material Requests</h1>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="head-applicant-filter" className="text-xs font-bold text-muted-foreground whitespace-nowrap">Applicant Type:</Label>
+          <select 
+            id="head-applicant-filter"
+            value={applicantTypeFilter} 
+            onChange={(e: any) => setApplicantTypeFilter(e.target.value)}
+            className="h-8 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+          >
+            <option value="All">All Applicants</option>
+            <option value="Internal">Internal Student</option>
+            <option value="External">External User</option>
+          </select>
+        </div>
+      </div>
 
       <div className="space-y-4">
-        {requests.length === 0 ? (
-          <p className="text-muted-foreground py-8 text-center text-xs font-semibold">No resource permission requests found.</p>
+        {requests
+          .filter((req: any) => {
+            if (applicantTypeFilter === "All") return true;
+            if (applicantTypeFilter === "Internal") return req.applicantType === "Internal" || !req.applicantType;
+            if (applicantTypeFilter === "External") return req.applicantType === "External";
+            return true;
+          }).length === 0 ? (
+          <p className="text-muted-foreground py-8 text-center text-xs font-semibold">No resource permission requests found matching criteria.</p>
         ) : (
-          requests.map((req) => (
-            <Card key={req._id} className="overflow-hidden border border-border/80 shadow-xs text-xs">
-              <CardHeader className="bg-slate-50/50 pb-3 border-b">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-primary">{req.requestId}</span>
-                      <span className="text-muted-foreground font-medium">•</span>
-                      <span className="font-semibold text-slate-500">{req.projectCategory}</span>
+          requests
+            .filter((req: any) => {
+              if (applicantTypeFilter === "All") return true;
+              if (applicantTypeFilter === "Internal") return req.applicantType === "Internal" || !req.applicantType;
+              if (applicantTypeFilter === "External") return req.applicantType === "External";
+              return true;
+            })
+            .map((req) => (
+              <Card key={req._id} className="overflow-hidden border border-border/80 shadow-xs text-xs">
+                <CardHeader className="bg-slate-50/50 pb-3 border-b">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-primary">{req.requestId}</span>
+                        <span className="text-muted-foreground font-medium">•</span>
+                        <span className="font-semibold text-slate-500">{req.projectCategory}</span>
+                        {req.applicantType === 'External' ? (
+                          <Badge className="bg-orange-500 hover:bg-orange-600 text-white text-[8px] font-bold">EXTERNAL</Badge>
+                        ) : (
+                          <Badge className="bg-blue-600 hover:bg-blue-700 text-white text-[8px] font-bold">INTERNAL</Badge>
+                        )}
+                      </div>
+                      <CardTitle className="text-base font-extrabold mt-1">{req.projectName}</CardTitle>
+                      <p className="text-3xs text-muted-foreground mt-0.5">
+                        Submitted by: {req.applicantType === 'External' ? (
+                          <span className="font-bold text-slate-800">{req.externalFullName || "External User"} ({req.externalCollegeOrg || "External Org"})</span>
+                        ) : (
+                          <>Submitted by <span className="font-bold text-slate-800">{req.students?.[0]?.name || "Student"}</span> ({req.students?.[0]?.branch || "Branch"})</>
+                        )}
+                      </p>
                     </div>
-                    <CardTitle className="text-base font-extrabold mt-1">{req.projectName}</CardTitle>
-                    <p className="text-3xs text-muted-foreground mt-0.5">
-                      Submitted by <span className="font-bold text-slate-800">{req.students?.[0]?.name || "Student"}</span> ({req.students?.[0]?.branch || "Branch"})
-                    </p>
+                    <Badge variant="outline" className={`font-bold text-[9px] uppercase ${getStatusColor(req.status)}`}>
+                      {req.status}
+                    </Badge>
                   </div>
-                  <Badge variant="outline" className={`font-bold text-[9px] uppercase ${getStatusColor(req.status)}`}>
-                    {req.status}
-                  </Badge>
-                </div>
-              </CardHeader>
+                </CardHeader>
               <CardContent className="pt-4 grid md:grid-cols-2 gap-4">
                 <div className="space-y-2 text-slate-700 font-medium">
                   {req.requestedMachines?.length > 0 && (
@@ -360,14 +416,58 @@ const MachineryRequests = () => {
                   </div>
                 </div>
                 <div>
-                   <h3 className="font-bold text-primary mb-1.5 uppercase tracking-wider text-[10px]">Requester Student</h3>
-                   <div className="p-3 bg-slate-50 border rounded-md font-medium">
-                     <p><strong>Name:</strong> {viewDialog.request.students?.[0]?.name || '-'}</p>
-                     <p><strong>PRN Number:</strong> {viewDialog.request.students?.[0]?.prn || '-'}</p>
-                     <p><strong>Email Address:</strong> {viewDialog.request.students?.[0]?.email || '-'}</p>
-                     <p><strong>Mobile Number:</strong> {viewDialog.request.students?.[0]?.mobile || '-'}</p>
-                     <p><strong>Branch/Year:</strong> {viewDialog.request.students?.[0]?.branch || '-'} / {viewDialog.request.students?.[0]?.year || '-'}</p>
-                   </div>
+                   {viewDialog.request.applicantType === 'External' ? (
+                     <>
+                       <h3 className="font-bold text-orange-600 mb-1.5 uppercase tracking-wider text-[10px]">External Applicant Profile</h3>
+                       <div className="p-3 bg-slate-50 border rounded-md font-medium space-y-1">
+                         <p><strong>Name:</strong> {viewDialog.request.externalFullName || '-'}</p>
+                         <p><strong>Designation:</strong> {viewDialog.request.externalDesignation || '-'}</p>
+                         <p><strong>Department:</strong> {viewDialog.request.externalDept || '-'}</p>
+                         <p><strong>College/Org:</strong> {viewDialog.request.externalCollegeOrg || '-'}</p>
+                         <p><strong>Location:</strong> {viewDialog.request.externalCity || '-'}, {viewDialog.request.externalState || '-'}</p>
+                         <p><strong>Email:</strong> {viewDialog.request.externalEmail || '-'}</p>
+                         <p><strong>Mobile:</strong> {viewDialog.request.externalMobile || '-'}</p>
+                         {viewDialog.request.externalIdentityProof && (
+                           <p className="pt-1.5 border-t mt-1.5">
+                             <strong>ID Proof: </strong>
+                             <a href={viewDialog.request.externalIdentityProof} target="_blank" rel="noreferrer" className="text-orange-600 underline font-bold">View Identity Proof</a>
+                           </p>
+                         )}
+                         <p className="mt-1">
+                           <strong>ID Verification: </strong>
+                           <span className={`px-2 py-0.5 rounded font-bold text-[9px] ${
+                             viewDialog.request.identityVerification === 'Verified' ? 'bg-green-100 text-green-800' :
+                             viewDialog.request.identityVerification === 'Rejected' ? 'bg-red-100 text-red-800' :
+                             'bg-amber-100 text-amber-800'
+                           }`}>
+                             {viewDialog.request.identityVerification || 'Pending'}
+                           </span>
+                         </p>
+                       </div>
+                     </>
+                   ) : (
+                      <>
+                        <h3 className="font-bold text-primary mb-1.5 uppercase tracking-wider text-[10px]">Student Team Details</h3>
+                        <div className="space-y-2">
+                          {viewDialog.request.teamName && (
+                            <p className="text-xs font-semibold text-slate-700">Team Name: {viewDialog.request.teamName}</p>
+                          )}
+                          <div className="grid grid-cols-1 gap-2">
+                            {viewDialog.request.students?.map((s, idx) => (
+                              <div key={idx} className="p-3 bg-slate-50 border rounded-md font-medium space-y-1">
+                                <p className="font-bold text-slate-800 text-xs">{s.name}</p>
+                                <div className="text-[11px] text-muted-foreground space-y-0.5 font-medium">
+                                  <p><strong>PRN Number:</strong> {s.prn || '-'}</p>
+                                  <p><strong>Email Address:</strong> {s.email || '-'}</p>
+                                  <p><strong>Mobile Number:</strong> {s.mobile || '-'}</p>
+                                  <p><strong>Branch/Year:</strong> {s.branch || '-'} / {s.year || '-'}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                   )}
                 </div>
               </div>
 
@@ -478,6 +578,43 @@ const MachineryRequests = () => {
                   </p>
                 </div>
               </div>
+
+              {/* External User Team Details */}
+              {viewDialog.request.applicantType === 'External' && viewDialog.request.externalApplicantType === 'Team' && (
+                <div className="border-t pt-4">
+                  <h3 className="font-bold text-orange-600 mb-1.5 uppercase tracking-wider text-[10px]">Team Details: {viewDialog.request.teamName}</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    {viewDialog.request.externalTeamMembers?.map((m: any, idx: number) => (
+                      <div key={idx} className="p-2 border rounded bg-slate-50">
+                        <p className="font-bold text-slate-800">{m.name}</p>
+                        <p className="text-[10px] text-muted-foreground">{m.email} | {m.mobile}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Usage Charges Block */}
+              {viewDialog.request.applicantType === 'External' && (viewDialog.request.totalCharges > 0 || viewDialog.request.paymentStatus) && (
+                <div className="border-t pt-4">
+                  <h3 className="font-bold text-blue-800 mb-1.5 uppercase tracking-wider text-[10px]">Usage Charges & Fee Allocation</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border p-3 rounded-md bg-blue-50/15 border-blue-100 font-medium">
+                    <p><strong>Machine Charges:</strong> ₹{viewDialog.request.machineCharges || 0}</p>
+                    <p><strong>Material Charges:</strong> ₹{viewDialog.request.materialCharges || 0}</p>
+                    <p><strong>Total Charges:</strong> <span className="font-bold text-blue-700">₹{viewDialog.request.totalCharges || 0}</span></p>
+                    <p className="sm:col-span-3 pt-1.5 border-t">
+                      <strong>Payment Status: </strong>
+                      <span className={`px-2 py-0.5 rounded font-bold text-[9px] ${
+                        viewDialog.request.paymentStatus === 'Paid' ? 'bg-green-100 text-green-800' :
+                        viewDialog.request.paymentStatus === 'Waived' ? 'bg-blue-100 text-blue-800' :
+                        'bg-amber-100 text-amber-800'
+                      }`}>
+                        {viewDialog.request.paymentStatus || 'Pending'}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Approval History log */}
               {viewDialog.request.approvalHistory && viewDialog.request.approvalHistory.length > 0 && (

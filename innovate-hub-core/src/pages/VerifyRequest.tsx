@@ -96,21 +96,112 @@ const VerifyRequest = () => {
                 </div>
               </div>
 
-              {/* Student details */}
-              <div className="bg-secondary/15 p-4 rounded-lg space-y-3 border">
-                <h3 className="font-bold text-foreground flex items-center gap-1.5"><User className="w-3.5 h-3.5 text-primary" /> Student Information</h3>
-                <div>
-                  <div className="font-bold">{request.students?.[0]?.name || request.studentId?.name || "N/A"}</div>
-                  <div className="text-3xs text-muted-foreground">
-                    PRN: {request.students?.[0]?.prn || "N/A"} | Branch: {request.students?.[0]?.branch || "N/A"} ({request.students?.[0]?.year || "N/A"})
+              {/* Applicant Profile */}
+              {request.applicantType === 'External' ? (
+                <div className="space-y-4">
+                  <div className="bg-orange-50/20 border border-orange-100 p-4 rounded-lg space-y-3">
+                    <h3 className="font-bold text-orange-700 flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5 text-orange-600" /> External Applicant Profile
+                    </h3>
+                    <div className="space-y-1">
+                      <div className="font-bold text-slate-800 text-sm">{request.externalFullName}</div>
+                      <div className="text-[11px] text-muted-foreground">
+                        {request.externalDesignation} | {request.externalDept}
+                      </div>
+                      <div className="text-[11px] font-medium text-slate-700">
+                        {request.externalCollegeOrg}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">
+                        Location: {request.externalCity}, {request.externalState}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">
+                        Contact: {request.externalEmail} | {request.externalMobile}
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t flex justify-between items-center text-[10px]">
+                      <span className="text-muted-foreground font-semibold">Identity ID Proof:</span>
+                      <span className={`px-2 py-0.5 rounded font-bold ${
+                        request.identityVerification === 'Verified' ? 'bg-green-100 text-green-800' :
+                        request.identityVerification === 'Rejected' ? 'bg-red-100 text-red-800' :
+                        'bg-amber-100 text-amber-800'
+                      }`}>
+                        ID VERIFICATION: {request.identityVerification?.toUpperCase() || 'PENDING'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {request.externalApplicantType === 'Team' && (
+                    <div className="bg-slate-50 border p-4 rounded-lg space-y-2">
+                      <h4 className="font-bold text-slate-700">
+                        Team Name: <span className="text-orange-600">{request.teamName}</span>
+                      </h4>
+                      <p className="text-[10px] text-muted-foreground font-semibold">Additional Team Members:</p>
+                      <div className="space-y-1.5">
+                        {request.externalTeamMembers?.map((m: any, idx: number) => (
+                          <div key={idx} className="bg-white border p-2 rounded text-[10px] flex justify-between">
+                            <span className="font-bold text-slate-700">{m.name}</span>
+                            <span className="text-muted-foreground">{m.email} | {m.mobile}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Charges Block */}
+                  {(request.totalCharges > 0 || request.paymentStatus) && (
+                    <div className="bg-blue-50/20 border border-blue-100 p-4 rounded-lg space-y-3">
+                      <h3 className="font-bold text-blue-800 flex items-center gap-1.5">
+                        <Database className="w-3.5 h-3.5 text-blue-600" /> Usage Charges & Fees
+                      </h3>
+                      <div className="space-y-1 text-[11px] font-medium text-slate-700">
+                        <div className="flex justify-between">
+                          <span>Machine Charges:</span>
+                          <span className="font-mono">₹{request.machineCharges || 0}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Material Charges:</span>
+                          <span className="font-mono">₹{request.materialCharges || 0}</span>
+                        </div>
+                        <div className="flex justify-between border-t pt-1 font-bold text-slate-800">
+                          <span>Total Charges:</span>
+                          <span className="font-mono text-blue-700">₹{request.totalCharges || 0}</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-2">
+                          <span className="text-muted-foreground text-[10px] font-semibold">Payment Status:</span>
+                          <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${
+                            request.paymentStatus === 'Paid' ? 'bg-green-100 text-green-800' :
+                            request.paymentStatus === 'Waived' ? 'bg-blue-100 text-blue-800' :
+                            'bg-amber-100 text-amber-800'
+                          }`}>
+                            {request.paymentStatus?.toUpperCase() || 'PENDING'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="bg-secondary/15 p-4 rounded-lg space-y-3 border">
+                  <h3 className="font-bold text-foreground flex items-center gap-1.5"><User className="w-3.5 h-3.5 text-primary" /> Student Team Details</h3>
+                  {request.teamName && (
+                    <div className="text-3xs text-muted-foreground font-semibold">
+                      <b>Team Name:</b> {request.teamName} | <b>Total Students:</b> {request.numberOfStudents}
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    {request.students?.map((s: any, idx: number) => (
+                      <div key={idx} className="bg-white p-2.5 border rounded-md space-y-1">
+                        <div className="font-bold text-slate-800">{s.name}</div>
+                        <div className="text-3xs text-muted-foreground space-y-0.5">
+                          <p>PRN: {s.prn || "N/A"} | Branch/Year: {s.branch || "N/A"} ({s.year || "N/A"})</p>
+                          <p>Email: {s.email || "N/A"} | Mobile: {s.mobile || "N/A"}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-                {request.teamName && (
-                  <div className="text-3xs text-muted-foreground">
-                    <b>Team Name:</b> {request.teamName} | <b>Total Students:</b> {request.numberOfStudents}
-                  </div>
-                )}
-              </div>
+              )}
 
               {/* Resources details */}
               <div className="space-y-2">

@@ -501,7 +501,8 @@ const SpecialRoomPermission = () => {
   };
 
   const downloadPdf = (id: string) => {
-    window.open(`${api.defaults.baseURL}/room-permissions/${id}/pdf`, "_blank");
+    const token = localStorage.getItem('idea_hub_token');
+    window.open(`${api.defaults.baseURL}/room-permissions/${id}/pdf${token ? `?token=${token}` : ''}`, "_blank");
   };
 
   const printForm = (req: any) => {

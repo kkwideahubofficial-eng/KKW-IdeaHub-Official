@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link, useSearchParams } from "react-router-dom";
 import { 
-  Calendar, Check, X, Clock, Users, Loader2, Database, ShieldAlert, 
+  Calendar, Check, X, Clock, Users, User, Loader2, Database, ShieldAlert, 
   Settings, FileDown, Eye, RefreshCw, Layers, Printer, Search, Download, SendHorizonal
 } from "lucide-react";
 import { toast } from "sonner";
@@ -98,6 +98,24 @@ interface ResourceRequest {
   completionRemarks?: string;
   actualUsageHours?: number;
   machineReleased?: boolean;
+  applicantType?: string;
+  externalFullName?: string;
+  externalDesignation?: string;
+  externalDept?: string;
+  externalCollegeOrg?: string;
+  externalCity?: string;
+  externalState?: string;
+  externalEmail?: string;
+  externalMobile?: string;
+  externalIdentityProof?: string;
+  identityVerification?: string;
+  externalApplicantType?: string;
+  externalTeamMembers?: { name: string; email: string; mobile: string }[];
+  totalCharges?: number;
+  paymentStatus?: string;
+  machineCharges?: number;
+  materialCharges?: number;
+  headConditions?: string;
 }
 
 interface Material {
@@ -231,14 +249,21 @@ const CoordinatorDashboard = () => {
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   // Materials & Machinery State
-  const [resourceRequests, setResourceRequests] = useState<ResourceRequest[]>([]);
+  const [resourceRequests, setResourceRequests] = useState<any[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [resourceLoading, setResourceLoading] = useState(false);
+  const [applicantTypeFilter, setApplicantTypeFilter] = useState<"All" | "Internal" | "External">("All");
 
   // Detail Modal & Action remarks
-  const [selectedResRequest, setSelectedResRequest] = useState<ResourceRequest | null>(null);
+  const [selectedResRequest, setSelectedResRequest] = useState<any | null>(null);
   const [showResReviewDialog, setShowResReviewDialog] = useState(false);
   const [decisionRemarks, setDecisionRemarks] = useState("");
+
+  // External Review fields
+  const [extIdVerification, setExtIdVerification] = useState("Pending");
+  const [extMachineCharges, setExtMachineCharges] = useState(0);
+  const [extMaterialCharges, setExtMaterialCharges] = useState(0);
+  const [extPaymentStatus, setExtPaymentStatus] = useState("Pending");
   
   // Coordinator Checklist
   const [checks, setChecks] = useState({
@@ -313,6 +338,15 @@ const CoordinatorDashboard = () => {
     fetchResourcePortalData();
   }, []);
 
+  useEffect(() => {
+    if (selectedResRequest) {
+      setExtIdVerification(selectedResRequest.identityVerification || "Pending");
+      setExtMachineCharges(selectedResRequest.machineCharges || 0);
+      setExtMaterialCharges(selectedResRequest.materialCharges || 0);
+      setExtPaymentStatus(selectedResRequest.paymentStatus || "Pending");
+    }
+  }, [selectedResRequest]);
+
   const fetchRoomBookings = async () => {
     try {
       const allRes = await axios.get('/bookings/all');
@@ -383,6 +417,11 @@ const CoordinatorDashboard = () => {
         toast.error("Please complete all Coordinator Review Checks before approving.");
         return;
       }
+
+      if (selectedResRequest.applicantType === "External" && extIdVerification !== "Verified") {
+        toast.error("Cannot approve request. Identity Verification must be set to 'Verified' for External Users.");
+        return;
+      }
     }
 
     let nextStatus = "Coordinator Approved";
@@ -394,7 +433,12 @@ const CoordinatorDashboard = () => {
       await api.patch(`/machinery/requests/${selectedResRequest._id}/status`, {
         status: nextStatus,
         remarks: decisionRemarks,
-        checks: checks
+        checks: checks,
+        identityVerification: extIdVerification,
+        machineCharges: extMachineCharges,
+        materialCharges: extMaterialCharges,
+        totalCharges: extMachineCharges + extMaterialCharges,
+        paymentStatus: extPaymentStatus
       });
 
       toast.success(`Request status updated to ${nextStatus}.`);
@@ -514,6 +558,10 @@ const CoordinatorDashboard = () => {
     approved: resourceRequests.filter(r => ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Active Booking'].includes(r.status)).length,
     lowStock: materials.filter(m => m.remainingQuantity <= m.lowStockThreshold).length,
     allocated: materials.reduce((acc, m) => acc + m.allocatedQuantity, 0),
+    totalInternal: resourceRequests.filter(r => r.applicantType === 'Internal' || !r.applicantType).length,
+    totalExternal: resourceRequests.filter(r => r.applicantType === 'External').length,
+    approvedExternal: resourceRequests.filter(r => r.applicantType === 'External' && ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Active Booking', 'Completed'].includes(r.status)).length,
+    pendingExternal: resourceRequests.filter(r => r.applicantType === 'External' && ['Submitted', 'Coordinator Review', 'Student Resubmitted'].includes(r.status)).length
   };
 
   const todayStr = new Date().toDateString();
@@ -591,12 +639,16 @@ const CoordinatorDashboard = () => {
       <TabsContent value="materials_machinery" className="space-y-6">
         
         {/* Resource Stats Bar */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {[
             { label: "Pending Resource Requests", value: resStats.pending, color: "text-blue-600" },
             { label: "Active Resource Permissions", value: resStats.approved, color: "text-green-600" },
             { label: "Allocated Materials Items", value: resStats.allocated, color: "text-indigo-600" },
-            { label: "Low Stock Inventory Alerts", value: resStats.lowStock, color: resStats.lowStock > 0 ? "text-amber-600" : "text-slate-600" }
+            { label: "Low Stock Inventory Alerts", value: resStats.lowStock, color: resStats.lowStock > 0 ? "text-amber-600" : "text-slate-600" },
+            { label: "Total Internal Requests", value: resStats.totalInternal, color: "text-blue-700" },
+            { label: "Total External Requests", value: resStats.totalExternal, color: "text-orange-600" },
+            { label: "Approved External Requests", value: resStats.approvedExternal, color: "text-orange-700" },
+            { label: "Pending External Requests", value: resStats.pendingExternal, color: "text-amber-600" }
           ].map((item, idx) => (
             <Card key={idx}>
               <CardContent className="pt-6">
@@ -618,37 +670,81 @@ const CoordinatorDashboard = () => {
           {/* Pending Reviews Tab */}
           <TabsContent value="resource_pending" className="space-y-4">
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base font-bold">Requests Awaiting Coordinator Review</CardTitle>
-                <CardDescription className="text-xs">Perform checks and forward approved requests to the Head</CardDescription>
+              <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <CardTitle className="text-base font-bold">Requests Awaiting Coordinator Review</CardTitle>
+                  <CardDescription className="text-xs">Perform checks and forward approved requests to the Head</CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="pending-applicant-filter" className="text-xs font-bold text-muted-foreground whitespace-nowrap">Applicant Type:</Label>
+                  <Select 
+                    value={applicantTypeFilter} 
+                    onValueChange={(val: any) => setApplicantTypeFilter(val)}
+                  >
+                    <SelectTrigger id="pending-applicant-filter" className="w-[150px] h-8 text-xs bg-white">
+                      <SelectValue placeholder="Select Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All Applicants</SelectItem>
+                      <SelectItem value="Internal">Internal Student</SelectItem>
+                      <SelectItem value="External">External User</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {resourceRequests.filter(r => ['Submitted', 'Coordinator Review', 'Student Resubmitted'].includes(r.status)).length === 0 ? (
-                  <p className="text-muted-foreground text-center py-6 text-xs font-semibold">No resource requests pending coordinator review.</p>
+                {resourceRequests
+                  .filter(r => ['Submitted', 'Coordinator Review', 'Student Resubmitted'].includes(r.status))
+                  .filter(r => {
+                    if (applicantTypeFilter === "All") return true;
+                    if (applicantTypeFilter === "Internal") return r.applicantType === "Internal" || !r.applicantType;
+                    if (applicantTypeFilter === "External") return r.applicantType === "External";
+                    return true;
+                  }).length === 0 ? (
+                  <p className="text-muted-foreground text-center py-6 text-xs font-semibold">No resource requests matching criteria pending review.</p>
                 ) : (
-                  resourceRequests.filter(r => ['Submitted', 'Coordinator Review', 'Student Resubmitted'].includes(r.status)).map((req) => (
-                    <div key={req._id} className="p-4 border rounded-xl bg-card hover:shadow-xs transition-shadow flex flex-col md:flex-row justify-between gap-4 items-start md:items-center text-xs">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-primary">{req.requestId}</span>
-                          <Badge variant="outline" className="text-[9px] font-bold uppercase">{req.status}</Badge>
+                  resourceRequests
+                    .filter(r => ['Submitted', 'Coordinator Review', 'Student Resubmitted'].includes(r.status))
+                    .filter(r => {
+                      if (applicantTypeFilter === "All") return true;
+                      if (applicantTypeFilter === "Internal") return r.applicantType === "Internal" || !r.applicantType;
+                      if (applicantTypeFilter === "External") return r.applicantType === "External";
+                      return true;
+                    })
+                    .map((req) => (
+                      <div key={req._id} className="p-4 border rounded-xl bg-card hover:shadow-xs transition-shadow flex flex-col md:flex-row justify-between gap-4 items-start md:items-center text-xs">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-bold text-primary">{req.requestId}</span>
+                            <Badge variant="outline" className="text-[9px] font-bold uppercase">{req.status}</Badge>
+                            {req.applicantType === 'External' ? (
+                              <Badge className="bg-orange-500 hover:bg-orange-600 text-white text-[9px] font-bold">EXTERNAL</Badge>
+                            ) : (
+                              <Badge className="bg-blue-600 hover:bg-blue-700 text-white text-[9px] font-bold">INTERNAL</Badge>
+                            )}
+                          </div>
+                          <h4 className="font-bold text-sm text-foreground mt-1">{req.projectName}</h4>
+                          <p className="text-3xs text-muted-foreground mt-0.5">
+                            Submitted by: {req.applicantType === 'External' ? (
+                              `${req.externalFullName || "External User"} (${req.externalCollegeOrg})`
+                            ) : (
+                              `${req.students?.[0]?.name || "Student"} (${req.students?.[0]?.branch})`
+                            )}
+                          </p>
                         </div>
-                        <h4 className="font-bold text-sm text-foreground mt-1">{req.projectName}</h4>
-                        <p className="text-3xs text-muted-foreground mt-0.5">Submitted by: {req.students?.[0]?.name || "Student"} ({req.students?.[0]?.branch})</p>
+                        
+                        <div className="flex gap-2 self-end md:self-auto">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => { setSelectedResRequest(req); setShowResReviewDialog(true); }}
+                            className="text-xs gap-1 font-semibold"
+                          >
+                            <Eye className="w-3.5 h-3.5" /> Review request
+                          </Button>
+                        </div>
                       </div>
-                      
-                      <div className="flex gap-2 self-end md:self-auto">
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          onClick={() => { setSelectedResRequest(req); setShowResReviewDialog(true); }}
-                          className="text-xs gap-1 font-semibold"
-                        >
-                          <Eye className="w-3.5 h-3.5" /> Review request
-                        </Button>
-                      </div>
-                    </div>
-                  ))
+                    ))
                 )}
               </CardContent>
             </Card>
@@ -657,9 +753,27 @@ const CoordinatorDashboard = () => {
           {/* Approved Permissions & Tracker Tab */}
           <TabsContent value="resource_approved" className="space-y-4">
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base font-bold">Approved Permissions Tracker</CardTitle>
-                <CardDescription className="text-xs">Manage checkout check-ins, allocations, and tool returns</CardDescription>
+              <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <CardTitle className="text-base font-bold">Approved Permissions Tracker</CardTitle>
+                  <CardDescription className="text-xs">Manage checkout check-ins, allocations, and tool returns</CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="approved-applicant-filter" className="text-xs font-bold text-muted-foreground whitespace-nowrap">Applicant Type:</Label>
+                  <Select 
+                    value={applicantTypeFilter} 
+                    onValueChange={(val: any) => setApplicantTypeFilter(val)}
+                  >
+                    <SelectTrigger id="approved-applicant-filter" className="w-[150px] h-8 text-xs bg-white">
+                      <SelectValue placeholder="Select Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="All">All Applicants</SelectItem>
+                      <SelectItem value="Internal">Internal Student</SelectItem>
+                      <SelectItem value="External">External User</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardHeader>
               <CardContent className="overflow-x-auto text-xs font-medium">
                 <table className="w-full text-left border-collapse border rounded-xl">
@@ -673,27 +787,57 @@ const CoordinatorDashboard = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {resourceRequests.filter(r => !['Draft', 'Submitted', 'Coordinator Review', 'Student Resubmitted', 'Coordinator Rejected', 'Rejected'].includes(r.status)).length === 0 ? (
+                    {resourceRequests
+                      .filter(r => !['Draft', 'Submitted', 'Coordinator Review', 'Student Resubmitted', 'Coordinator Rejected', 'Rejected'].includes(r.status))
+                      .filter(r => {
+                        if (applicantTypeFilter === "All") return true;
+                        if (applicantTypeFilter === "Internal") return r.applicantType === "Internal" || !r.applicantType;
+                        if (applicantTypeFilter === "External") return r.applicantType === "External";
+                        return true;
+                      }).length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="text-center py-6 text-muted-foreground font-semibold text-xs">No approved permissions found.</td>
+                        <td colSpan={5} className="text-center py-6 text-muted-foreground font-semibold text-xs">No approved permissions matching filter found.</td>
                       </tr>
                     ) : (
-                      resourceRequests.filter(r => !['Draft', 'Submitted', 'Coordinator Review', 'Student Resubmitted', 'Coordinator Rejected', 'Rejected'].includes(r.status)).map((req) => (
-                        <tr key={req._id} className="hover:bg-slate-50/30">
-                          <td className="px-4 py-3 font-mono font-bold text-primary">{req.requestId}</td>
-                          <td className="px-4 py-3">
-                            <div className="font-bold text-slate-800">{req.projectName}</div>
-                            <div className="text-3xs text-muted-foreground">{req.teamName || req.students?.[0]?.name}</div>
-                          </td>
-                          <td className="px-4 py-3 font-mono text-3xs text-muted-foreground">
-                            {req.requestedMachines?.[0]?.startTime} - {req.requestedMachines?.[0]?.endTime}
-                          </td>
-                          <td className="px-4 py-3">
-                            <Badge className="text-[8px] font-bold uppercase">{req.status}</Badge>
-                          </td>
-                          <td className="px-4 py-3 flex gap-2">
+                      resourceRequests
+                        .filter(r => !['Draft', 'Submitted', 'Coordinator Review', 'Student Resubmitted', 'Coordinator Rejected', 'Rejected'].includes(r.status))
+                        .filter(r => {
+                          if (applicantTypeFilter === "All") return true;
+                          if (applicantTypeFilter === "Internal") return r.applicantType === "Internal" || !r.applicantType;
+                          if (applicantTypeFilter === "External") return r.applicantType === "External";
+                          return true;
+                        })
+                        .map((req) => (
+                          <tr key={req._id} className="hover:bg-slate-50/30">
+                            <td className="px-4 py-3 font-mono font-bold text-primary">
+                              <div>{req.requestId}</div>
+                              <div className="mt-1">
+                                {req.applicantType === 'External' ? (
+                                  <Badge className="bg-orange-500 hover:bg-orange-600 text-white text-[8px] font-bold scale-90 origin-left">EXTERNAL</Badge>
+                                ) : (
+                                  <Badge className="bg-blue-600 hover:bg-blue-700 text-white text-[8px] font-bold scale-90 origin-left">INTERNAL</Badge>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="font-bold text-slate-800">{req.projectName}</div>
+                              <div className="text-3xs text-muted-foreground">
+                                {req.applicantType === 'External' ? (
+                                  `${req.externalFullName || "External User"} (${req.externalCollegeOrg})`
+                                ) : (
+                                  req.teamName || req.students?.[0]?.name
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 font-mono text-3xs text-muted-foreground">
+                              {req.requestedMachines?.[0]?.startTime} - {req.requestedMachines?.[0]?.endTime}
+                            </td>
+                            <td className="px-4 py-3">
+                              <Badge className="text-[8px] font-bold uppercase">{req.status}</Badge>
+                            </td>
+                            <td className="px-4 py-3 flex gap-2">
                             {/* Materials Issue */}
-                            {req.status === 'Approved' && (
+                            {req.status === 'Approved' && req.requestedMaterials && req.requestedMaterials.length > 0 && (
                               <Button 
                                 size="sm" 
                                 variant="outline"
@@ -1083,10 +1227,52 @@ const CoordinatorDashboard = () => {
             <div className="space-y-6">
               
               {/* Project & Team Description */}
-              <div className="bg-secondary/10 p-3 rounded-lg border">
+              <div className="bg-secondary/10 p-3 rounded-lg border space-y-2">
                 <p><b>Project Title:</b> {selectedResRequest.projectName} ({selectedResRequest.projectCategory})</p>
-                <p className="mt-1"><b>Description:</b> {selectedResRequest.projectDescription}</p>
-                <p className="mt-1"><b>Students:</b> {selectedResRequest.students?.map(s => s.name).join(', ')}</p>
+                <p><b>Description:</b> {selectedResRequest.projectDescription}</p>
+                {selectedResRequest.applicantType === 'External' ? (
+                  <div className="pt-2 border-t mt-2 space-y-1">
+                    <p className="font-bold text-orange-600 text-xs">External Applicant Details</p>
+                    <p><b>Name:</b> {selectedResRequest.externalFullName} ({selectedResRequest.externalDesignation || 'N/A'})</p>
+                    <p><b>Department:</b> {selectedResRequest.externalDept || 'N/A'}</p>
+                    <p><b>College / Org:</b> {selectedResRequest.externalCollegeOrg || 'N/A'}</p>
+                    <p><b>Location:</b> {selectedResRequest.externalCity}, {selectedResRequest.externalState}</p>
+                    <p><b>Contact:</b> {selectedResRequest.externalEmail} | {selectedResRequest.externalMobile}</p>
+                    {selectedResRequest.externalWebsite && <p><b>Website:</b> <a href={selectedResRequest.externalWebsite} target="_blank" rel="noreferrer" className="text-primary underline">{selectedResRequest.externalWebsite}</a></p>}
+                    
+                    {selectedResRequest.externalApplicantType === 'Team' ? (
+                      <div className="mt-2 p-2 bg-white border rounded">
+                        <p className="font-bold text-[10px] text-slate-800">Team Project: {selectedResRequest.teamName}</p>
+                        <div className="mt-1 space-y-1">
+                          {selectedResRequest.externalTeamMembers?.map((m: any, idx: number) => (
+                            <div key={idx} className="text-3xs text-muted-foreground">• {m.name} ({m.email} | {m.mobile})</div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <p><b>Type:</b> Individual Project</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="pt-2 border-t mt-2 space-y-2">
+                    <p className="font-bold text-primary text-[10px] uppercase tracking-wider">Student Team Details</p>
+                    {selectedResRequest.teamName && (
+                      <p className="font-semibold text-slate-700">Team Name: {selectedResRequest.teamName}</p>
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
+                      {selectedResRequest.students?.map((s, idx) => (
+                        <div key={idx} className="p-2.5 bg-white border rounded-md shadow-2xs space-y-1">
+                          <p className="font-bold text-slate-900 text-xs">{s.name}</p>
+                          <div className="text-muted-foreground text-[10px] space-y-0.5 font-medium">
+                            <p><b>PRN:</b> {s.prn || 'N/A'} | <b>Branch/Year:</b> {s.branch || 'N/A'} / {s.year || 'N/A'}</p>
+                            <p><b>Email:</b> {s.email || 'N/A'}</p>
+                            <p><b>Mobile:</b> {s.mobile || 'N/A'}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Resources details inside modal */}
@@ -1163,6 +1349,138 @@ const CoordinatorDashboard = () => {
                   </div>
                 )}
               </div>
+
+              {/* External User ID Proof and Verification */}
+              {selectedResRequest.applicantType === 'External' && (
+                <div className="space-y-4 pt-3 border-t">
+                  <h4 className="font-bold text-orange-600 flex items-center gap-1.5">
+                    <User className="w-4 h-4 text-orange-600" /> Identity Verification & Proof
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-xl bg-orange-50/10 border-orange-100">
+                    <div>
+                      <span className="font-semibold text-slate-700 block mb-1">Uploaded Identity Proof:</span>
+                      {selectedResRequest.externalIdentityProof ? (
+                        <a 
+                          href={selectedResRequest.externalIdentityProof} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className="inline-flex items-center gap-1.5 font-bold text-orange-700 underline text-xs"
+                        >
+                          <Eye className="w-4 h-4" /> View ID Proof Document
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground italic">No ID Proof uploaded.</span>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="ext-id-verification-status" className="font-semibold">Identity Verification Status:</Label>
+                      <Select 
+                        value={extIdVerification} 
+                        onValueChange={(val: any) => setExtIdVerification(val)}
+                      >
+                        <SelectTrigger id="ext-id-verification-status" className="h-9 mt-1 bg-white">
+                          <SelectValue placeholder="Verification Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Pending">Pending Verification</SelectItem>
+                          <SelectItem value="Verified">Verified & Approved ID</SelectItem>
+                          <SelectItem value="Rejected">Rejected ID Proof</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Usage Charges Configurator */}
+                  <h4 className="font-bold text-blue-800 flex items-center gap-1.5">
+                    <Database className="w-4 h-4 text-blue-800" /> External Usage Fee Configuration
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 border p-4 rounded-xl bg-blue-50/10 border-blue-100 font-medium">
+                    <div>
+                      <Label htmlFor="machine-charges" className="text-3xs uppercase font-bold text-slate-600">Machine Charges (₹)</Label>
+                      <Input 
+                        id="machine-charges"
+                        type="number"
+                        min="0"
+                        value={extMachineCharges}
+                        onChange={(e) => setExtMachineCharges(Number(e.target.value) || 0)}
+                        className="h-9 mt-1 bg-white text-xs font-mono font-bold"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="material-charges" className="text-3xs uppercase font-bold text-slate-600">Material Charges (₹)</Label>
+                      <Input 
+                        id="material-charges"
+                        type="number"
+                        min="0"
+                        value={extMaterialCharges}
+                        onChange={(e) => setExtMaterialCharges(Number(e.target.value) || 0)}
+                        className="h-9 mt-1 bg-white text-xs font-mono font-bold"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-3xs uppercase font-bold text-slate-600">Total Charges (₹)</Label>
+                      <div className="h-9 border rounded-md flex items-center px-3 mt-1 bg-slate-50 font-mono font-extrabold text-blue-700 text-sm">
+                        ₹{extMachineCharges + extMaterialCharges}
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="payment-status" className="text-3xs uppercase font-bold text-slate-600">Payment Status</Label>
+                      <Select 
+                        value={extPaymentStatus} 
+                        onValueChange={(val: any) => setExtPaymentStatus(val)}
+                      >
+                        <SelectTrigger id="payment-status" className="h-9 mt-1 bg-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Pending">Pending</SelectItem>
+                          <SelectItem value="Paid">Paid</SelectItem>
+                          <SelectItem value="Waived">Waived</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Previous Requests History */}
+                  <h4 className="font-bold text-slate-800 flex items-center gap-1.5">
+                    <RefreshCw className="w-4 h-4 text-slate-600" /> Applicant History Lookup
+                  </h4>
+                  <div className="border rounded-xl bg-slate-50 p-4 space-y-3">
+                    <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">
+                      Previous Requests from {selectedResRequest.externalEmail || selectedResRequest.externalMobile}
+                    </p>
+                    {resourceRequests.filter(r => 
+                      r._id !== selectedResRequest._id && 
+                      r.applicantType === 'External' && 
+                      ((selectedResRequest.externalEmail && r.externalEmail === selectedResRequest.externalEmail) || 
+                       (selectedResRequest.externalMobile && r.externalMobile === selectedResRequest.externalMobile))
+                    ).length === 0 ? (
+                      <p className="text-3xs text-muted-foreground italic">No previous requests found for this applicant.</p>
+                    ) : (
+                      <div className="space-y-2 max-h-36 overflow-y-auto">
+                        {resourceRequests.filter(r => 
+                          r._id !== selectedResRequest._id && 
+                          r.applicantType === 'External' && 
+                          ((selectedResRequest.externalEmail && r.externalEmail === selectedResRequest.externalEmail) || 
+                           (selectedResRequest.externalMobile && r.externalMobile === selectedResRequest.externalMobile))
+                        ).map((prevReq) => (
+                          <div key={prevReq._id} className="bg-white border rounded p-2 text-3xs flex justify-between items-center">
+                            <div>
+                              <span className="font-mono font-bold text-primary">{prevReq.requestId}</span>
+                              <span className="font-bold text-slate-700 ml-2">{prevReq.projectName}</span>
+                              <span className="text-muted-foreground block mt-0.5">
+                                Date: {prevReq.requestedMachines?.[0]?.usageDate ? new Date(prevReq.requestedMachines[0].usageDate).toLocaleDateString() : 'N/A'} 
+                                {prevReq.totalCharges > 0 && ` | Charges: ₹${prevReq.totalCharges} (${prevReq.paymentStatus})`}
+                              </span>
+                            </div>
+                            <Badge className="text-[8px] font-bold uppercase">{prevReq.status}</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Coordinator Checklist checks (Section 12) */}
               <div className="space-y-3 pt-3 border-t">

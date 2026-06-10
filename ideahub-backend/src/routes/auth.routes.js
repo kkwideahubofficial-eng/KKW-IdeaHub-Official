@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
 import { signup, login, getProfile, updateProfile, changePassword } from '../controllers/authController.js';
-import { requireAuth } from '../middlewares/auth.js';
+import { requireAuth, optionalAuth } from '../middlewares/auth.js';
 import { validationResult } from 'express-validator';
-import { upload } from '../middlewares/upload.js';
+import { upload, uploadIdProof } from '../middlewares/upload.js';
 
 const router = Router();
 
@@ -12,8 +12,16 @@ const validateSignup = [
   body('name').isString().isLength({ min: 2 }).withMessage('Name is required'),
   body('email').isEmail().withMessage('Valid email required'),
   body('password').isLength({ min: 6 }).withMessage('Password min length 6'),
-  body('role').optional().isIn(['team', 'coordinator', 'head', 'delivery_boy']).withMessage('Invalid role'),
+  body('role').optional().isIn(['team', 'coordinator', 'head', 'delivery_boy', 'admin']).withMessage('Invalid role'),
   body('teamName').optional().isString(),
+  body('prn').optional().isString(),
+  body('division').optional().isString(),
+  body('externalMobile').optional().isString(),
+  body('externalCollegeOrg').optional().isString(),
+  body('externalDept').optional().isString(),
+  body('externalCity').optional().isString(),
+  body('externalState').optional().isString(),
+  body('externalIdentityProof').optional().isString(),
 ];
 
 const validateLogin = [
@@ -26,6 +34,14 @@ const validateProfileUpdate = [
   body('mobile').optional().isString(),
   body('year').optional().isIn(['FE', 'SE', 'TE', 'BE', '']),
   body('branch').optional().isString(),
+  body('prn').optional().isString(),
+  body('division').optional().isString(),
+  body('externalMobile').optional().isString(),
+  body('externalCollegeOrg').optional().isString(),
+  body('externalDept').optional().isString(),
+  body('externalCity').optional().isString(),
+  body('externalState').optional().isString(),
+  body('externalIdentityProof').optional().isString(),
 ];
 
 const validatePasswordChange = [
@@ -54,6 +70,14 @@ function validate(req, res, next) {
 
 router.post('/signup', upload.single('image'), validateSignup, validate, signup);
 router.post('/login', validateLogin, validate, login);
+
+// Endpoint for uploading external user identity proofs (5MB and PDF/images only)
+router.post('/upload-id', optionalAuth, uploadIdProof.single('image'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ message: 'No file uploaded' });
+  }
+  res.json({ url: req.file.path });
+});
 
 // Protected routes
 router.get('/profile', requireAuth, getProfile);

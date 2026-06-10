@@ -16,6 +16,15 @@ interface UserProfile {
   year: string;
   branch: string;
   role: string;
+  userType: 'INTERNAL' | 'EXTERNAL';
+  prn: string;
+  division: string;
+  externalMobile: string;
+  externalCollegeOrg: string;
+  externalDept: string;
+  externalCity: string;
+  externalState: string;
+  externalIdentityProof: string;
 }
 
 const Profile = () => {
@@ -31,6 +40,15 @@ const Profile = () => {
     year: "",
     branch: "",
     role: "",
+    userType: "INTERNAL",
+    prn: "",
+    division: "",
+    externalMobile: "",
+    externalCollegeOrg: "",
+    externalDept: "",
+    externalCity: "",
+    externalState: "",
+    externalIdentityProof: "",
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -46,11 +64,20 @@ const Profile = () => {
   const fetchProfile = async () => {
     try {
       const response = await axios.get("/auth/profile");
+      const user = response.data.user;
       setProfile({
-        ...response.data.user,
-        mobile: response.data.user.mobile || "",
-        year: response.data.user.year || "",
-        branch: response.data.user.branch || "",
+        ...user,
+        mobile: user.mobile || "",
+        year: user.year || "",
+        branch: user.branch || "",
+        prn: user.prn || "",
+        division: user.division || "",
+        externalMobile: user.externalMobile || "",
+        externalCollegeOrg: user.externalCollegeOrg || "",
+        externalDept: user.externalDept || "",
+        externalCity: user.externalCity || "",
+        externalState: user.externalState || "",
+        externalIdentityProof: user.externalIdentityProof || "",
       });
     } catch (error) {
       toast.error("Failed to fetch profile data");
@@ -72,11 +99,19 @@ const Profile = () => {
 
     setSubmitting(true);
     try {
-      const { name, mobile, year, branch } = profile;
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const response = await axios.put("/auth/profile", { name, mobile, year, branch });
+      const {
+        name, email, mobile, year, branch, prn, division,
+        externalMobile, externalCollegeOrg, externalDept, externalCity,
+        externalState, externalIdentityProof
+      } = profile;
       
-      // Update local storage user data if needed to reflect name changes immediately across app
+      const response = await axios.put("/auth/profile", {
+        name, email, mobile, year, branch, prn, division,
+        externalMobile, externalCollegeOrg, externalDept, externalCity,
+        externalState, externalIdentityProof
+      });
+      
+      // Update local storage user data
       const rawUser = localStorage.getItem("idea_hub_user");
       if (rawUser) {
         const user = JSON.parse(rawUser);
@@ -84,11 +119,23 @@ const Profile = () => {
         user.mobile = mobile;
         user.year = year;
         user.branch = branch;
+        user.prn = prn;
+        user.division = division;
+        user.externalMobile = externalMobile;
+        user.externalCollegeOrg = externalCollegeOrg;
+        user.externalDept = externalDept;
+        user.externalCity = externalCity;
+        user.externalState = externalState;
+        user.externalIdentityProof = externalIdentityProof;
+        if (response.data.user?.userType) {
+          user.userType = response.data.user.userType;
+        }
         localStorage.setItem("idea_hub_user", JSON.stringify(user));
       }
 
       toast.success("Profile updated successfully");
       setIsEditing(false);
+      fetchProfile();
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to update profile");
     } finally {
@@ -116,8 +163,7 @@ const Profile = () => {
 
     setSubmitting(true);
     try {
-       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const response = await axios.post("/auth/change-password", {
+      await axios.post("/auth/change-password", {
         currentPassword,
         newPassword,
       });
@@ -142,9 +188,22 @@ const Profile = () => {
     );
   }
 
+  const isInternal = profile.userType === "INTERNAL" || profile.role !== "team";
+
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl space-y-8">
-      <h1 className="text-3xl font-bold text-foreground mb-6">My Profile</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <h1 className="text-3xl font-bold text-foreground">My Profile</h1>
+        {profile.userType && (
+          <span className={`inline-flex items-center px-4 py-1.5 rounded-full text-sm font-semibold shadow-sm w-fit ${
+            profile.userType === 'INTERNAL'
+              ? 'bg-blue-100 text-blue-800 border border-blue-200'
+              : 'bg-orange-100 text-orange-800 border border-orange-200'
+          }`}>
+            {profile.userType === 'INTERNAL' ? '🟦 KK Wagh Student' : '🟧 External User'}
+          </span>
+        )}
+      </div>
 
       {/* Profile Details Card */}
       <Card>
@@ -166,54 +225,168 @@ const Profile = () => {
 
             <div className="space-y-2">
               <Label htmlFor="email">Email Address</Label>
-              <Input id="email" value={profile.email} disabled className="bg-muted" />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="mobile">Mobile Number</Label>
-              <Input
-                id="mobile"
-                value={profile.mobile}
-                disabled={!isEditing}
-                onChange={(e) => handleProfileChange("mobile", e.target.value)}
-                placeholder="+91 9999999999"
+              <Input 
+                id="email" 
+                value={profile.email} 
+                disabled={!isEditing} 
+                className={isEditing ? "" : "bg-muted"}
+                onChange={(e) => handleProfileChange("email", e.target.value)} 
               />
+              {isEditing && (
+                <p className="text-[11px] text-muted-foreground">
+                  Updating email will automatically recalculate user type and badge.
+                </p>
+              )}
             </div>
 
-            {profile.role !== 'coordinator' && (
+            {/* --- INTERNAL STUDENT FIELDS --- */}
+            {isInternal && (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="branch">Branch</Label>
+                  <Label htmlFor="mobile">Mobile Number</Label>
                   <Input
-                    id="branch"
-                    value={profile.branch}
+                    id="mobile"
+                    value={profile.mobile}
                     disabled={!isEditing}
-                    onChange={(e) => handleProfileChange("branch", e.target.value)}
-                    placeholder="Ex. Computer Engineering"
+                    onChange={(e) => handleProfileChange("mobile", e.target.value)}
+                    placeholder="+91 9999999999"
+                  />
+                </div>
+
+                {profile.role === 'team' && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="prn">PRN</Label>
+                      <Input
+                        id="prn"
+                        value={profile.prn}
+                        disabled={!isEditing}
+                        onChange={(e) => handleProfileChange("prn", e.target.value)}
+                        placeholder="Ex. 71234567A"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="division">Division</Label>
+                      <Input
+                        id="division"
+                        value={profile.division}
+                        disabled={!isEditing}
+                        onChange={(e) => handleProfileChange("division", e.target.value)}
+                        placeholder="Ex. A"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="branch">Branch</Label>
+                      <Input
+                        id="branch"
+                        value={profile.branch}
+                        disabled={!isEditing}
+                        onChange={(e) => handleProfileChange("branch", e.target.value)}
+                        placeholder="Ex. Computer Engineering"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="year">Engineering Year</Label>
+                      {isEditing ? (
+                        <Select
+                          value={profile.year}
+                          onValueChange={(value) => handleProfileChange("year", value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select Year" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="FE">FE (First Year)</SelectItem>
+                            <SelectItem value="SE">SE (Second Year)</SelectItem>
+                            <SelectItem value="TE">TE (Third Year)</SelectItem>
+                            <SelectItem value="BE">BE (Final Year)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input value={profile.year || "Not set"} disabled />
+                      )}
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+
+            {/* --- EXTERNAL USER FIELDS --- */}
+            {!isInternal && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="externalMobile">Mobile Number</Label>
+                  <Input
+                    id="externalMobile"
+                    value={profile.externalMobile}
+                    disabled={!isEditing}
+                    onChange={(e) => handleProfileChange("externalMobile", e.target.value)}
+                    placeholder="+91 9999999999"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="year">Engineering Year</Label>
-                  {isEditing ? (
-                    <Select
-                      value={profile.year}
-                      onValueChange={(value) => handleProfileChange("year", value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Year" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="FE">FE (First Year)</SelectItem>
-                        <SelectItem value="SE">SE (Second Year)</SelectItem>
-                        <SelectItem value="TE">TE (Third Year)</SelectItem>
-                        <SelectItem value="BE">BE (Final Year)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Input value={profile.year || "Not set"} disabled />
-                  )}
+                  <Label htmlFor="externalCollegeOrg">College / Organization Name</Label>
+                  <Input
+                    id="externalCollegeOrg"
+                    value={profile.externalCollegeOrg}
+                    disabled={!isEditing}
+                    onChange={(e) => handleProfileChange("externalCollegeOrg", e.target.value)}
+                    placeholder="Ex. MIT Nashik"
+                  />
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="externalDept">Department / Domain</Label>
+                  <Input
+                    id="externalDept"
+                    value={profile.externalDept}
+                    disabled={!isEditing}
+                    onChange={(e) => handleProfileChange("externalDept", e.target.value)}
+                    placeholder="Ex. Robotics & Automation"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="externalCity">City</Label>
+                  <Input
+                    id="externalCity"
+                    value={profile.externalCity}
+                    disabled={!isEditing}
+                    onChange={(e) => handleProfileChange("externalCity", e.target.value)}
+                    placeholder="Nashik"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="externalState">State</Label>
+                  <Input
+                    id="externalState"
+                    value={profile.externalState}
+                    disabled={!isEditing}
+                    onChange={(e) => handleProfileChange("externalState", e.target.value)}
+                    placeholder="Maharashtra"
+                  />
+                </div>
+
+                {profile.externalIdentityProof && (
+                  <div className="space-y-2">
+                    <Label>Uploaded Identity Proof</Label>
+                    <div className="pt-2">
+                      <a
+                        href={profile.externalIdentityProof}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-primary hover:underline text-sm font-semibold"
+                      >
+                        Click to view Identity Proof Document
+                      </a>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>

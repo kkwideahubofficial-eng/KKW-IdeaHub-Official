@@ -16,7 +16,8 @@ interface UserData {
   id: string;
   name: string;
   email: string;
-  role: 'coordinator' | 'team' | 'head';
+  role: 'coordinator' | 'team' | 'head' | 'delivery_boy' | 'admin';
+  userType?: 'INTERNAL' | 'EXTERNAL';
   teamName?: string;
 }
 
@@ -38,6 +39,7 @@ const Navigation = () => {
           name: parsed.name,
           email: parsed.email,
           role: parsed.role,
+          userType: parsed.userType,
           teamName: parsed.teamName
         });
       } else {
@@ -88,10 +90,14 @@ const Navigation = () => {
     ];
 
     if (user?.role === 'team') {
-      links.push({ name: "Book Slots", path: "/book-slots" });
-      links.push({ name: "My Bookings", path: "/my-bookings" });
+      if (user.userType === 'INTERNAL') {
+        links.push({ name: "Book Slots", path: "/book-slots" });
+        links.push({ name: "My Bookings", path: "/my-bookings" });
+      }
       links.push({ name: "Machinery Permission", path: "/machinery" });
-      links.push({ name: "Room Permission", path: "/room-permission" });
+      if (user.userType === 'INTERNAL') {
+        links.push({ name: "Room Permission", path: "/room-permission" });
+      }
       links.push({ name: "Profile", path: "/profile" });
     }
 

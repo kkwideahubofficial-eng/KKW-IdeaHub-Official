@@ -3,7 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
+import { toast } from "sonner";
 import Navigation from "./components/layout/Navigation";
 import Footer from "./components/layout/Footer";
 import Home from "./pages/Home";
@@ -63,15 +64,34 @@ function getCurrentUser() {
   }
 }
 
+function ForbiddenRedirect({ message }: { message: string }) {
+  useEffect(() => {
+    toast.error(message);
+  }, [message]);
+  return <Navigate to="/" replace />;
+}
+
 function RequireAuth({ children }: { children: ReactNode }) {
   const user = getCurrentUser();
   if (!user) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 
+function RequireInternal({ children }: { children: ReactNode }) {
+  const user = getCurrentUser();
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.userType !== 'INTERNAL') {
+    return <ForbiddenRedirect message="Access Restricted. This feature is available only for KK Wagh students." />;
+  }
+  return <>{children}</>;
+}
+
 function RequireCoordinator({ children }: { children: ReactNode }) {
   const user = getCurrentUser();
   if (!user) return <Navigate to="/login" replace />;
+  if (user.userType !== 'INTERNAL') {
+    return <ForbiddenRedirect message="Access Restricted. This page is available only for KK Wagh staff members." />;
+  }
   if (!['coordinator', 'head', 'admin'].includes(user.role)) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
@@ -79,7 +99,19 @@ function RequireCoordinator({ children }: { children: ReactNode }) {
 function RequireHead({ children }: { children: ReactNode }) {
   const user = getCurrentUser();
   if (!user) return <Navigate to="/login" replace />;
+  if (user.userType !== 'INTERNAL') {
+    return <ForbiddenRedirect message="Access Restricted. This page is available only for KK Wagh staff members." />;
+  }
   if (user.role !== 'head' && user.role !== 'admin') return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+function RequireAdmin({ children }: { children: ReactNode }) {
+  const user = getCurrentUser();
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.userType !== 'INTERNAL' || user.role !== 'admin') {
+    return <ForbiddenRedirect message="Access Restricted. This page is available only for Administrators." />;
+  }
   return <>{children}</>;
 }
 
@@ -109,7 +141,9 @@ const App = () => (
                 path="/book-slots"
                 element={
                   <RequireAuth>
-                    <BookSlots />
+                    <RequireInternal>
+                      <BookSlots />
+                    </RequireInternal>
                   </RequireAuth>
                 }
               />
@@ -117,7 +151,9 @@ const App = () => (
                 path="/my-bookings"
                 element={
                   <RequireAuth>
-                    <MyBookings />
+                    <RequireInternal>
+                      <MyBookings />
+                    </RequireInternal>
                   </RequireAuth>
                 }
               />
@@ -246,18 +282,16 @@ const App = () => (
               />
               <Route
                 path="/machinery/request/:id"
-                element={
-                  <RequireAuth>
-                    <MachineryRequestForm />
-                  </RequireAuth>
-                }
+                element={<MachineryRequestForm />}
               />
               {/* Room Permission Routes */}
               <Route
                 path="/room-permission"
                 element={
                   <RequireAuth>
-                    <SpecialRoomPermission />
+                    <RequireInternal>
+                      <SpecialRoomPermission />
+                    </RequireInternal>
                   </RequireAuth>
                 }
               />

@@ -133,11 +133,62 @@ export const createAchievement = async (req, res) => {
 
   try {
     const { title, description, date, achievedBy, achievementType, contributionDomain, competitionLevel } = req.body;
-    const imageUrl = req.file ? req.file.path : (req.body.imageUrl || '');
+    
+    let imageUrl = req.body.imageUrl || '';
+    if (req.files && req.files.image && req.files.image[0]) {
+      imageUrl = req.files.image[0].path;
+    }
+
+    let gallery = [];
+    if (req.files && req.files.gallery) {
+      gallery = req.files.gallery.map(file => file.path);
+    }
+
     const prizeAmount = parseNumberish(req.body.prizeAmount);
     const eventYear = parseIntegerish(req.body.eventYear);
     const teamSize = parseIntegerish(req.body.teamSize);
     const ideaHubContributions = parseContributionFlags(req.body.ideaHubContributions);
+
+    let timeline = [];
+    if (req.body.timeline) {
+      try {
+        const parsed = typeof req.body.timeline === 'string' ? JSON.parse(req.body.timeline) : req.body.timeline;
+        if (Array.isArray(parsed)) {
+          timeline = parsed.map(item => ({
+            label: item.label,
+            date: new Date(item.date)
+          })).filter(item => !isNaN(item.date.getTime()) && item.label);
+        }
+      } catch (e) {
+        // ignore JSON errors
+      }
+    }
+
+    let certificates = [];
+    if (req.body.certificates) {
+      try {
+        const parsed = typeof req.body.certificates === 'string' ? JSON.parse(req.body.certificates) : req.body.certificates;
+        if (Array.isArray(parsed)) {
+          certificates = parsed.map(item => {
+            let fileUrl = item.fileUrl || '';
+            if (item.fileIndex !== undefined && req.files && req.files.certificateFiles) {
+              const idx = Number(item.fileIndex);
+              if (req.files.certificateFiles[idx]) {
+                fileUrl = req.files.certificateFiles[idx].path;
+              }
+            }
+            return {
+              title: item.title,
+              achievedBy: item.achievedBy,
+              date: new Date(item.date),
+              fileUrl
+            };
+          }).filter(item => !isNaN(item.date.getTime()) && item.title && item.achievedBy);
+        }
+      } catch (e) {
+        // ignore JSON errors
+      }
+    }
 
     const newAchievement = new Achievement({
       title,
@@ -145,6 +196,9 @@ export const createAchievement = async (req, res) => {
       date,
       achievedBy,
       imageUrl,
+      gallery,
+      timeline,
+      certificates,
       achievementType,
       contributionDomain,
       competitionLevel,
@@ -492,10 +546,70 @@ export const updateAchievement = async (req, res) => {
         ...ideaHubContributions,
       };
     }
-    if (req.file) {
-      achievement.imageUrl = req.file.path;
+    if (req.files && req.files.image && req.files.image[0]) {
+      achievement.imageUrl = req.files.image[0].path;
     } else if (typeof req.body.imageUrl === 'string') {
       achievement.imageUrl = req.body.imageUrl || achievement.imageUrl;
+    }
+
+    let gallery = [];
+    if (req.files && req.files.gallery) {
+      gallery = req.files.gallery.map(file => file.path);
+    }
+
+    if (req.body.existingGallery) {
+      try {
+        const existing = typeof req.body.existingGallery === 'string'
+          ? JSON.parse(req.body.existingGallery)
+          : req.body.existingGallery;
+        if (Array.isArray(existing)) {
+          gallery = [...existing, ...gallery];
+        }
+      } catch (e) {
+        // Ignore parse error
+      }
+    }
+
+    if ((req.files && req.files.gallery) || req.body.existingGallery !== undefined) {
+      achievement.gallery = gallery;
+    }
+
+    if (req.body.timeline !== undefined) {
+      try {
+        const parsed = typeof req.body.timeline === 'string' ? JSON.parse(req.body.timeline) : req.body.timeline;
+        if (Array.isArray(parsed)) {
+          achievement.timeline = parsed.map(item => ({
+            label: item.label,
+            date: new Date(item.date)
+          })).filter(item => !isNaN(item.date.getTime()) && item.label);
+        }
+      } catch (e) {
+        // ignore parse error
+      }
+    }
+    if (req.body.certificates !== undefined) {
+      try {
+        const parsed = typeof req.body.certificates === 'string' ? JSON.parse(req.body.certificates) : req.body.certificates;
+        if (Array.isArray(parsed)) {
+          achievement.certificates = parsed.map(item => {
+            let fileUrl = item.fileUrl || '';
+            if (item.fileIndex !== undefined && req.files && req.files.certificateFiles) {
+              const idx = Number(item.fileIndex);
+              if (req.files.certificateFiles[idx]) {
+                fileUrl = req.files.certificateFiles[idx].path;
+              }
+            }
+            return {
+              title: item.title,
+              achievedBy: item.achievedBy,
+              date: new Date(item.date),
+              fileUrl
+            };
+          }).filter(item => !isNaN(item.date.getTime()) && item.title && item.achievedBy);
+        }
+      } catch (e) {
+        // ignore parse error
+      }
     }
 
     await achievement.save();

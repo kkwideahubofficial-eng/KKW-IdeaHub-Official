@@ -1,5 +1,5 @@
 import express from 'express';
-import { requireAuth, requireCoordinator } from '../middlewares/auth.js';
+import { requireAuth, requireCoordinator, optionalAuth } from '../middlewares/auth.js';
 import * as machineryController from '../controllers/machineryController.js';
 import * as requestController from '../controllers/machineryRequestController.js';
 import { upload } from '../middlewares/upload.js';
@@ -7,7 +7,7 @@ import { upload } from '../middlewares/upload.js';
 const router = express.Router();
 
 // Upload generic image (Machinery or Request photos)
-router.post('/upload', requireAuth, upload.single('image'), (req, res) => {
+router.post('/upload', optionalAuth, upload.single('image'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: 'No file uploaded' });
   }
@@ -23,8 +23,8 @@ router.get('/check/availability', requireAuth, requestController.checkMachineAva
 // Public verify route
 router.get('/requests/:requestId/verify-public', requestController.verifyPublicRequest);
 
-// Create request (Student)
-router.post('/requests', requireAuth, requestController.createRequest);
+// Create request (Student or External)
+router.post('/requests', optionalAuth, requestController.createRequest);
 
 // Get requests (Head views all, Student views theirs, with filters/search)
 router.get('/requests', requireAuth, requestController.getRequests);

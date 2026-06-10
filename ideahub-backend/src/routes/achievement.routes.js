@@ -31,7 +31,7 @@ router.post(
   '/',
   requireAuth,
   requireCoordinator,
-  upload.single('image'),
+  upload.fields([{ name: 'image', maxCount: 1 }, { name: 'gallery', maxCount: 10 }, { name: 'certificateFiles', maxCount: 10 }]),
   [
     body('title').not().isEmpty().withMessage('Title is required'),
     body('description').not().isEmpty().withMessage('Description is required'),
@@ -48,7 +48,7 @@ router.put(
   '/:id',
   requireAuth,
   requireCoordinator,
-  upload.single('image'),
+  upload.fields([{ name: 'image', maxCount: 1 }, { name: 'gallery', maxCount: 10 }, { name: 'certificateFiles', maxCount: 10 }]),
   param('id').isMongoId(),
   [
     body('title').optional().not().isEmpty(),

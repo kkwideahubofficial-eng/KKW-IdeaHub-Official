@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, MapPin, Users, Clock, Search, Filter, BookOpen, Bell, ArrowRight, ShieldCheck, Download, Award, PlayCircle, Layers } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 
 interface EventItem {
@@ -102,6 +103,44 @@ const Events = () => {
   const [category, setCategory] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("");
+
+  // Drawer & temp filter state for mobile view
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [tempSearch, setTempSearch] = useState("");
+  const [tempCategory, setTempCategory] = useState("all");
+  const [tempStatus, setTempStatus] = useState("all");
+  const [tempDate, setTempDate] = useState("");
+
+  // Sync temp state when drawer opens
+  useEffect(() => {
+    if (isDrawerOpen) {
+      setTempSearch(search);
+      setTempCategory(category);
+      setTempStatus(statusFilter);
+      setTempDate(dateFilter);
+    }
+  }, [isDrawerOpen]);
+
+  const handleApplyFilters = () => {
+    setSearch(tempSearch);
+    setCategory(tempCategory);
+    setStatusFilter(tempStatus);
+    setDateFilter(tempDate);
+    setIsDrawerOpen(false);
+  };
+
+  const handleClearFilters = () => {
+    setTempSearch("");
+    setTempCategory("all");
+    setTempStatus("all");
+    setTempDate("");
+    
+    setSearch("");
+    setCategory("all");
+    setStatusFilter("all");
+    setDateFilter("");
+    setIsDrawerOpen(false);
+  };
 
   const user = useMemo(getCurrentUser, []);
 
@@ -559,8 +598,8 @@ const Events = () => {
 
         {/* Tab 1: Browse Events */}
         <TabsContent value="browse" className="space-y-6">
-          {/* Filters Panel */}
-          <div className="bg-card/30 border p-5 rounded-2xl grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end shadow-sm">
+          {/* Desktop Filters Panel (visible on sm screens and up) */}
+          <div className="hidden sm:grid bg-card/30 border p-5 rounded-2xl grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end shadow-sm">
             <div className="space-y-2">
               <Label htmlFor="search" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Search</Label>
               <div className="relative">
@@ -615,6 +654,112 @@ const Events = () => {
               </select>
             </div>
           </div>
+
+          {/* Mobile Filters Panel Toolbar (hidden on sm screens) */}
+          <div className="flex sm:hidden items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input 
+                placeholder="Search events..." 
+                className="pl-9 rounded-xl border-border/60 bg-background/50 focus:bg-background transition-all"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <Button 
+              variant="outline" 
+              className="rounded-xl border-border/60 h-10 gap-2 font-semibold bg-background"
+              onClick={() => setIsDrawerOpen(true)}
+            >
+              <Filter className="w-4 h-4" /> Filters
+            </Button>
+          </div>
+
+          {/* Mobile Bottom Sheet Filter Drawer */}
+          <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+            <SheetContent side="bottom" className="h-[70vh] rounded-t-3xl flex flex-col p-0 bg-background overflow-hidden border-t">
+              <SheetHeader className="p-4 border-b text-center shrink-0">
+                <SheetTitle className="text-base font-bold text-foreground">Filters</SheetTitle>
+              </SheetHeader>
+              
+              <div className="flex-1 overflow-y-auto p-5 space-y-5">
+                {/* Search Field inside Drawer */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="drawer-search" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Search</Label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input 
+                      id="drawer-search"
+                      placeholder="Search events, organizer..." 
+                      className="pl-9 rounded-xl border-border/60 bg-background/50"
+                      value={tempSearch}
+                      onChange={(e) => setTempSearch(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Category Dropdown inside Drawer */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="drawer-category" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Category</Label>
+                  <select 
+                    id="drawer-category"
+                    className="w-full h-10 px-3 rounded-xl border border-border/60 bg-background/50 text-sm focus:outline-none"
+                    value={tempCategory}
+                    onChange={(e) => setTempCategory(e.target.value)}
+                  >
+                    {categories.map(cat => (
+                      <option key={cat} value={cat} className="capitalize">{cat === 'all' ? 'All Categories' : cat}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Date Picker inside Drawer */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="drawer-date" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Date</Label>
+                  <Input 
+                    id="drawer-date"
+                    type="date"
+                    className="rounded-xl border-border/60 bg-background/50"
+                    value={tempDate}
+                    onChange={(e) => setTempDate(e.target.value)}
+                  />
+                </div>
+
+                {/* Status Dropdown inside Drawer */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="drawer-status" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Status Group</Label>
+                  <select 
+                    id="drawer-status"
+                    className="w-full h-10 px-3 rounded-xl border border-border/60 bg-background/50 text-sm focus:outline-none"
+                    value={tempStatus}
+                    onChange={(e) => setTempStatus(e.target.value)}
+                  >
+                    <option value="all">All Events</option>
+                    <option value="upcoming">Upcoming & Open</option>
+                    <option value="ongoing">Ongoing</option>
+                    <option value="past">Past / Closed</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Sticky Drawer Footer */}
+              <div className="p-4 border-t bg-muted/20 shrink-0 flex gap-3">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 rounded-xl h-11 font-semibold"
+                  onClick={handleClearFilters}
+                >
+                  Clear Filters
+                </Button>
+                <Button 
+                  className="flex-1 rounded-xl h-11 font-semibold bg-primary text-primary-foreground"
+                  onClick={handleApplyFilters}
+                >
+                  Apply Filters
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
 
           {/* Events Grid */}
           {loading ? (

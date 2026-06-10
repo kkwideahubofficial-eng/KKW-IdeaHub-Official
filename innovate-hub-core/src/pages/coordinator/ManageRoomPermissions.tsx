@@ -578,7 +578,10 @@ const ManageRoomPermissions = () => {
                           <Button
                             type="button"
                             variant="outline"
-                            onClick={() => window.open(`${api.defaults.baseURL}/room-permissions/${selectedRequest._id}/pdf`, "_blank")}
+                            onClick={() => {
+                              const token = localStorage.getItem('idea_hub_token');
+                              window.open(`${api.defaults.baseURL}/room-permissions/${selectedRequest._id}/pdf${token ? `?token=${token}` : ''}`, "_blank");
+                            }}
                             className="border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs px-3 h-9"
                           >
                             View PDF
@@ -587,7 +590,8 @@ const ManageRoomPermissions = () => {
                             type="button"
                             variant="outline"
                             onClick={() => {
-                              window.open(`${api.defaults.baseURL}/room-permissions/${selectedRequest._id}/pdf`, "_blank");
+                              const token = localStorage.getItem('idea_hub_token');
+                              window.open(`${api.defaults.baseURL}/room-permissions/${selectedRequest._id}/pdf${token ? `?token=${token}` : ''}`, "_blank");
                             }}
                             className="border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs px-3 h-9"
                           >

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
 import api from "@/lib/axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -119,7 +119,14 @@ const MachineryRequestForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadingField, setUploadingField] = useState<string | null>(null);
 
-  // Form State
+  // Success tracking state for guests
+  const [isSubmittedSuccessfully, setIsSubmittedSuccessfully] = useState(false);
+  const [submittedRequestId, setSubmittedRequestId] = useState("");
+
+  // Applicant Type state
+  const [applicantType, setApplicantType] = useState<"Internal" | "External">("Internal");
+
+  // Form State - Internal Student
   const [projectName, setProjectName] = useState("");
   const [projectCategory, setProjectCategory] = useState("Academic Project");
   const [projectDescription, setProjectDescription] = useState("");
@@ -140,6 +147,23 @@ const MachineryRequestForm = () => {
     designation: "Assistant Professor",
     remarks: ""
   });
+
+  // Form State - External User
+  const [externalFullName, setExternalFullName] = useState("");
+  const [externalCollegeOrg, setExternalCollegeOrg] = useState("");
+  const [externalDept, setExternalDept] = useState("");
+  const [externalDesignation, setExternalDesignation] = useState("");
+  const [externalWebsite, setExternalWebsite] = useState("");
+  const [externalCity, setExternalCity] = useState("");
+  const [externalState, setExternalState] = useState("");
+  const [externalEmail, setExternalEmail] = useState("");
+  const [externalMobile, setExternalMobile] = useState("");
+  const [externalIdentityProof, setExternalIdentityProof] = useState("");
+  const [externalApplicantType, setExternalApplicantType] = useState<"Individual" | "Team">("Individual");
+  const [externalTeamMembers, setExternalTeamMembers] = useState<any[]>([
+    { name: "", email: "", mobile: "" }
+  ]);
+  const [externalTeamCount, setExternalTeamCount] = useState(1);
 
   const [selectedMachines, setSelectedMachines] = useState<string[]>([]);
   const [machineDetails, setMachineDetails] = useState<Record<string, any>>({});
@@ -174,7 +198,99 @@ const MachineryRequestForm = () => {
 
   useEffect(() => {
     fetchInitialResourceLists();
-  }, []);
+    
+    const userRaw = localStorage.getItem('idea_hub_user');
+    const token = localStorage.getItem('idea_hub_token');
+    const typeParam = searchParams.get("type");
+    
+    let resolvedType: "Internal" | "External" = "Internal";
+    if (typeParam === "External") {
+      resolvedType = "External";
+    } else if (typeParam === "Internal") {
+      resolvedType = "Internal";
+    } else {
+      // Default based on login status and user type
+      if (userRaw && token) {
+        try {
+          const u = JSON.parse(userRaw);
+          resolvedType = u.userType === "EXTERNAL" ? "External" : "Internal";
+        } catch {
+          resolvedType = "Internal";
+        }
+      } else {
+        resolvedType = "External";
+      }
+    }
+    
+    setApplicantType(resolvedType);
+    
+    if (resolvedType === "Internal") {
+      if (!userRaw || !token) {
+        toast.error("You must be logged in as a student to file an internal request.");
+        navigate("/login?redirect=" + encodeURIComponent(window.location.pathname + window.location.search));
+        return;
+      }
+      try {
+        const u = JSON.parse(userRaw);
+        if (u.userType === "EXTERNAL") {
+          toast.error("Access Restricted. External users cannot submit Internal student requests.");
+          navigate("/machinery");
+          return;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    if (id === "new" && userRaw) {
+      try {
+        const u = JSON.parse(userRaw);
+        if (resolvedType === "Internal") {
+          let mappedYear = "3rd Year";
+          if (u.year === "FE") mappedYear = "1st Year";
+          else if (u.year === "SE") mappedYear = "2nd Year";
+          else if (u.year === "TE") mappedYear = "3rd Year";
+          else if (u.year === "BE") mappedYear = "4th Year";
+
+          setStudents([{
+            name: u.name || "",
+            prn: u.prn || "",
+            branch: u.branch || "Computer Engineering",
+            year: mappedYear,
+            division: u.division || "A",
+            mobile: u.mobile || "",
+            email: u.email || ""
+          }]);
+        } else {
+          setExternalFullName(u.name || "");
+          setExternalEmail(u.email || "");
+          setExternalMobile(u.externalMobile || u.mobile || "");
+          setExternalCollegeOrg(u.externalCollegeOrg || "");
+          setExternalDept(u.externalDept || "");
+          setExternalCity(u.externalCity || "");
+          setExternalState(u.externalState || "");
+          setExternalIdentityProof(u.externalIdentityProof || "");
+        }
+      } catch (e) {
+        console.error("Failed to parse user for pre-population:", e);
+      }
+    }
+  }, [searchParams, navigate]);
+
+  useEffect(() => {
+    if (externalApplicantType === "Team") {
+      const count = Math.max(1, externalTeamCount);
+      const nextList = [...externalTeamMembers];
+      if (count > nextList.length) {
+        for (let i = nextList.length; i < count; i++) {
+          nextList.push({ name: "", email: "", mobile: "" });
+        }
+      } else {
+        nextList.length = count;
+      }
+      setExternalTeamMembers(nextList);
+    }
+  }, [externalTeamCount, externalApplicantType]);
 
   const fetchInitialResourceLists = async () => {
     setLoading(true);
@@ -387,10 +503,10 @@ const MachineryRequestForm = () => {
       projectDescription,
       projectObjectives,
       expectedOutcome,
-      teamName,
-      numberOfStudents,
-      students,
-      facultyGuide,
+      teamName: applicantType === 'External' ? (externalApplicantType === 'Team' ? teamName : '') : teamName,
+      numberOfStudents: applicantType === 'External' ? (externalApplicantType === 'Team' ? externalTeamCount + 1 : 1) : numberOfStudents,
+      students: applicantType === 'External' ? [] : students,
+      facultyGuide: applicantType === 'External' ? {} : facultyGuide,
       requestedMachines: selectedMachines.map(mId => ({
         machineId: mId,
         machineName: machinesList.find(m => m._id === mId)?.name || "",
@@ -410,18 +526,40 @@ const MachineryRequestForm = () => {
       uploadedFiles,
       benefits,
       declaration,
-      status: statusType
+      status: statusType,
+      
+      // External applicant fields
+      applicantType,
+      externalFullName: applicantType === 'External' ? externalFullName : '',
+      externalCollegeOrg: applicantType === 'External' ? externalCollegeOrg : '',
+      externalDept: applicantType === 'External' ? externalDept : '',
+      externalDesignation: applicantType === 'External' ? externalDesignation : '',
+      externalWebsite: applicantType === 'External' ? externalWebsite : '',
+      externalCity: applicantType === 'External' ? externalCity : '',
+      externalState: applicantType === 'External' ? externalState : '',
+      externalEmail: applicantType === 'External' ? externalEmail : '',
+      externalMobile: applicantType === 'External' ? externalMobile : '',
+      externalIdentityProof: applicantType === 'External' ? externalIdentityProof : '',
+      externalApplicantType: applicantType === 'External' ? externalApplicantType : 'Individual',
+      externalTeamMembers: applicantType === 'External' ? (externalApplicantType === 'Team' ? externalTeamMembers : []) : []
     };
 
     try {
+      let res;
       if (id && id !== "new") {
-        await api.put(`/machinery/requests/${id}`, payload);
+        res = await api.put(`/machinery/requests/${id}`, payload);
         toast.success(statusType === 'Draft' ? "Draft saved." : "Application resubmitted successfully!");
       } else {
-        await api.post("/machinery/requests", payload);
+        res = await api.post("/machinery/requests", payload);
         toast.success(statusType === 'Draft' ? "Draft saved." : "Application submitted successfully!");
       }
-      navigate("/machinery");
+
+      if (applicantType === 'External' && statusType !== 'Draft') {
+        setSubmittedRequestId(res.data.requestId);
+        setIsSubmittedSuccessfully(true);
+      } else {
+        navigate("/machinery");
+      }
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to submit request.");
     } finally {
@@ -436,10 +574,31 @@ const MachineryRequestForm = () => {
         toast.error("Please fill in all project details.");
         return;
       }
-      for (const stud of students) {
-        if (!stud.name || !stud.prn || !stud.mobile || !stud.email) {
-          toast.error("Please fill in all team student details.");
+      if (applicantType === "External") {
+        if (!externalFullName || !externalCollegeOrg || !externalCity || !externalState || !externalEmail || !externalMobile || !externalIdentityProof) {
+          toast.error("Please fill in all applicant details and upload your Identity Proof.");
           return;
+        }
+        if (externalApplicantType === "Team") {
+          if (!teamName) {
+            toast.error("Please enter your Team Name.");
+            return;
+          }
+          for (let i = 0; i < externalTeamMembers.length; i++) {
+            const m = externalTeamMembers[i];
+            if (!m.name || !m.email || !m.mobile) {
+              toast.error(`Please fill in all details for Team Member ${i + 1}.`);
+              return;
+            }
+          }
+        }
+      } else {
+        // Internal Student
+        for (const stud of students) {
+          if (!stud.name || !stud.prn || !stud.mobile || !stud.email) {
+            toast.error("Please fill in all team student details.");
+            return;
+          }
         }
       }
     }
@@ -480,6 +639,64 @@ const MachineryRequestForm = () => {
     );
   }
 
+  if (isSubmittedSuccessfully) {
+    return (
+      <div className="container mx-auto px-4 py-16 max-w-xl font-sans flex flex-col items-center justify-center min-h-[80vh]">
+        <Card className="w-full shadow-2xl border border-orange-200 overflow-hidden rounded-2xl">
+          <div className="bg-orange-500 p-8 text-center text-white flex flex-col items-center justify-center">
+            <div className="w-16 h-16 bg-white/20 backdrop-blur-xs rounded-full flex items-center justify-center mb-4 border border-white/30">
+              <Check className="w-10 h-10 text-white stroke-[3px]" />
+            </div>
+            <h1 className="text-2xl font-extrabold tracking-tight">Request Submitted Successfully!</h1>
+            <p className="text-orange-50/90 text-xs mt-1.5 font-medium">KK Wagh AICTE IDEA Lab External Permission System</p>
+          </div>
+          
+          <CardContent className="p-8 space-y-6 text-xs text-slate-700">
+            <div className="bg-orange-50/30 border border-orange-100 rounded-xl p-4 space-y-2 text-center">
+              <span className="text-[10px] text-muted-foreground uppercase font-bold block">Your Generated Request ID</span>
+              <span className="font-mono text-2xl font-extrabold text-orange-600 block">{submittedRequestId}</span>
+              <p className="text-3xs text-muted-foreground leading-normal max-w-xs mx-auto">
+                Please save this Request ID. You can use it to check the live status of your application without logging in.
+              </p>
+            </div>
+
+            <div className="space-y-3 font-medium text-slate-600 border-t pt-4">
+              <p className="flex justify-between">
+                <span>Applicant Name:</span>
+                <span className="font-bold text-slate-800">{externalFullName}</span>
+              </p>
+              <p className="flex justify-between">
+                <span>Institution:</span>
+                <span className="font-bold text-slate-800">{externalCollegeOrg}</span>
+              </p>
+              <p className="flex justify-between">
+                <span>Project Name:</span>
+                <span className="font-bold text-slate-800">{projectName}</span>
+              </p>
+              <p className="flex justify-between">
+                <span>Verification ID Status:</span>
+                <span className="text-blue-600 font-bold uppercase">PENDING REVIEW</span>
+              </p>
+            </div>
+
+            <div className="pt-4 border-t flex flex-col sm:flex-row gap-3">
+              <Link to={`/verify-request/${submittedRequestId}`} className="flex-1">
+                <Button className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold h-10">
+                  Track Live Status
+                </Button>
+              </Link>
+              <Link to="/" className="flex-1">
+                <Button variant="outline" className="w-full font-bold h-10">
+                  Back to Home
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl font-sans">
       {/* Visual Step Progress Bar */}
@@ -502,7 +719,7 @@ const MachineryRequestForm = () => {
             const isActive = step === stepNum;
             
             return (
-              <div key={idx} className="flex flex-col items-center relative z-10 w-24">
+              <div key={idx} className="flex flex-col items-center relative z-10 w-auto flex-1 px-1">
                 <button
                   type="button"
                   onClick={() => {
@@ -581,109 +798,374 @@ const MachineryRequestForm = () => {
                 </div>
               </div>
 
-              {/* Team Information Group */}
-              <div className="space-y-6 pt-6 border-t border-slate-200">
-                <div>
-                  <h2 className="text-lg font-bold text-primary flex items-center gap-2"><Users className="w-5 h-5 text-primary" /> Team Information</h2>
-                  <p className="text-[11px] text-muted-foreground font-semibold">Add details for team members (Max 4 students)</p>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Applicant Profile / Team Configuration block */}
+              {applicantType === "External" ? (
+                <div className="space-y-6 pt-6 border-t border-slate-200">
                   <div>
-                    <Label htmlFor="teamName" className="text-xs font-bold">Team Name</Label>
-                    <Input id="teamName" value={teamName} onChange={(e) => setTeamName(e.target.value)} placeholder="Nikola Team" className="h-10 mt-1" />
+                    <h2 className="text-lg font-bold text-orange-600 flex items-center gap-2">
+                      <User className="w-5 h-5 text-orange-600" /> External Applicant Profile
+                    </h2>
+                    <p className="text-[11px] text-muted-foreground font-semibold">
+                      Please enter your institutional and identity details
+                    </p>
                   </div>
-                  <div>
-                    <Label htmlFor="numStudents" className="text-xs font-bold">Number of Students</Label>
-                    <Select value={String(numberOfStudents)} onValueChange={(v) => setNumberOfStudents(Number(v))}>
-                      <SelectTrigger className="h-10 mt-1"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">1 Student (Individual)</SelectItem>
-                        <SelectItem value="2">2 Students</SelectItem>
-                        <SelectItem value="3">3 Students</SelectItem>
-                        <SelectItem value="4">4 Students (Max Group)</SelectItem>
-                      </SelectContent>
-                    </Select>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+                    <div>
+                      <Label htmlFor="extFullName" className="font-semibold">Full Name</Label>
+                      <Input 
+                        id="extFullName" 
+                        value={externalFullName} 
+                        onChange={(e) => setExternalFullName(e.target.value)} 
+                        placeholder="John Doe" 
+                        className="h-9 mt-1" 
+                        required 
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="extCollegeOrg" className="font-semibold">College / Organization Name</Label>
+                      <Input 
+                        id="extCollegeOrg" 
+                        value={externalCollegeOrg} 
+                        onChange={(e) => setExternalCollegeOrg(e.target.value)} 
+                        placeholder="MIT Pune" 
+                        className="h-9 mt-1" 
+                        required 
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="extDept" className="font-semibold">Department</Label>
+                      <Input 
+                        id="extDept" 
+                        value={externalDept} 
+                        onChange={(e) => setExternalDept(e.target.value)} 
+                        placeholder="Mechanical Engineering" 
+                        className="h-9 mt-1" 
+                        required 
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="extDesignation" className="font-semibold">Designation</Label>
+                      <Input 
+                        id="extDesignation" 
+                        value={externalDesignation} 
+                        onChange={(e) => setExternalDesignation(e.target.value)} 
+                        placeholder="Research Scholar" 
+                        className="h-9 mt-1" 
+                        required 
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="extWebsite" className="font-semibold">Website (Optional)</Label>
+                      <Input 
+                        id="extWebsite" 
+                        value={externalWebsite} 
+                        onChange={(e) => setExternalWebsite(e.target.value)} 
+                        placeholder="https://example.com" 
+                        className="h-9 mt-1" 
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="extCity" className="font-semibold">City</Label>
+                      <Input 
+                        id="extCity" 
+                        value={externalCity} 
+                        onChange={(e) => setExternalCity(e.target.value)} 
+                        placeholder="Nashik" 
+                        className="h-9 mt-1" 
+                        required 
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="extState" className="font-semibold">State</Label>
+                      <Input 
+                        id="extState" 
+                        value={externalState} 
+                        onChange={(e) => setExternalState(e.target.value)} 
+                        placeholder="Maharashtra" 
+                        className="h-9 mt-1" 
+                        required 
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="extEmail" className="font-semibold">Email Address</Label>
+                      <Input 
+                        id="extEmail" 
+                        type="email" 
+                        value={externalEmail} 
+                        onChange={(e) => setExternalEmail(e.target.value)} 
+                        placeholder="john.doe@gmail.com" 
+                        className="h-9 mt-1" 
+                        required 
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="extMobile" className="font-semibold">Mobile Number</Label>
+                      <Input 
+                        id="extMobile" 
+                        value={externalMobile} 
+                        onChange={(e) => setExternalMobile(e.target.value)} 
+                        placeholder="9876543210" 
+                        className="h-9 mt-1" 
+                        required 
+                      />
+                    </div>
+                  </div>
+
+                  {/* ID proof upload block */}
+                  <div className="p-4 border rounded-lg bg-orange-50/20 border-orange-100 mt-4">
+                    <Label className="font-bold text-xs">Identity Verification Document</Label>
+                    <p className="text-[10px] text-muted-foreground leading-normal mb-3">
+                      Please upload a valid institutional ID proof, Aadhar Card, or Passport copy (PDF, JPG, PNG, WebP)
+                    </p>
+                    <div className="flex gap-2">
+                      <Input 
+                        type="file" 
+                        accept=".pdf,.jpg,.jpeg,.png,.webp"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const data = new FormData();
+                          data.append('image', file);
+                          setUploadingField('externalIdentityProof');
+                          try {
+                            const res = await api.post('/machinery/upload', data, {
+                              headers: { 'Content-Type': 'multipart/form-data' }
+                            });
+                            setExternalIdentityProof(res.data.url);
+                            toast.success("Identity Proof uploaded successfully!");
+                          } catch {
+                            toast.error("Identity Proof upload failed.");
+                          } finally {
+                            setUploadingField(null);
+                          }
+                        }}
+                        disabled={uploadingField !== null}
+                        className="bg-white h-9 py-0.5 text-xs cursor-pointer mt-1 max-w-sm"
+                      />
+                    </div>
+                    {uploadingField === 'externalIdentityProof' && <span className="text-[10px] text-muted-foreground animate-pulse">Uploading file...</span>}
+                    {externalIdentityProof && (
+                      <p className="text-[10px] text-green-600 truncate mt-1.5 font-bold">
+                        Uploaded ID Proof Link: <a href={externalIdentityProof} target="_blank" rel="noreferrer" className="underline">{externalIdentityProof}</a>
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Individual vs Team configuration */}
+                  <div className="space-y-4 pt-4 border-t">
+                    <Label className="font-bold text-xs">Applicant Configuration</Label>
+                    <div className="flex gap-4">
+                      <div className="flex items-center space-x-2">
+                        <input 
+                          type="radio" 
+                          id="appIndividual" 
+                          name="extApplicantType" 
+                          checked={externalApplicantType === "Individual"} 
+                          onChange={() => setExternalApplicantType("Individual")} 
+                          className="w-4 h-4 text-orange-600 cursor-pointer"
+                        />
+                        <Label htmlFor="appIndividual" className="cursor-pointer font-semibold text-xs text-slate-700">Individual Project</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <input 
+                          type="radio" 
+                          id="appTeam" 
+                          name="extApplicantType" 
+                          checked={externalApplicantType === "Team"} 
+                          onChange={() => setExternalApplicantType("Team")} 
+                          className="w-4 h-4 text-orange-600 cursor-pointer"
+                        />
+                        <Label htmlFor="appTeam" className="cursor-pointer font-semibold text-xs text-slate-700">Team Project</Label>
+                      </div>
+                    </div>
+
+                    {externalApplicantType === "Team" && (
+                      <div className="space-y-4 pt-3 border-t">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="extTeamName" className="font-semibold text-2xs">Team Name</Label>
+                            <Input 
+                              id="extTeamName" 
+                              value={teamName} 
+                              onChange={(e) => setTeamName(e.target.value)} 
+                              placeholder="Omega Team" 
+                              className="h-9 mt-1" 
+                              required 
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="extTeamCount" className="font-semibold text-2xs">Number of Additional Members</Label>
+                            <Select value={String(externalTeamCount)} onValueChange={(v) => setExternalTeamCount(Number(v))}>
+                              <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 9 }, (_, i) => String(i + 1)).map(num => (
+                                  <SelectItem key={num} value={num}>{num} Member{Number(num) > 1 ? 's' : ''}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        {/* List of team members inputs */}
+                        <div className="space-y-3 mt-4">
+                          <p className="font-bold text-orange-600 text-[10px] uppercase tracking-wider">Team Members Details</p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {externalTeamMembers.map((member, idx) => (
+                              <Card key={idx} className="border border-orange-100 bg-orange-50/5 p-4 space-y-3 text-xs shadow-2xs">
+                                <p className="font-bold text-slate-700">Member #{idx + 1}</p>
+                                <div>
+                                  <Label className="font-semibold">Full Name</Label>
+                                  <Input 
+                                    value={member.name} 
+                                    onChange={(e) => {
+                                      const next = [...externalTeamMembers];
+                                      next[idx].name = e.target.value;
+                                      setExternalTeamMembers(next);
+                                    }} 
+                                    className="h-8 mt-1 bg-white" 
+                                    required 
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="font-semibold">Email Address</Label>
+                                  <Input 
+                                    type="email"
+                                    value={member.email} 
+                                    onChange={(e) => {
+                                      const next = [...externalTeamMembers];
+                                      next[idx].email = e.target.value;
+                                      setExternalTeamMembers(next);
+                                    }} 
+                                    className="h-8 mt-1 bg-white" 
+                                    required 
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="font-semibold">Mobile Number</Label>
+                                  <Input 
+                                    value={member.mobile} 
+                                    onChange={(e) => {
+                                      const next = [...externalTeamMembers];
+                                      next[idx].mobile = e.target.value;
+                                      setExternalTeamMembers(next);
+                                    }} 
+                                    className="h-8 mt-1 bg-white" 
+                                    required 
+                                  />
+                                </div>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
+              ) : (
+                <div className="space-y-6 pt-6 border-t border-slate-200">
+                  <div>
+                    <h2 className="text-lg font-bold text-primary flex items-center gap-2"><Users className="w-5 h-5 text-primary" /> Team Information</h2>
+                    <p className="text-[11px] text-muted-foreground font-semibold">Add details for team members (Max 4 students)</p>
+                  </div>
 
-                {/* Collapsible Student Cards UI */}
-                <div className="space-y-4 mt-4">
-                  {students.map((student, idx) => (
-                    <Card key={idx} className="border-primary/20 bg-secondary/5 overflow-hidden shadow-2xs">
-                      <button
-                        type="button"
-                        onClick={() => toggleStudentExpand(idx)}
-                        className="w-full bg-primary/5 py-2.5 px-4 border-b border-primary/10 flex items-center justify-between text-left hover:bg-primary/10 transition-colors"
-                      >
-                        <span className="font-bold text-primary text-xs flex items-center gap-1.5">
-                          <User className="w-3.5 h-3.5" />
-                          Student {idx + 1} Info {student.name ? `(${student.name})` : ""}
-                        </span>
-                        {expandedStudents[idx] ? (
-                          <ChevronUp className="w-4 h-4 text-primary shrink-0" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4 text-primary shrink-0" />
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="teamName" className="text-xs font-bold">Team Name</Label>
+                      <Input id="teamName" value={teamName} onChange={(e) => setTeamName(e.target.value)} placeholder="Nikola Team" className="h-10 mt-1" />
+                    </div>
+                    <div>
+                      <Label htmlFor="numStudents" className="text-xs font-bold">Number of Students</Label>
+                      <Select value={String(numberOfStudents)} onValueChange={(v) => setNumberOfStudents(Number(v))}>
+                        <SelectTrigger className="h-10 mt-1"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">1 Student (Individual)</SelectItem>
+                          <SelectItem value="2">2 Students</SelectItem>
+                          <SelectItem value="3">3 Students</SelectItem>
+                          <SelectItem value="4">4 Students (Max Group)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Collapsible Student Cards UI */}
+                  <div className="space-y-4 mt-4">
+                    {students.map((student, idx) => (
+                      <Card key={idx} className="border-primary/20 bg-secondary/5 overflow-hidden shadow-2xs">
+                        <button
+                          type="button"
+                          onClick={() => toggleStudentExpand(idx)}
+                          className="w-full bg-primary/5 py-2.5 px-4 border-b border-primary/10 flex items-center justify-between text-left hover:bg-primary/10 transition-colors"
+                        >
+                          <span className="font-bold text-primary text-xs flex items-center gap-1.5">
+                            <User className="w-3.5 h-3.5" />
+                            Student {idx + 1} Info {student.name ? `(${student.name})` : ""}
+                          </span>
+                          {expandedStudents[idx] ? (
+                            <ChevronUp className="w-4 h-4 text-primary shrink-0" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4 text-primary shrink-0" />
+                          )}
+                        </button>
+                        
+                        {expandedStudents[idx] && (
+                          <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+                            <div>
+                              <Label className="font-semibold">Full Name</Label>
+                              <Input value={student.name} onChange={(e) => handleStudentFieldChange(idx, 'name', e.target.value)} className="h-9 mt-1" required />
+                            </div>
+                            <div>
+                              <Label className="font-semibold">PRN Number</Label>
+                              <Input value={student.prn} onChange={(e) => handleStudentFieldChange(idx, 'prn', e.target.value)} className="h-9 mt-1" required />
+                            </div>
+                            <div>
+                              <Label className="font-semibold">Division</Label>
+                              <Input value={student.division} onChange={(e) => handleStudentFieldChange(idx, 'division', e.target.value)} placeholder="A" className="h-9 mt-1" required />
+                            </div>
+                            <div>
+                              <Label className="font-semibold">Branch</Label>
+                              <Select value={student.branch} onValueChange={(v) => handleStudentFieldChange(idx, 'branch', v)}>
+                                <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Computer Engineering">Computer Engineering</SelectItem>
+                                  <SelectItem value="AIDS">AIDS</SelectItem>
+                                  <SelectItem value="CSD">CSD</SelectItem>
+                                  <SelectItem value="ENTC">ENTC</SelectItem>
+                                  <SelectItem value="IT">IT</SelectItem>
+                                  <SelectItem value="Civil">Civil</SelectItem>
+                                  <SelectItem value="Mechanical">Mechanical</SelectItem>
+                                  <SelectItem value="Electrical">Electrical</SelectItem>
+                                  <SelectItem value="Robotics & Automation">Robotics & Automation</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label className="font-semibold">Year</Label>
+                              <Select value={student.year} onValueChange={(v) => handleStudentFieldChange(idx, 'year', v)}>
+                                <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="1st Year">1st Year</SelectItem>
+                                  <SelectItem value="2nd Year">2nd Year</SelectItem>
+                                  <SelectItem value="3rd Year">3rd Year</SelectItem>
+                                  <SelectItem value="4th Year">4th Year</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label className="font-semibold">Mobile Number</Label>
+                              <Input type="tel" value={student.mobile} onChange={(e) => handleStudentFieldChange(idx, 'mobile', e.target.value)} className="h-9 mt-1" required />
+                            </div>
+                            <div className="md:col-span-2 lg:col-span-3">
+                              <Label className="font-semibold">Email Address</Label>
+                              <Input type="email" value={student.email} onChange={(e) => handleStudentFieldChange(idx, 'email', e.target.value)} className="h-9 mt-1" required />
+                            </div>
+                          </CardContent>
                         )}
-                      </button>
-                      
-                      {expandedStudents[idx] && (
-                        <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
-                          <div>
-                            <Label className="font-semibold">Full Name</Label>
-                            <Input value={student.name} onChange={(e) => handleStudentFieldChange(idx, 'name', e.target.value)} className="h-9 mt-1" required />
-                          </div>
-                          <div>
-                            <Label className="font-semibold">PRN Number</Label>
-                            <Input value={student.prn} onChange={(e) => handleStudentFieldChange(idx, 'prn', e.target.value)} className="h-9 mt-1" required />
-                          </div>
-                          <div>
-                            <Label className="font-semibold">Division</Label>
-                            <Input value={student.division} onChange={(e) => handleStudentFieldChange(idx, 'division', e.target.value)} placeholder="A" className="h-9 mt-1" required />
-                          </div>
-                          <div>
-                            <Label className="font-semibold">Branch</Label>
-                            <Select value={student.branch} onValueChange={(v) => handleStudentFieldChange(idx, 'branch', v)}>
-                              <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Computer Engineering">Computer Engineering</SelectItem>
-                                <SelectItem value="AIDS">AIDS</SelectItem>
-                                <SelectItem value="CSD">CSD</SelectItem>
-                                <SelectItem value="ENTC">ENTC</SelectItem>
-                                <SelectItem value="IT">IT</SelectItem>
-                                <SelectItem value="Civil">Civil</SelectItem>
-                                <SelectItem value="Mechanical">Mechanical</SelectItem>
-                                <SelectItem value="Electrical">Electrical</SelectItem>
-                                <SelectItem value="Robotics & Automation">Robotics & Automation</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <Label className="font-semibold">Year</Label>
-                            <Select value={student.year} onValueChange={(v) => handleStudentFieldChange(idx, 'year', v)}>
-                              <SelectTrigger className="h-9 mt-1"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="1st Year">1st Year</SelectItem>
-                                <SelectItem value="2nd Year">2nd Year</SelectItem>
-                                <SelectItem value="3rd Year">3rd Year</SelectItem>
-                                <SelectItem value="4th Year">4th Year</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <Label className="font-semibold">Mobile Number</Label>
-                            <Input type="tel" value={student.mobile} onChange={(e) => handleStudentFieldChange(idx, 'mobile', e.target.value)} className="h-9 mt-1" required />
-                          </div>
-                          <div className="md:col-span-2 lg:col-span-3">
-                            <Label className="font-semibold">Email Address</Label>
-                            <Input type="email" value={student.email} onChange={(e) => handleStudentFieldChange(idx, 'email', e.target.value)} className="h-9 mt-1" required />
-                          </div>
-                        </CardContent>
-                      )}
-                    </Card>
-                  ))}
+                      </Card>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
 
@@ -942,36 +1424,77 @@ const MachineryRequestForm = () => {
                     </CardContent>
                   </Card>
 
-                  {/* Card 2: Team Details */}
-                  <Card className="border border-border/80 shadow-2xs">
-                    <CardHeader className="py-2.5 px-4 bg-slate-50 border-b flex flex-row justify-between items-center">
-                      <h4 className="font-bold text-xs text-primary flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> Team Details ({teamName || "N/A"})</h4>
-                      <Button variant="ghost" size="sm" onClick={() => setStep(1)} className="h-6 text-[10px] font-bold text-primary hover:bg-primary/10">Edit</Button>
-                    </CardHeader>
-                    <CardContent className="p-4 space-y-3 text-2xs max-h-[180px] overflow-y-auto">
-                      {students.map((s, idx) => (
-                        <div key={idx} className="border-b last:border-0 pb-1.5 mb-1.5 last:pb-0 last:mb-0">
-                          <p className="font-bold text-slate-800">Student {idx + 1}: {s.name || "N/A"}</p>
-                          <p className="text-[10px] text-muted-foreground">PRN: {s.prn} | Div: {s.division} | Year: {s.year} | Mobile: {s.mobile} | Email: {s.email}</p>
+                  {/* Card 2: External Applicant Profile or Student Team Details */}
+                  {applicantType === 'External' ? (
+                    <Card className="border border-border/80 shadow-2xs md:col-span-2">
+                      <CardHeader className="py-2.5 px-4 bg-slate-50 border-b flex flex-row justify-between items-center">
+                        <h4 className="font-bold text-xs text-primary flex items-center gap-1.5"><User className="w-3.5 h-3.5" /> External Applicant Profile</h4>
+                        <Button variant="ghost" size="sm" onClick={() => setStep(1)} className="h-6 text-[10px] font-bold text-primary hover:bg-primary/10">Edit</Button>
+                      </CardHeader>
+                      <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 text-2xs">
+                        <div className="space-y-1">
+                          <p><strong>Name:</strong> {externalFullName}</p>
+                          <p><strong>Institution/College:</strong> {externalCollegeOrg}</p>
+                          <p><strong>Department:</strong> {externalDept || 'N/A'}</p>
+                          <p><strong>Designation:</strong> {externalDesignation || 'N/A'}</p>
+                          {externalWebsite && <p><strong>Website:</strong> {externalWebsite}</p>}
                         </div>
-                      ))}
-                    </CardContent>
-                  </Card>
+                        <div className="space-y-1">
+                          <p><strong>Location:</strong> {externalCity}, {externalState}</p>
+                          <p><strong>Email:</strong> {externalEmail}</p>
+                          <p><strong>Mobile:</strong> {externalMobile}</p>
+                          <p><strong>Type:</strong> {externalApplicantType} {externalApplicantType === 'Team' && `(${externalTeamCount + 1} Members)`}</p>
+                          <p><strong>ID Proof:</strong> {externalIdentityProof ? "Uploaded" : "Not Provided"}</p>
+                        </div>
+                        {externalApplicantType === 'Team' && externalTeamMembers.length > 0 && (
+                          <div className="sm:col-span-2 border-t pt-2 mt-2">
+                            <span className="font-bold text-slate-700 block mb-1">Team Members:</span>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {externalTeamMembers.map((m, i) => (
+                                <div key={i} className="bg-slate-50 p-1.5 border rounded">
+                                  <p className="font-semibold text-slate-800">{m.name || "N/A"}</p>
+                                  <p className="text-[10px] text-muted-foreground">{m.email} | {m.mobile}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <>
+                      {/* Card 2: Team Details */}
+                      <Card className="border border-border/80 shadow-2xs">
+                        <CardHeader className="py-2.5 px-4 bg-slate-50 border-b flex flex-row justify-between items-center">
+                          <h4 className="font-bold text-xs text-primary flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> Team Details ({teamName || "N/A"})</h4>
+                          <Button variant="ghost" size="sm" onClick={() => setStep(1)} className="h-6 text-[10px] font-bold text-primary hover:bg-primary/10">Edit</Button>
+                        </CardHeader>
+                        <CardContent className="p-4 space-y-3 text-2xs max-h-[180px] overflow-y-auto">
+                          {students.map((s, idx) => (
+                            <div key={idx} className="border-b last:border-0 pb-1.5 mb-1.5 last:pb-0 last:mb-0">
+                              <p className="font-bold text-slate-800">Student {idx + 1}: {s.name || "N/A"}</p>
+                              <p className="text-[10px] text-muted-foreground">PRN: {s.prn} | Div: {s.division} | Year: {s.year} | Mobile: {s.mobile} | Email: {s.email}</p>
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
 
-                  {/* Card 3: Faculty Guide */}
-                  <Card className="border border-border/80 shadow-2xs">
-                    <CardHeader className="py-2.5 px-4 bg-slate-50 border-b flex flex-row justify-between items-center">
-                      <h4 className="font-bold text-xs text-primary flex items-center gap-1.5"><Award className="w-3.5 h-3.5" /> Faculty Guide</h4>
-                      <Button variant="ghost" size="sm" onClick={() => setStep(2)} className="h-6 text-[10px] font-bold text-primary hover:bg-primary/10">Edit</Button>
-                    </CardHeader>
-                    <CardContent className="p-4 space-y-1.5 text-2xs">
-                      <p><strong>Name:</strong> {facultyGuide.name || "N/A"}</p>
-                      <p><strong>Department:</strong> {facultyGuide.department}</p>
-                      <p><strong>Designation:</strong> {facultyGuide.designation}</p>
-                      <p><strong>Contact:</strong> {facultyGuide.mobile} | {facultyGuide.email}</p>
-                      {facultyGuide.remarks && <p><strong>Remarks:</strong> {facultyGuide.remarks}</p>}
-                    </CardContent>
-                  </Card>
+                      {/* Card 3: Faculty Guide */}
+                      <Card className="border border-border/80 shadow-2xs">
+                        <CardHeader className="py-2.5 px-4 bg-slate-50 border-b flex flex-row justify-between items-center">
+                          <h4 className="font-bold text-xs text-primary flex items-center gap-1.5"><Award className="w-3.5 h-3.5" /> Faculty Guide</h4>
+                          <Button variant="ghost" size="sm" onClick={() => setStep(2)} className="h-6 text-[10px] font-bold text-primary hover:bg-primary/10">Edit</Button>
+                        </CardHeader>
+                        <CardContent className="p-4 space-y-1.5 text-2xs">
+                          <p><strong>Name:</strong> {facultyGuide.name || "N/A"}</p>
+                          <p><strong>Department:</strong> {facultyGuide.department}</p>
+                          <p><strong>Designation:</strong> {facultyGuide.designation}</p>
+                          <p><strong>Contact:</strong> {facultyGuide.mobile} | {facultyGuide.email}</p>
+                          {facultyGuide.remarks && <p><strong>Remarks:</strong> {facultyGuide.remarks}</p>}
+                        </CardContent>
+                      </Card>
+                    </>
+                  )}
 
                   {/* Card 4: Selected Resources */}
                   <Card className="border border-border/80 shadow-2xs">

@@ -4,13 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { API_BASE_URL } from "@/lib/api";
 
 const Login = () => {
   const navigate = useNavigate();
-  const [role, setRole] = useState<"coordinator" | "team" | "head">("team");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -34,18 +32,25 @@ const Login = () => {
         throw new Error(data?.message || "Login failed");
       }
 
-      // Save token and user
+      // Save token and user (which includes userType returned from backend)
       if (data?.token) localStorage.setItem("idea_hub_token", data.token);
       if (data?.user) localStorage.setItem("idea_hub_user", JSON.stringify(data.user));
 
       toast.success("Logged in");
-      const userRole = data?.user?.role as "coordinator" | "team" | "head" | undefined;
+      const userRole = data?.user?.role;
+      const userType = data?.user?.userType;
+
       if (userRole === "coordinator") {
         navigate("/coordinator-dashboard");
       } else if (userRole === "head") {
         navigate("/head-dashboard");
       } else {
-        navigate("/book-slots");
+        // If external user, redirect to /machinery, else /book-slots
+        if (userType === "EXTERNAL") {
+          navigate("/machinery");
+        } else {
+          navigate("/book-slots");
+        }
       }
     } catch (err: any) {
       toast.error(err?.message || "Login failed");
@@ -63,32 +68,13 @@ const Login = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Role Selection */}
-            <div className="space-y-2">
-              <Label>Login as</Label>
-              <RadioGroup value={role} onValueChange={(value: string) => setRole(value as "coordinator" | "team" | "head")}>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="team" id="team" />
-                  <Label htmlFor="team" className="font-normal cursor-pointer">Team Member</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="coordinator" id="coordinator" />
-                  <Label htmlFor="coordinator" className="font-normal cursor-pointer">Coordinator</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="head" id="head" />
-                  <Label htmlFor="head" className="font-normal cursor-pointer">Idea Lab Head</Label>
-                </div>
-              </RadioGroup>
-            </div>
-
             {/* Email */}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="name@university.edu"
+                placeholder="name@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -118,8 +104,6 @@ const Login = () => {
                 Sign up
               </Link>
             </p>
-            
-
           </form>
         </CardContent>
       </Card>

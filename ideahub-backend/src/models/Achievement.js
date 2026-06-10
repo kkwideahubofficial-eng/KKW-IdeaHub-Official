@@ -21,6 +21,24 @@ const achievementSchema = new Schema(
       type: String,
       required: true,
     },
+    gallery: {
+      type: [String],
+      default: [],
+    },
+    timeline: [
+      {
+        date: { type: Date, required: true },
+        label: { type: String, required: true }
+      }
+    ],
+    certificates: [
+      {
+        title: { type: String, required: true },
+        achievedBy: { type: String, required: true },
+        date: { type: Date, required: true },
+        fileUrl: { type: String }
+      }
+    ],
     achievedBy: {
       type: String, // e.g., Student name, team name
       required: true,

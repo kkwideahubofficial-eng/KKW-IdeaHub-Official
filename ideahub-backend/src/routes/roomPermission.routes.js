@@ -1,5 +1,5 @@
 import express from 'express';
-import { requireAuth, requireCoordinator } from '../middlewares/auth.js';
+import { requireAuth, requireCoordinator, requireInternalUser } from '../middlewares/auth.js';
 import {
   checkRoomAvailability,
   createRoomRequest,
@@ -26,22 +26,22 @@ const router = express.Router();
 router.put('/:id/faculty-verify', facultyVerifyRequest);
 router.get('/:id/verify-public', getRoomRequestById);
 
-// Authenticated Routes
-router.get('/availability', requireAuth, checkRoomAvailability);
-router.get('/inventory', requireAuth, getRoomInventory);
-router.post('/submit', requireAuth, createRoomRequest);
-router.put('/:id/update', requireAuth, updateRoomRequest);
-router.put('/:id/cancel', requireAuth, cancelRequest);
-router.get('/student-stats', requireAuth, getStudentStats);
-router.get('/coordinator-stats', requireAuth, requireCoordinator, getCoordinatorStats);
-router.get('/head-stats', requireAuth, requireCoordinator, getHeadStats);
-router.get('/analytics', requireAuth, requireCoordinator, getAnalytics);
-router.get('/calendar-bookings', requireAuth, requireCoordinator, getCalendarBookings);
-router.get('/', requireAuth, getRoomRequests);
-router.get('/:id', requireAuth, getRoomRequestById);
-router.get('/:id/pdf', downloadRoomPermissionPdf);
-router.post('/:id/send-reminder', requireAuth, requireCoordinator, sendManualReminder);
-router.put('/:id/coordinator-decision', requireAuth, requireCoordinator, coordinatorDecision);
-router.put('/:id/head-decision', requireAuth, requireCoordinator, headDecision);
+// Authenticated & Protected Routes
+router.get('/availability', requireAuth, requireInternalUser, checkRoomAvailability);
+router.get('/inventory', requireAuth, requireInternalUser, getRoomInventory);
+router.post('/submit', requireAuth, requireInternalUser, createRoomRequest);
+router.put('/:id/update', requireAuth, requireInternalUser, updateRoomRequest);
+router.put('/:id/cancel', requireAuth, requireInternalUser, cancelRequest);
+router.get('/student-stats', requireAuth, requireInternalUser, getStudentStats);
+router.get('/coordinator-stats', requireAuth, requireInternalUser, requireCoordinator, getCoordinatorStats);
+router.get('/head-stats', requireAuth, requireInternalUser, requireCoordinator, getHeadStats);
+router.get('/analytics', requireAuth, requireInternalUser, requireCoordinator, getAnalytics);
+router.get('/calendar-bookings', requireAuth, requireInternalUser, requireCoordinator, getCalendarBookings);
+router.get('/', requireAuth, requireInternalUser, getRoomRequests);
+router.get('/:id', requireAuth, requireInternalUser, getRoomRequestById);
+router.get('/:id/pdf', requireAuth, requireInternalUser, downloadRoomPermissionPdf);
+router.post('/:id/send-reminder', requireAuth, requireInternalUser, requireCoordinator, sendManualReminder);
+router.put('/:id/coordinator-decision', requireAuth, requireInternalUser, requireCoordinator, coordinatorDecision);
+router.put('/:id/head-decision', requireAuth, requireInternalUser, requireCoordinator, headDecision);
 
 export default router;

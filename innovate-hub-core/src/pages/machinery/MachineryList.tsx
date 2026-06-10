@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/axios";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -108,6 +108,26 @@ interface ResourceRequest {
   extensionEndTime?: string;
   extensionReason?: string;
   extensionStatus?: string;
+  applicantType?: string;
+  externalFullName?: string;
+  externalDesignation?: string;
+  externalDept?: string;
+  externalCollegeOrg?: string;
+  externalCity?: string;
+  externalState?: string;
+  externalEmail?: string;
+  externalMobile?: string;
+  externalIdentityProof?: string;
+  identityVerification?: string;
+  externalApplicantType?: string;
+  externalTeamMembers?: { name: string; email: string; mobile: string }[];
+  totalCharges?: number;
+  paymentStatus?: string;
+  machineCharges?: number;
+  materialCharges?: number;
+  headConditions?: string;
+  numberOfStudents?: number;
+  externalWebsite?: string;
 }
 
 // Helpers for 12-hour time dropdowns
@@ -186,11 +206,29 @@ const TimeSelectGroup = ({
 };
 
 const MachineryList = () => {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const extendId = searchParams.get("extend");
   const completeId = searchParams.get("complete");
 
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState("machines");
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    const rawUser = localStorage.getItem("idea_hub_user");
+    if (rawUser) {
+      try {
+        setCurrentUser(JSON.parse(rawUser));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }, []);
+
+  const handleNewRequestClick = () => {
+    const type = currentUser?.userType === "EXTERNAL" ? "External" : "Internal";
+    navigate(`/machinery/request/new?type=${type}`);
+  };
   const [machines, setMachines] = useState<Machine[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [requests, setRequests] = useState<ResourceRequest[]>([]);
@@ -262,6 +300,7 @@ const MachineryList = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [resourceTypeFilter, setResourceTypeFilter] = useState("all"); // all, machine, material
   const [dateFilter, setDateFilter] = useState("");
+  const [applicantTypeFilter, setApplicantTypeFilter] = useState("all");
 
   // Detailed Modal state
   const [selectedRequest, setSelectedRequest] = useState<ResourceRequest | null>(null);
@@ -421,7 +460,13 @@ const MachineryList = () => {
       matchesDate = appDate === targetDate;
     }
 
-    return matchesSearch && matchesStatus && matchesResourceType && matchesDate;
+    // Applicant Type Filter
+    let matchesApplicantType = true;
+    if (applicantTypeFilter !== "all") {
+      matchesApplicantType = r.applicantType === applicantTypeFilter;
+    }
+
+    return matchesSearch && matchesStatus && matchesResourceType && matchesDate && matchesApplicantType;
   });
 
   const getStatusColor = (status: string) => {
@@ -526,17 +571,18 @@ const MachineryList = () => {
           </h1>
           <p className="text-muted-foreground text-sm mt-1">KK Wagh AICTE IDEA Lab Permission Management System</p>
         </div>
-        <div className="flex gap-2 w-full md:w-auto">
-          <Link to="/machinery/request/new" className="flex-grow md:flex-grow-0">
-            <Button className="w-full gap-2 shadow-md hover:scale-[1.02] transition-transform">
-              <PlusCircle className="w-4 h-4" /> New Permission Request
-            </Button>
-          </Link>
+        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+          <Button 
+            onClick={handleNewRequestClick}
+            className="w-full gap-2 shadow-md hover:scale-[1.02] transition-transform bg-primary text-primary-foreground border-none font-bold"
+          >
+            <PlusCircle className="w-4 h-4" /> + New Permission Request
+          </Button>
         </div>
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 mb-8">
         {[
           { label: "My Requests", value: stats.total, color: "text-primary", icon: FileText },
           { label: "Pending Reviews", value: stats.pending, color: "text-blue-600", icon: Clock },
@@ -546,12 +592,12 @@ const MachineryList = () => {
           { label: "Machine Bookings", value: stats.bookings, color: "text-purple-600", icon: CalendarIcon }
         ].map((card, idx) => (
           <Card key={idx} className="shadow-2xs border-border/60 hover:shadow-sm transition-shadow">
-            <CardContent className="p-4 flex items-center justify-between">
+            <CardContent className="p-3 sm:p-4 flex items-center justify-between">
               <div>
                 <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">{card.label}</p>
                 <p className={`text-xl font-bold mt-1 ${card.color}`}>{card.value}</p>
               </div>
-              <div className="w-8 h-8 rounded-full bg-secondary/15 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-secondary/15 flex items-center justify-center shrink-0">
                 <card.icon className={`w-4 h-4 ${card.color}`} />
               </div>
             </CardContent>
@@ -559,12 +605,15 @@ const MachineryList = () => {
         ))}
       </div>
 
-      <Tabs defaultValue="dashboard" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="bg-muted/50 p-1 rounded-lg border">
-          <TabsTrigger value="dashboard" className="rounded-md gap-1.5"><History className="w-4 h-4" /> Student Dashboard</TabsTrigger>
-          <TabsTrigger value="machines" className="rounded-md gap-1.5"><Settings className="w-4 h-4" /> Available Machinery</TabsTrigger>
-          <TabsTrigger value="materials" className="rounded-md gap-1.5"><Database className="w-4 h-4" /> Material Stock Check</TabsTrigger>
-          <TabsTrigger value="history" className="rounded-md gap-1.5"><History className="w-4 h-4" /> Request History & PDF</TabsTrigger>
+      <Tabs defaultValue="machines" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList 
+          className="bg-muted/50 p-1 rounded-lg border w-full flex overflow-x-auto whitespace-nowrap justify-start md:inline-flex md:justify-center [&::-webkit-scrollbar]:hidden h-auto md:h-10"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          <TabsTrigger value="machines" className="rounded-md gap-1.5 shrink-0"><Settings className="w-4 h-4" /> Available Machinery</TabsTrigger>
+          <TabsTrigger value="dashboard" className="rounded-md gap-1.5 shrink-0"><History className="w-4 h-4" /> Student Dashboard</TabsTrigger>
+          <TabsTrigger value="materials" className="rounded-md gap-1.5 shrink-0"><Database className="w-4 h-4" /> Material Stock Check</TabsTrigger>
+          <TabsTrigger value="history" className="rounded-md gap-1.5 shrink-0"><History className="w-4 h-4" /> Request History & PDF</TabsTrigger>
         </TabsList>
 
         {/* Tab 1: Dashboard Overview */}
@@ -575,11 +624,13 @@ const MachineryList = () => {
             <Card className="lg:col-span-1 shadow-sm border-border/75">
               <CardHeader><CardTitle className="text-base font-bold">Quick Actions</CardTitle></CardHeader>
               <CardContent className="space-y-3">
-                <Link to="/machinery/request/new" className="block">
-                  <Button variant="outline" className="w-full justify-start gap-3 text-sm py-5 font-semibold text-primary hover:bg-primary/5 border-primary/20">
-                    <PlusCircle className="w-4 h-4 text-primary" /> Apply for Materials / Machines
-                  </Button>
-                </Link>
+                <Button 
+                  variant="outline" 
+                  onClick={handleNewRequestClick}
+                  className="w-full justify-start gap-3 text-sm py-5 font-semibold text-primary border-primary/20 hover:bg-primary/5"
+                >
+                  <PlusCircle className="w-4 h-4 text-primary" /> Apply for Permission Request
+                </Button>
                 <Button 
                   variant="outline" 
                   onClick={() => setActiveTab("machines")} 
@@ -623,7 +674,16 @@ const MachineryList = () => {
                     <div key={req._id} className="p-3 border rounded-lg bg-card hover:bg-secondary/5 flex flex-col md:flex-row justify-between gap-3 items-start md:items-center transition-all text-xs">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-primary">{req.requestId}</span>
+                          <span className="font-mono font-bold text-primary flex items-center gap-1.5">
+                            {req.requestId}
+                            <Badge className={`text-[8px] font-bold px-1.5 py-0 rounded-sm ${
+                              req.applicantType === 'External'
+                                ? 'bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-100'
+                                : 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-100'
+                            }`}>
+                              {req.applicantType === 'External' ? 'EXTERNAL' : 'INTERNAL'}
+                            </Badge>
+                          </span>
                           <span className="text-muted-foreground">•</span>
                           <span className="font-semibold text-foreground">{req.projectName}</span>
                         </div>
@@ -727,7 +787,7 @@ const MachineryList = () => {
                     </div>
                   </div>
 
-                  <Link to={`/machinery/request/new?machineId=${machine._id}`} className="mt-auto block">
+                  <Link to={`/machinery/request/new?machineId=${machine._id}&type=${currentUser?.userType === "EXTERNAL" ? "External" : "Internal"}`} className="mt-auto block">
                     <Button className="w-full text-xs font-semibold" variant={machine.isAvailable ? "default" : "outline"} disabled={!machine.isAvailable}>
                       {machine.isAvailable ? "Request Booking / Check Slots" : "Slot Booking Disabled"}
                     </Button>
@@ -798,7 +858,7 @@ const MachineryList = () => {
         <TabsContent value="history" className="space-y-6">
           {/* Advanced Search & Filters Card */}
           <Card className="shadow-sm border-border/60 bg-muted/10">
-            <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 text-xs">
+            <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-3 text-xs">
               
               {/* Search Bar */}
               <div className="space-y-1 md:col-span-2">
@@ -859,6 +919,20 @@ const MachineryList = () => {
                 </select>
               </div>
 
+              {/* Applicant Type Filter */}
+              <div className="space-y-1">
+                <Label>Applicant Type</Label>
+                <select 
+                  className="w-full h-8 rounded-md border border-input bg-background px-2 py-1 text-xs focus:ring-1 focus:ring-primary"
+                  value={applicantTypeFilter}
+                  onChange={(e) => setApplicantTypeFilter(e.target.value)}
+                >
+                  <option value="all">All Applicants</option>
+                  <option value="Internal">Internal Student</option>
+                  <option value="External">External User</option>
+                </select>
+              </div>
+
             </CardContent>
           </Card>
 
@@ -889,7 +963,16 @@ const MachineryList = () => {
                       
                       return (
                         <tr key={req._id} className="hover:bg-slate-50/40">
-                          <td className="px-4 py-3 font-mono font-bold text-primary">{req.requestId}</td>
+                          <td className="px-4 py-3 font-mono font-bold text-primary flex items-center gap-1.5">
+                            {req.requestId}
+                            <Badge className={`text-[8px] font-bold px-1.5 py-0 rounded-sm ${
+                              req.applicantType === 'External'
+                                ? 'bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-100'
+                                : 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-100'
+                            }`}>
+                              {req.applicantType === 'External' ? 'EXTERNAL' : 'INTERNAL'}
+                            </Badge>
+                          </td>
                           <td className="px-4 py-3 font-semibold text-foreground">{req.projectName}</td>
                           <td className="px-4 py-3 text-muted-foreground font-medium max-w-xs truncate">
                             {req.requestedMachines?.map(m => m.machineName).concat(req.requestedMaterials?.map(m => m.materialName)).filter(Boolean).join(', ')}
@@ -1050,6 +1133,98 @@ const MachineryList = () => {
                   {renderTimeline(selectedRequest.status)}
                 </div>
               </div>
+
+              {/* Applicant Details */}
+              {selectedRequest.applicantType === 'External' ? (
+                <div className="bg-orange-50/50 border border-orange-200 p-4 rounded-lg space-y-3">
+                  <h4 className="font-bold text-orange-850 flex items-center gap-1.5 uppercase tracking-wider text-[10px]">
+                    <Users className="w-3.5 h-3.5 text-orange-600" /> External Applicant Profile
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-slate-700">
+                    <div className="space-y-1">
+                      <p><strong>Full Name:</strong> {selectedRequest.externalFullName}</p>
+                      <p><strong>Institution:</strong> {selectedRequest.externalCollegeOrg}</p>
+                      <p><strong>Department:</strong> {selectedRequest.externalDept || 'N/A'}</p>
+                      <p><strong>Designation:</strong> {selectedRequest.externalDesignation || 'N/A'}</p>
+                      {selectedRequest.externalWebsite && (
+                        <p>
+                          <strong>Website:</strong> <a href={selectedRequest.externalWebsite} target="_blank" rel="noreferrer" className="text-primary hover:underline">{selectedRequest.externalWebsite}</a>
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <p><strong>Location:</strong> {selectedRequest.externalCity}, {selectedRequest.externalState}</p>
+                      <p><strong>Email:</strong> {selectedRequest.externalEmail}</p>
+                      <p><strong>Mobile:</strong> {selectedRequest.externalMobile}</p>
+                      <p>
+                        <strong>Identity Proof:</strong>{" "}
+                        {selectedRequest.externalIdentityProof ? (
+                          <a href={selectedRequest.externalIdentityProof} target="_blank" rel="noreferrer" className="text-primary hover:underline font-bold">View Uploaded ID</a>
+                        ) : (
+                          <span className="text-muted-foreground italic">Not Provided</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="border-t border-orange-200/60 pt-3 flex flex-wrap gap-x-6 gap-y-2 text-slate-700">
+                    <div><strong>Identity Verification:</strong> <Badge variant="outline" className={`font-bold capitalize ml-1 ${
+                      selectedRequest.identityVerification === 'Verified' ? 'bg-green-100 text-green-800 border-green-200' :
+                      selectedRequest.identityVerification === 'Rejected' ? 'bg-red-100 text-red-800 border-red-200' :
+                      'bg-blue-100 text-blue-800 border-blue-200'
+                    }`}>{selectedRequest.identityVerification || 'Pending'}</Badge></div>
+                    <p><strong>Usage Charges:</strong> ₹{selectedRequest.totalCharges || 0} ({selectedRequest.paymentStatus || 'Pending'})</p>
+                  </div>
+                  
+                  {selectedRequest.externalApplicantType === 'Team' && selectedRequest.externalTeamMembers && selectedRequest.externalTeamMembers.length > 0 && (
+                    <div className="border-t border-orange-200/60 pt-3 space-y-2">
+                      <p className="font-bold text-orange-850 text-[9px] uppercase tracking-wider">Team Members List</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-3xs">
+                        {selectedRequest.externalTeamMembers.map((m, idx) => (
+                          <div key={idx} className="bg-white border border-orange-100 rounded-md p-2">
+                            <p className="font-bold text-slate-800">{m.name}</p>
+                            <p className="text-muted-foreground mt-0.5">Email: {m.email} | Mobile: {m.mobile}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="bg-secondary/15 p-4 rounded-lg space-y-3 border">
+                  <h4 className="font-bold text-foreground flex items-center gap-1.5 uppercase tracking-wider text-[10px]"><Users className="w-3.5 h-3.5 text-primary" /> Student Team Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-0.5">
+                      <div className="font-bold text-sm text-foreground">{selectedRequest.students?.[0]?.name || "N/A"}</div>
+                      <div className="text-muted-foreground">
+                        PRN: {selectedRequest.students?.[0]?.prn || "N/A"} | Branch: {selectedRequest.students?.[0]?.branch || "N/A"}
+                      </div>
+                      <div className="text-muted-foreground">
+                        Year: {selectedRequest.students?.[0]?.year || "N/A"} | Division: {selectedRequest.students?.[0]?.division || "N/A"}
+                      </div>
+                    </div>
+                    <div className="space-y-0.5">
+                      <p><strong>Email:</strong> {selectedRequest.students?.[0]?.email || "N/A"}</p>
+                      <p><strong>Mobile:</strong> {selectedRequest.students?.[0]?.mobile || "N/A"}</p>
+                      {selectedRequest.teamName && <p><strong>Team:</strong> {selectedRequest.teamName} ({selectedRequest.numberOfStudents} members)</p>}
+                    </div>
+                  </div>
+                  {selectedRequest.students?.length > 1 && (
+                    <div className="border-t border-border/40 pt-3 space-y-2">
+                      <p className="font-semibold text-foreground text-[9px] uppercase tracking-wider">Additional Team Members</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-3xs font-medium">
+                        {selectedRequest.students.slice(1).map((s, idx) => (
+                          <div key={idx} className="p-2 border rounded bg-card space-y-0.5">
+                            <p className="font-bold">{s.name}</p>
+                            <p className="text-muted-foreground">PRN: {s.prn} | Branch: {s.branch}</p>
+                            <p className="text-muted-foreground">Email: {s.email || "N/A"} | Mobile: {s.mobile || "N/A"}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Resource Split details */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1335,6 +1510,7 @@ const MachineryList = () => {
           </Card>
         </div>
       )}
+
 
     </div>
   );
