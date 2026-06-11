@@ -1681,7 +1681,7 @@ const Achievements = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             
             {/* Left Column: Achievement List (30% approx) */}
-            <div className="order-2 lg:order-1 lg:col-span-4 xl:col-span-3.5 space-y-4 max-h-[850px] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="lg:col-span-4 xl:col-span-3.5 space-y-4 max-h-[850px] overflow-y-auto pr-2 custom-scrollbar">
               <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider mb-2 block lg:hidden pt-4 border-t border-slate-100">
                 Explore Achievements ({achievements.length})
               </h3>
@@ -1769,7 +1769,7 @@ const Achievements = () => {
 
             {/* Right Column: Selected Item Details Panel (70% approx) */}
             {activeAchievement && (
-              <div className="order-1 lg:order-2 lg:col-span-8 xl:col-span-8.5 bg-white border border-slate-200/60 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
+              <div className="lg:col-span-8 xl:col-span-8.5 bg-white border border-slate-200/60 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
                 
                 {/* Details Top Panel: Header info */}
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b pb-5 border-slate-100">
