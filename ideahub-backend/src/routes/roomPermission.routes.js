@@ -17,7 +17,8 @@ import {
   getCalendarBookings,
   getRoomInventory,
   downloadRoomPermissionPdf,
-  sendManualReminder
+  sendManualReminder,
+  downloadRoomUsageReport
 } from '../controllers/roomPermissionController.js';
 
 const router = express.Router();
@@ -29,6 +30,7 @@ router.get('/:id/verify-public', getRoomRequestById);
 // Authenticated & Protected Routes
 router.get('/availability', requireAuth, requireInternalUser, checkRoomAvailability);
 router.get('/inventory', requireAuth, requireInternalUser, getRoomInventory);
+router.get('/report', requireAuth, requireInternalUser, requireCoordinator, downloadRoomUsageReport);
 router.post('/submit', requireAuth, requireInternalUser, createRoomRequest);
 router.put('/:id/update', requireAuth, requireInternalUser, updateRoomRequest);
 router.put('/:id/cancel', requireAuth, requireInternalUser, cancelRequest);

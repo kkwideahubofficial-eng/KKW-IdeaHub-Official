@@ -7,6 +7,8 @@ import webpush from '../config/webPush.js';
 import generatePdf from '../utils/pdfGenerator.js';
 import path from 'path';
 import Room from '../models/Room.js';
+import XLSX from 'xlsx';
+
 
 // Helper utilities for time calculations
 function parseTimeToMinutes(timeStr) {
@@ -1272,5 +1274,173 @@ export const sendManualReminder = async (req, res) => {
     res.status(200).json({ message: 'Reminder sent successfully!' });
   } catch (error) {
     res.status(500).json({ message: 'Error sending reminder', error: error.message });
+  }
+};
+
+// 18. Download Room Usage Report (Excel, CSV, PDF)
+export const downloadRoomUsageReport = async (req, res) => {
+  try {
+    const { rangeType, fromDate, toDate, format } = req.query;
+
+    if (!rangeType) {
+      return res.status(400).json({ message: 'Range type is required' });
+    }
+
+    const today = new Date();
+    let startStr = '';
+    let endStr = '';
+
+    const formatDate = (d) => {
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    };
+
+    if (rangeType === 'Today') {
+      startStr = formatDate(today);
+      endStr = formatDate(today);
+    } else if (rangeType === 'Last 7 Days' || rangeType === '7 Days') {
+      const start = new Date();
+      start.setDate(today.getDate() - 6);
+      startStr = formatDate(start);
+      endStr = formatDate(today);
+    } else if (rangeType === 'Last 30 Days' || rangeType === '30 Days') {
+      const start = new Date();
+      start.setDate(today.getDate() - 29);
+      startStr = formatDate(start);
+      endStr = formatDate(today);
+    } else if (rangeType === 'Last 3 Months' || rangeType === '3 Months') {
+      const start = new Date();
+      start.setMonth(today.getMonth() - 3);
+      startStr = formatDate(start);
+      endStr = formatDate(today);
+    } else if (rangeType === 'Last 6 Months' || rangeType === '6 Months') {
+      const start = new Date();
+      start.setMonth(today.getMonth() - 6);
+      startStr = formatDate(start);
+      endStr = formatDate(today);
+    } else if (rangeType === 'Last 1 Year' || rangeType === '1 Year') {
+      const start = new Date();
+      start.setFullYear(today.getFullYear() - 1);
+      startStr = formatDate(start);
+      endStr = formatDate(today);
+    } else if (rangeType === 'Custom Date Range' || rangeType === 'Custom') {
+      if (!fromDate || !toDate) {
+        return res.status(400).json({ message: 'From date and To date are required for custom range' });
+      }
+      startStr = fromDate;
+      endStr = toDate;
+    } else {
+      return res.status(400).json({ message: 'Invalid range type' });
+    }
+
+    // Fetch matching bookings
+    let query = { status: { $ne: 'Draft' } };
+    let dateRangeStr = '';
+
+    if (rangeType === 'Today') {
+      query['schedule.requestedDate'] = startStr;
+      dateRangeStr = startStr;
+    } else if (rangeType === 'Custom Date Range' || rangeType === 'Custom') {
+      query['schedule.requestedDate'] = { $gte: startStr, $lte: endStr };
+      dateRangeStr = `${startStr} to ${endStr}`;
+    } else {
+      // For Last 7 Days, Last 30 Days, Last 3 Months, Last 6 Months, Last 1 Year
+      // We start from startStr but don't cap the upper bound, so all future scheduled bookings are included
+      query['schedule.requestedDate'] = { $gte: startStr };
+      dateRangeStr = `From ${startStr}`;
+    }
+
+    const requests = await RoomPermissionRequest.find(query)
+      .sort({ 'schedule.requestedDate': 1, 'schedule.startTime': 1 });
+
+    if (format === 'csv') {
+      const headers = [
+        'Request ID', 'Student Name', 'PRN', 'Room Type', 'Project Name',
+        'Date', 'Start Time', 'End Time', 'Duration (Hrs)', 'Purpose',
+        'Category', 'Status', 'Recommending Faculty', 'Department'
+      ];
+      const csvRows = [headers.join(',')];
+      
+      requests.forEach(r => {
+        const rowData = [
+          r.requestId,
+          r.applicantDetails?.applicantName || 'N/A',
+          r.applicantDetails?.prn || 'N/A',
+          r.facilityRequired,
+          r.teamDetails?.projectName || 'N/A',
+          r.schedule?.requestedDate || 'N/A',
+          r.schedule?.startTime || 'N/A',
+          r.schedule?.endTime || 'N/A',
+          r.schedule?.duration || 0,
+          r.purpose || 'N/A',
+          r.category || 'N/A',
+          r.status,
+          r.facultyRecommendation?.facultyName || 'N/A',
+          r.applicantDetails?.department || 'N/A'
+        ];
+        const escapedRow = rowData.map(val => {
+          const strVal = String(val).replace(/"/g, '""');
+          return `"${strVal}"`;
+        });
+        csvRows.push(escapedRow.join(','));
+      });
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="RoomUsageReport_${rangeType.replace(/\s+/g, '_')}_${startStr}_${endStr}.csv"`);
+      return res.send(csvRows.join('\n'));
+
+    } else if (format === 'pdf') {
+      const pdfPath = `uploads/pdfs/RoomUsageReport_${rangeType.replace(/\s+/g, '_')}_${startStr}_${endStr}.pdf`;
+      const data = {
+        dateRangeStr,
+        requests
+      };
+      
+      await generatePdf('roomUsageReport', data, pdfPath);
+      
+      return res.download(pdfPath, (err) => {
+        if (err) {
+          console.error('Error sending PDF report:', err);
+          if (!res.headersSent) {
+            res.status(500).end();
+          }
+        }
+      });
+
+    } else {
+      // Default to xlsx
+      const reportData = requests.map(r => ({
+        'Request ID': r.requestId,
+        'Student Name': r.applicantDetails?.applicantName || 'N/A',
+        'PRN': r.applicantDetails?.prn || 'N/A',
+        'Room Type': r.facilityRequired,
+        'Project Name': r.teamDetails?.projectName || 'N/A',
+        'Date': r.schedule?.requestedDate || 'N/A',
+        'Start Time': r.schedule?.startTime || 'N/A',
+        'End Time': r.schedule?.endTime || 'N/A',
+        'Duration (Hrs)': r.schedule?.duration || 0,
+        'Purpose': r.purpose || 'N/A',
+        'Category': r.category || 'N/A',
+        'Status': r.status,
+        'Recommending Faculty': r.facultyRecommendation?.facultyName || 'N/A',
+        'Department': r.applicantDetails?.department || 'N/A'
+      }));
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(reportData);
+      XLSX.utils.book_append_sheet(wb, ws, "Room Usage Report");
+      
+      const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+      
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="RoomUsageReport_${rangeType.replace(/\s+/g, '_')}_${startStr}_${endStr}.xlsx"`);
+      return res.send(buffer);
+    }
+
+  } catch (error) {
+    console.error('Error generating report:', error);
+    res.status(500).json({ message: 'Error generating report', error: error.message });
   }
 };

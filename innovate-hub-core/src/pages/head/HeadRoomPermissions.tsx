@@ -32,7 +32,8 @@ import {
   AlertTriangle,
   RotateCcw,
   Check,
-  AlertCircle
+  AlertCircle,
+  FileText
 } from "lucide-react";
 
 const BRANCHES = [
@@ -73,6 +74,40 @@ const HeadRoomPermissions = () => {
   const [conditionsInput, setConditionsInput] = useState("");
   const [processing, setProcessing] = useState(false);
   const [confirmAction, setConfirmAction] = useState<"approve" | "reject" | "conditional" | "forward_back" | "request_changes" | null>(null);
+
+  // Report states
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [timeRange, setTimeRange] = useState("Today");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [fileFormat, setFileFormat] = useState("xlsx");
+
+  const handleDownloadReport = (range: string, format: string = 'xlsx', from?: string, to?: string) => {
+    const token = localStorage.getItem('idea_hub_token');
+    let url = `${api.defaults.baseURL}/room-permissions/report?rangeType=${encodeURIComponent(range)}&format=${format}`;
+    if (token) url += `&token=${token}`;
+    if (from) url += `&fromDate=${from}`;
+    if (to) url += `&toDate=${to}`;
+    window.open(url, '_blank');
+  };
+
+  const handleQuickDownload = (range: string) => {
+    if (range === 'Custom') {
+      setTimeRange('Custom Date Range');
+      setReportModalOpen(true);
+    } else {
+      handleDownloadReport(range, 'xlsx');
+    }
+  };
+
+  const handleGenerateReportSubmit = () => {
+    if (timeRange === 'Custom Date Range' && (!fromDate || !toDate)) {
+      toast.error("Please select both start and end dates");
+      return;
+    }
+    handleDownloadReport(timeRange, fileFormat, fromDate, toDate);
+    setReportModalOpen(false);
+  };
 
   useEffect(() => {
     fetchRequests();
@@ -215,13 +250,41 @@ const HeadRoomPermissions = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
-      <div className="border-b pb-4 mb-8">
-        <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-          IDEA Hub Head: Approvals & Analytics
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Make final decisions on room bookings, review facility usage analytics, and track monthly schedules.
-        </p>
+      <div className="border-b pb-4 mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            IDEA Hub Head: Approvals & Analytics
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Make final decisions on room bookings, review facility usage analytics, and track monthly schedules.
+          </p>
+        </div>
+        <div className="flex flex-col items-end gap-2 shrink-0">
+          <Button onClick={() => setReportModalOpen(true)} className="flex items-center gap-2 shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white shrink-0">
+            <FileText className="w-4 h-4" /> Download Reports
+          </Button>
+          {/* Quick Download Buttons */}
+          <div className="flex flex-wrap items-center gap-1.5 bg-slate-50 border border-slate-200/60 p-1 rounded-lg">
+            <span className="text-3xs font-semibold text-muted-foreground px-1.5">Quick Download:</span>
+            {['Today', '7 Days', '30 Days', '3 Months', '1 Year'].map((range) => (
+              <Button
+                key={range}
+                variant="ghost"
+                className="h-6 text-3xs px-2 hover:bg-white hover:shadow-2xs text-slate-700 font-medium"
+                onClick={() => handleQuickDownload(range)}
+              >
+                {range}
+              </Button>
+            ))}
+            <Button
+              variant="ghost"
+              className="h-6 text-3xs px-2 hover:bg-white hover:shadow-2xs text-primary font-bold"
+              onClick={() => handleQuickDownload('Custom')}
+            >
+              Custom
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Head Stats Cards */}
@@ -778,6 +841,110 @@ const HeadRoomPermissions = () => {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Download Reports Modal */}
+      <Dialog open={reportModalOpen} onOpenChange={setReportModalOpen}>
+        <DialogContent className="max-w-md bg-white border border-slate-200 rounded-2xl p-6">
+          <DialogHeader className="border-b pb-3 -mx-6 -mt-6 p-6 bg-primary/5">
+            <DialogTitle className="text-lg font-bold">Download Room Usage Report</DialogTitle>
+            <DialogDescription className="text-xs">
+              Select time range and format to export the data.
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Form */}
+          <div className="space-y-4 pt-4 text-xs">
+            {/* Time Range */}
+            <div>
+              <Label className="text-xs font-semibold text-slate-700">Select Time Range</Label>
+              <div className="grid grid-cols-2 gap-2 mt-1.5">
+                {[
+                  { value: 'Today', label: 'Today' },
+                  { value: 'Last 7 Days', label: 'Last 7 Days' },
+                  { value: 'Last 30 Days', label: 'Last 30 Days' },
+                  { value: 'Last 3 Months', label: 'Last 3 Months' },
+                  { value: 'Last 6 Months', label: 'Last 6 Months' },
+                  { value: 'Last 1 Year', label: 'Last 1 Year' },
+                  { value: 'Custom Date Range', label: 'Custom Date Range' }
+                ].map(item => (
+                  <label key={item.value} className="flex items-center gap-2 p-2 rounded-lg border hover:bg-slate-50 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="timeRange"
+                      value={item.value}
+                      checked={timeRange === item.value}
+                      onChange={() => setTimeRange(item.value)}
+                      className="accent-primary"
+                    />
+                    <span>{item.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom Dates (Conditional) */}
+            {timeRange === 'Custom Date Range' && (
+              <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 border rounded-lg">
+                <div>
+                  <Label className="text-3xs font-semibold">From Date</Label>
+                  <Input
+                    type="date"
+                    value={fromDate}
+                    onChange={(e) => setFromDate(e.target.value)}
+                    className="h-8 text-xs mt-1 bg-white"
+                  />
+                </div>
+                <div>
+                  <Label className="text-3xs font-semibold">To Date</Label>
+                  <Input
+                    type="date"
+                    value={toDate}
+                    onChange={(e) => setToDate(e.target.value)}
+                    className="h-8 text-xs mt-1 bg-white"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* File Format */}
+            <div>
+              <Label className="text-xs font-semibold text-slate-700">File Format</Label>
+              <div className="flex gap-4 mt-1.5">
+                {[
+                  { value: 'xlsx', label: 'Excel (.xlsx)' },
+                  { value: 'csv', label: 'CSV' },
+                  { value: 'pdf', label: 'PDF' }
+                ].map(item => (
+                  <label key={item.value} className="flex items-center gap-2 p-2 px-3 rounded-lg border hover:bg-slate-50 cursor-pointer flex-1 justify-center">
+                    <input
+                      type="radio"
+                      name="fileFormat"
+                      value={item.value}
+                      checked={fileFormat === item.value}
+                      onChange={() => setFileFormat(item.value)}
+                      className="accent-primary"
+                    />
+                    <span>{item.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 border-t pt-4 mt-6">
+            <Button variant="outline" size="sm" onClick={() => setReportModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleGenerateReportSubmit}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            >
+              Generate Report
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
