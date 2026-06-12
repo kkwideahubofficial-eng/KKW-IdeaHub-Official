@@ -778,13 +778,154 @@ const generateRoomUsageReportPdf = async (doc, data) => {
   }
 };
 
+const generateMachineryUsageReportPdf = async (doc, data) => {
+  const margin = 30;
+  const contentWidth = 595.28 - 2 * margin;
+  let currentY = margin;
+
+  // Header Box
+  doc.rect(margin, currentY, contentWidth, 50).lineWidth(1).stroke();
+  doc.fillColor('#000000').font('Times-Bold').fontSize(11);
+  doc.text('AICTE IDEA Lab and Innovation Centre', margin, currentY + 10, { width: contentWidth, align: 'center' });
+  doc.font('Times-Roman').fontSize(9);
+  doc.text('K. K. Wagh Institute of Engineering Education and Research, Nashik', margin, currentY + 23, { width: contentWidth, align: 'center' });
+  doc.font('Times-Bold').fontSize(10);
+  doc.text(`Machinery Usage Report (${data.dateRangeStr})`, margin, currentY + 36, { width: contentWidth, align: 'center' });
+
+  currentY += 65;
+
+  // Table Columns
+  // 1. Request ID (65)
+  // 2. Type (50)
+  // 3. Applicant Name (75)
+  // 4. Machine Booked (85)
+  // 5. Project Name (85)
+  // 6. Date (55)
+  // 7. Time Slot (70)
+  // 8. Status (50)
+  const colWidths = [65, 50, 75, 85, 85, 55, 70, 50];
+  const colHeaders = ['Request ID', 'Type', 'Applicant', 'Machine', 'Project', 'Date', 'Time Slot', 'Status'];
+
+  const rowHeight = 22;
+  const headerHeight = 24;
+
+  // Draw Table Header
+  doc.rect(margin, currentY, contentWidth, headerHeight).fill('#1a237e');
+  doc.fillColor('#ffffff').font('Times-Bold').fontSize(8);
+  
+  let headerX = margin;
+  colHeaders.forEach((h, idx) => {
+    doc.text(h, headerX + 4, currentY + 7, { width: colWidths[idx] - 8, align: 'left' });
+    headerX += colWidths[idx];
+  });
+
+  currentY += headerHeight;
+
+  doc.fillColor('#000000').font('Times-Roman').fontSize(7);
+
+  let flatBookings = [];
+  data.requests.forEach(r => {
+    const isExt = r.applicantType === 'External';
+    const applicantName = isExt ? r.externalFullName : (r.students?.[0]?.name || 'N/A');
+    
+    r.requestedMachines.forEach(m => {
+      flatBookings.push({
+        requestId: r.requestId,
+        applicantType: r.applicantType || 'Internal',
+        applicantName,
+        projectName: r.projectName || 'N/A',
+        machineName: m.machineId?.name || m.machineName || 'N/A',
+        usageDate: m.usageDate ? new Date(m.usageDate).toLocaleDateString('en-IN') : 'N/A',
+        timeSlot: `${m.startTime} - ${m.endTime}`,
+        status: r.status
+      });
+    });
+  });
+
+  flatBookings.forEach((b, rIdx) => {
+    // Page break check
+    if (currentY > 770) {
+      doc.addPage();
+      currentY = margin;
+      
+      // Redraw Table Header on new page
+      doc.rect(margin, currentY, contentWidth, headerHeight).fill('#1a237e');
+      doc.fillColor('#ffffff').font('Times-Bold').fontSize(8);
+      
+      let newHeaderX = margin;
+      colHeaders.forEach((h, idx) => {
+        doc.text(h, newHeaderX + 4, currentY + 7, { width: colWidths[idx] - 8, align: 'left' });
+        newHeaderX += colWidths[idx];
+      });
+      currentY += headerHeight;
+      doc.fillColor('#000000').font('Times-Roman').fontSize(7);
+    }
+
+    // Zebra striping
+    if (rIdx % 2 === 1) {
+      doc.rect(margin, currentY, contentWidth, rowHeight).fill('#f5f5f5');
+    }
+
+    // Bottom border
+    doc.moveTo(margin, currentY + rowHeight).lineTo(margin + contentWidth, currentY + rowHeight).lineWidth(0.5).strokeColor('#bdbdbd').stroke();
+
+    doc.fillColor('#000000');
+    let cellX = margin;
+    
+    // Draw cells
+    doc.text(b.requestId, cellX + 4, currentY + 6, { width: colWidths[0] - 8, height: rowHeight - 8, ellipsis: true });
+    cellX += colWidths[0];
+    
+    doc.text(b.applicantType, cellX + 4, currentY + 6, { width: colWidths[1] - 8, height: rowHeight - 8, ellipsis: true });
+    cellX += colWidths[1];
+    
+    doc.text(b.applicantName, cellX + 4, currentY + 6, { width: colWidths[2] - 8, height: rowHeight - 8, ellipsis: true });
+    cellX += colWidths[2];
+    
+    doc.text(b.machineName, cellX + 4, currentY + 6, { width: colWidths[3] - 8, height: rowHeight - 8, ellipsis: true });
+    cellX += colWidths[3];
+    
+    doc.text(b.projectName, cellX + 4, currentY + 6, { width: colWidths[4] - 8, height: rowHeight - 8, ellipsis: true });
+    cellX += colWidths[4];
+    
+    doc.text(b.usageDate, cellX + 4, currentY + 6, { width: colWidths[5] - 8, height: rowHeight - 8 });
+    cellX += colWidths[5];
+    
+    doc.text(b.timeSlot, cellX + 4, currentY + 6, { width: colWidths[6] - 8, height: rowHeight - 8 });
+    cellX += colWidths[6];
+    
+    doc.text(b.status, cellX + 4, currentY + 6, { width: colWidths[7] - 8, height: rowHeight - 8, ellipsis: true });
+    
+    currentY += rowHeight;
+  });
+
+  // Footer Note
+  currentY += 15;
+  if (currentY > 770) {
+    doc.addPage();
+    currentY = margin;
+  }
+  doc.font('Times-Italic').fontSize(8).fillColor('#616161');
+  doc.text(`Total Records Found: ${flatBookings.length}`, margin, currentY);
+  
+  // Footer text on all pages
+  const pages = doc.bufferedPageRange();
+  for (let i = 0; i < pages.count; i++) {
+    doc.switchToPage(i);
+    const fy = PAGE_HEIGHT - 35;
+    doc.moveTo(margin, fy).lineTo(595.28 - margin, fy).lineWidth(0.5).strokeColor('#bdbdbd').stroke();
+    doc.font('Times-Roman').fontSize(7).fillColor('#616161')
+       .text(`AICTE IDEA Lab & Innovation Centre Machinery Usage Report - Page ${i + 1} of ${pages.count}`, margin, fy + 5, { width: contentWidth, align: 'center' });
+  }
+};
+
 const generatePdf = async (type, data, outputPath) => {
   const dir = path.dirname(outputPath);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
 
-  const docMargin = type === 'specialRoom' ? 56.7 : (type === 'roomUsageReport' ? 30 : MARGIN);
+  const docMargin = type === 'specialRoom' ? 56.7 : (type === 'roomUsageReport' || type === 'machineryUsageReport' ? 30 : MARGIN);
   const doc = new PDFDocument({ margin: docMargin, size: 'A4', layout: 'portrait', bufferPages: true });
 
   return new Promise((resolve, reject) => {
@@ -799,6 +940,8 @@ const generatePdf = async (type, data, outputPath) => {
           await generateSpecialRoomPdf(doc, data);
         } else if (type === 'roomUsageReport') {
           await generateRoomUsageReportPdf(doc, data);
+        } else if (type === 'machineryUsageReport') {
+          await generateMachineryUsageReportPdf(doc, data);
         } else {
           await generateMachineryPdf(doc, data);
         }

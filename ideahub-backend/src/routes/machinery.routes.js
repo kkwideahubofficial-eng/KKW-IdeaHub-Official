@@ -1,5 +1,5 @@
 import express from 'express';
-import { requireAuth, requireCoordinator, optionalAuth } from '../middlewares/auth.js';
+import { requireAuth, requireCoordinator, optionalAuth, requireInternalUser } from '../middlewares/auth.js';
 import * as machineryController from '../controllers/machineryController.js';
 import * as requestController from '../controllers/machineryRequestController.js';
 import { upload } from '../middlewares/upload.js';
@@ -28,6 +28,9 @@ router.post('/requests', optionalAuth, requestController.createRequest);
 
 // Get requests (Head views all, Student views theirs, with filters/search)
 router.get('/requests', requireAuth, requestController.getRequests);
+
+// Download machinery/material requests usage report
+router.get('/requests/report', requireAuth, requireInternalUser, requireCoordinator, requestController.downloadMachineryUsageReport);
 
 // Get single request details
 router.get('/requests/:id', requireAuth, requestController.getRequestById);
