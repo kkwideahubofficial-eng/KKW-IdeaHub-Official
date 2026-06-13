@@ -135,7 +135,7 @@ const MyBookings = () => {
 
   const StatusTabs = ({ type }: { type: 'room' | 'machinery' }) => (
     <Tabs defaultValue="all" className="w-full">
-      <TabsList className="mb-4">
+      <TabsList className="grid w-full grid-cols-4 max-w-[400px] mb-4">
         <TabsTrigger value="all">All</TabsTrigger>
         <TabsTrigger value="pending">Pending</TabsTrigger>
         <TabsTrigger value="approved">Approved</TabsTrigger>

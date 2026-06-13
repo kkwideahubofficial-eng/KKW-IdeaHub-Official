@@ -616,7 +616,10 @@ const CoordinatorDashboard = () => {
             <p className="text-muted-foreground text-sm">Review applications, coordinate reservations, and track inventory allocation.</p>
           </div>
           <div className="flex items-center gap-4">
-            <TabsList className="bg-muted/30 p-1 rounded-lg border border-border/60">
+            <TabsList 
+              className="bg-muted/30 p-1 rounded-lg border border-border/60 w-full flex overflow-x-auto whitespace-nowrap justify-start lg:inline-flex lg:justify-center [&::-webkit-scrollbar]:hidden h-auto"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
               <TabsTrigger value="room_bookings" className="rounded-md text-xs font-semibold">Room Bookings</TabsTrigger>
               <TabsTrigger value="materials_machinery" className="rounded-md text-xs font-semibold">Materials & Machinery</TabsTrigger>
             </TabsList>
@@ -647,7 +650,10 @@ const CoordinatorDashboard = () => {
         </div>
 
         <Tabs defaultValue="pending" className="space-y-6">
-          <TabsList>
+          <TabsList 
+            className="w-full flex overflow-x-auto whitespace-nowrap justify-start lg:inline-flex lg:justify-center [&::-webkit-scrollbar]:hidden h-auto"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
             <TabsTrigger value="pending">Pending</TabsTrigger>
             <TabsTrigger value="approved">Approved</TabsTrigger>
             <TabsTrigger value="rejected">Rejected</TabsTrigger>
@@ -696,7 +702,10 @@ const CoordinatorDashboard = () => {
 
         <Tabs defaultValue="resource_pending" className="space-y-6">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b pb-4 mb-6">
-            <TabsList className="bg-muted/50 p-1 border rounded-lg">
+            <TabsList 
+              className="bg-muted/50 p-1 border rounded-lg w-full flex overflow-x-auto whitespace-nowrap justify-start lg:inline-flex lg:justify-center [&::-webkit-scrollbar]:hidden h-auto"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
               <TabsTrigger value="resource_pending" className="text-xs">Pending Reviews ({resStats.pending})</TabsTrigger>
               <TabsTrigger value="resource_approved" className="text-xs">Approved Permissions</TabsTrigger>
               <TabsTrigger value="machine_bookings" className="text-xs">Machine Bookings ({machineStats.pendingCompletion})</TabsTrigger>

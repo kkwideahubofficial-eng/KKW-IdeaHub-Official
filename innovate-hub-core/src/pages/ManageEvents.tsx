@@ -640,7 +640,10 @@ const ManageEvents = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="bg-muted/50 p-1 rounded-xl">
+        <TabsList 
+          className="bg-muted/50 p-1 rounded-xl w-full flex overflow-x-auto whitespace-nowrap justify-start md:inline-flex md:justify-center [&::-webkit-scrollbar]:hidden h-auto md:h-12"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
           <TabsTrigger value="events" className="rounded-lg font-semibold px-5 py-2.5">Events List</TabsTrigger>
           <TabsTrigger value="registrations" className="rounded-lg font-semibold px-5 py-2.5">Manage Registrations</TabsTrigger>
           <TabsTrigger value="attendance" className="rounded-lg font-semibold px-5 py-2.5">Attendance Tracker</TabsTrigger>
@@ -728,17 +731,17 @@ const ManageEvents = () => {
               </select>
             </div>
 
-            <div className="flex gap-2 shrink-0 self-end">
-              <Button size="sm" className="rounded-xl text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold animate-all" onClick={() => handleBulkDecision('approved')}>
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-start sm:justify-end">
+              <Button size="sm" className="rounded-xl text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold animate-all flex-1 sm:flex-initial" onClick={() => handleBulkDecision('approved')}>
                 Approve Selected
               </Button>
-              <Button size="sm" className="rounded-xl text-xs bg-rose-600 hover:bg-rose-700 text-white font-semibold animate-all" onClick={() => handleBulkDecision('rejected')}>
+              <Button size="sm" className="rounded-xl text-xs bg-rose-600 hover:bg-rose-700 text-white font-semibold animate-all flex-1 sm:flex-initial" onClick={() => handleBulkDecision('rejected')}>
                 Reject Selected
               </Button>
-              <Button size="sm" variant="outline" className="rounded-xl text-xs font-semibold gap-1.5" onClick={handleExportCSV}>
+              <Button size="sm" variant="outline" className="rounded-xl text-xs font-semibold gap-1.5 flex-1 sm:flex-initial" onClick={handleExportCSV}>
                 <FileSpreadsheet className="w-3.5 h-3.5" /> Export Excel
               </Button>
-              <Button size="sm" variant="outline" className="rounded-xl text-xs font-semibold gap-1.5" onClick={handleExportPDF}>
+              <Button size="sm" variant="outline" className="rounded-xl text-xs font-semibold gap-1.5 flex-1 sm:flex-initial" onClick={handleExportPDF}>
                 <FileDown className="w-3.5 h-3.5" /> Export PDF
               </Button>
             </div>
@@ -817,41 +820,43 @@ const ManageEvents = () => {
                             <TableCell colSpan={8} className="p-4">
                               <div className="border rounded-xl bg-background p-4 space-y-3">
                                 <h4 className="text-xs font-bold text-primary uppercase tracking-wide">Team Composition details</h4>
-                                <Table>
-                                  <TableHeader className="bg-muted/20">
-                                    <TableRow>
-                                      <TableHead className="text-xs font-bold">Member Name</TableHead>
-                                      <TableHead className="text-xs font-bold">PRN</TableHead>
-                                      <TableHead className="text-xs font-bold">Roll</TableHead>
-                                      <TableHead className="text-xs font-bold">Branch/Year</TableHead>
-                                      <TableHead className="text-xs font-bold">Division</TableHead>
-                                      <TableHead className="text-xs font-bold">Contact Email / Phone</TableHead>
-                                      <TableHead className="text-xs font-bold">Role Badge</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {reg.teamMembers.map((member) => (
-                                      <TableRow key={member._id}>
-                                        <TableCell className="text-xs font-semibold text-foreground">{member.fullName}</TableCell>
-                                        <TableCell className="text-xs font-mono">{member.prn}</TableCell>
-                                        <TableCell className="text-xs">{member.rollNumber}</TableCell>
-                                        <TableCell className="text-xs">{member.department} / {member.year}</TableCell>
-                                        <TableCell className="text-xs">{member.division}</TableCell>
-                                        <TableCell className="text-xs">
-                                          <div>{member.email}</div>
-                                          <div className="text-[10px] text-muted-foreground">{member.mobile}</div>
-                                        </TableCell>
-                                        <TableCell>
-                                          {member.isTeamLeader ? (
-                                            <Badge className="bg-amber-500 text-[9px] font-bold"><Star className="w-2.5 h-2.5 mr-0.5" /> Leader</Badge>
-                                          ) : (
-                                            <Badge variant="secondary" className="text-[9px] font-bold">Member</Badge>
-                                          )}
-                                        </TableCell>
+                                <div className="overflow-x-auto w-full">
+                                  <Table>
+                                    <TableHeader className="bg-muted/20">
+                                      <TableRow>
+                                        <TableHead className="text-xs font-bold">Member Name</TableHead>
+                                        <TableHead className="text-xs font-bold">PRN</TableHead>
+                                        <TableHead className="text-xs font-bold">Roll</TableHead>
+                                        <TableHead className="text-xs font-bold">Branch/Year</TableHead>
+                                        <TableHead className="text-xs font-bold">Division</TableHead>
+                                        <TableHead className="text-xs font-bold">Contact Email / Phone</TableHead>
+                                        <TableHead className="text-xs font-bold">Role Badge</TableHead>
                                       </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {reg.teamMembers.map((member) => (
+                                        <TableRow key={member._id}>
+                                          <TableCell className="text-xs font-semibold text-foreground">{member.fullName}</TableCell>
+                                          <TableCell className="text-xs font-mono">{member.prn}</TableCell>
+                                          <TableCell className="text-xs">{member.rollNumber}</TableCell>
+                                          <TableCell className="text-xs">{member.department} / {member.year}</TableCell>
+                                          <TableCell className="text-xs">{member.division}</TableCell>
+                                          <TableCell className="text-xs">
+                                            <div>{member.email}</div>
+                                            <div className="text-[10px] text-muted-foreground">{member.mobile}</div>
+                                          </TableCell>
+                                          <TableCell>
+                                            {member.isTeamLeader ? (
+                                              <Badge className="bg-amber-500 text-[9px] font-bold"><Star className="w-2.5 h-2.5 mr-0.5" /> Leader</Badge>
+                                            ) : (
+                                              <Badge variant="secondary" className="text-[9px] font-bold">Member</Badge>
+                                            )}
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
 
                                 {/* Project Description metadata info */}
                                 {(reg.projectTitle || reg.problemStatement || reg.projectDescription || reg.skills) && (
@@ -896,11 +901,11 @@ const ManageEvents = () => {
               </select>
             </div>
 
-            <div className="flex gap-2.5 shrink-0 self-end">
-              <Button size="sm" className="rounded-xl text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold" onClick={() => handleBulkAttendance('present')}>
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-start sm:justify-end">
+              <Button size="sm" className="rounded-xl text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex-1 sm:flex-initial" onClick={() => handleBulkAttendance('present')}>
                 Mark Present
               </Button>
-              <Button size="sm" className="rounded-xl text-xs bg-rose-600 hover:bg-rose-700 text-white font-semibold" onClick={() => handleBulkAttendance('absent')}>
+              <Button size="sm" className="rounded-xl text-xs bg-rose-600 hover:bg-rose-700 text-white font-semibold flex-1 sm:flex-initial" onClick={() => handleBulkAttendance('absent')}>
                 Mark Absent
               </Button>
             </div>
@@ -1164,249 +1169,259 @@ const ManageEvents = () => {
 
       {/* Create / Edit Form Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto rounded-3xl p-6">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-foreground">{currentEvent ? 'Edit Event Details' : 'Create New Event'}</DialogTitle>
-            <DialogDescription>Fill all information components to configure the event.</DialogDescription>
+        <DialogContent className="w-[95vw] max-w-[95vw] sm:max-w-3xl lg:max-w-5xl max-h-[90vh] overflow-hidden rounded-t-3xl sm:rounded-3xl p-0 flex flex-col">
+          <DialogHeader className="p-6 pb-4 border-b bg-background shrink-0">
+            <DialogTitle className="text-xl sm:text-3xl font-bold text-foreground text-center sm:text-left pr-8">
+              {currentEvent ? 'Edit Event Details' : 'Create New Event'}
+            </DialogTitle>
+            <DialogDescription className="text-sm text-slate-500 text-center sm:text-left">
+              Fill all information components to configure the event.
+            </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleFormSubmit} className="space-y-6 pt-4">
-            
-            {/* Tabbed Form Section */}
-            <Tabs defaultValue="basic" className="space-y-4">
-              <TabsList className="bg-muted/50 p-0.5 rounded-lg text-xs">
-                <TabsTrigger value="basic" className="text-xs font-semibold px-3 py-2 rounded-md">Basic Info</TabsTrigger>
-                <TabsTrigger value="schedule" className="text-xs font-semibold px-3 py-2 rounded-md">Schedule & Date</TabsTrigger>
-                <TabsTrigger value="venue" className="text-xs font-semibold px-3 py-2 rounded-md">Venue & Capacity</TabsTrigger>
-                <TabsTrigger value="eligibility" className="text-xs font-semibold px-3 py-2 rounded-md">Eligibility Criteria</TabsTrigger>
-                <TabsTrigger value="media" className="text-xs font-semibold px-3 py-2 rounded-md">Media & Extra</TabsTrigger>
-              </TabsList>
+          <form onSubmit={handleFormSubmit} className="flex flex-col flex-grow overflow-hidden">
+            {/* Scrollable Content Area */}
+            <div className="flex-grow overflow-y-auto p-6 space-y-6">
+              
+              {/* Tabbed Form Section */}
+              <Tabs defaultValue="basic" className="space-y-6 w-full max-w-full">
+                <TabsList 
+                  className="bg-muted/50 p-0.5 rounded-lg text-xs w-full flex overflow-x-auto whitespace-nowrap justify-start [&::-webkit-scrollbar]:hidden h-auto scrollbar-hide"
+                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                >
+                  <TabsTrigger value="basic" className="min-w-max px-4 py-2 text-xs font-semibold rounded-md">Basic Info</TabsTrigger>
+                  <TabsTrigger value="schedule" className="min-w-max px-4 py-2 text-xs font-semibold rounded-md">Schedule & Date</TabsTrigger>
+                  <TabsTrigger value="venue" className="min-w-max px-4 py-2 text-xs font-semibold rounded-md">Venue & Capacity</TabsTrigger>
+                  <TabsTrigger value="eligibility" className="min-w-max px-4 py-2 text-xs font-semibold rounded-md">Eligibility Criteria</TabsTrigger>
+                  <TabsTrigger value="media" className="min-w-max px-4 py-2 text-xs font-semibold rounded-md">Media & Extra</TabsTrigger>
+                </TabsList>
 
-              {/* Form Tab 1: Basic */}
-              <TabsContent value="basic" className="space-y-4 pt-2">
-                <div className="space-y-1">
-                  <Label htmlFor="title" className="text-xs font-semibold">Event Name</Label>
-                  <Input id="title" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} placeholder="Enter event name" required />
-                </div>
-                
-                <div className="space-y-1">
-                  <Label htmlFor="category" className="text-xs font-semibold">Event Category</Label>
-                  <select 
-                    id="category"
-                    className="w-full h-10 px-3 rounded-md border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    value={formData.category}
-                    onChange={e => setFormData({ ...formData, category: e.target.value })}
-                  >
-                    <option value="Workshop">Workshop</option>
-                    <option value="Competition">Competition</option>
-                    <option value="Seminar">Seminar</option>
-                    <option value="Hackathon">Hackathon</option>
-                    <option value="General">General Event</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <Label htmlFor="description" className="text-xs font-semibold">Event Description</Label>
-                  <Textarea id="description" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="Detail the event description..." required />
-                </div>
-
-                <div className="space-y-1">
-                  <Label htmlFor="objectives" className="text-xs font-semibold">Event Objectives</Label>
-                  <Textarea id="objectives" value={formData.objectives} onChange={e => setFormData({ ...formData, objectives: e.target.value })} placeholder="What will the participants learn or achieve..." />
-                </div>
-              </TabsContent>
-
-              {/* Form Tab 2: Schedule */}
-              <TabsContent value="schedule" className="space-y-4 pt-2">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-1">
-                    <Label htmlFor="date" className="text-xs font-semibold">Event Date</Label>
-                    <Input id="date" type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} required />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="startTime" className="text-xs font-semibold">Start Time</Label>
-                    <Input id="startTime" placeholder="Ex. 10:00 AM" value={formData.startTime} onChange={e => setFormData({ ...formData, startTime: e.target.value })} required />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="endTime" className="text-xs font-semibold">End Time</Label>
-                    <Input id="endTime" placeholder="Ex. 05:00 PM" value={formData.endTime} onChange={e => setFormData({ ...formData, endTime: e.target.value })} required />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <Label htmlFor="regStart" className="text-xs font-semibold">Registration Start Date</Label>
-                    <Input id="regStart" type="date" value={formData.registrationStartDate} onChange={e => setFormData({ ...formData, registrationStartDate: e.target.value })} required />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="regEnd" className="text-xs font-semibold">Registration End Date</Label>
-                    <Input id="regEnd" type="date" value={formData.registrationEndDate} onChange={e => setFormData({ ...formData, registrationEndDate: e.target.value })} required />
-                  </div>
-                </div>
-              </TabsContent>
-
-              {/* Form Tab 3: Venue & Capacity */}
-              <TabsContent value="venue" className="space-y-4 pt-2">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-1">
-                    <Label htmlFor="venue" className="text-xs font-semibold">Venue / Lab</Label>
-                    <Input id="venue" value={formData.venue} onChange={e => setFormData({ ...formData, venue: e.target.value })} required />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="building" className="text-xs font-semibold">Building</Label>
-                    <Input id="building" value={formData.building} onChange={e => setFormData({ ...formData, building: e.target.value })} placeholder="Ex. Main Building" />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="roomNumber" className="text-xs font-semibold">Room Number</Label>
-                    <Input id="roomNumber" value={formData.roomNumber} onChange={e => setFormData({ ...formData, roomNumber: e.target.value })} placeholder="Ex. 201" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
-                  <div className="space-y-1">
-                    <Label htmlFor="totalSeats" className="text-xs font-semibold">Total Seats Capacity</Label>
-                    <Input id="totalSeats" type="number" value={formData.totalSeats} onChange={e => setFormData({ ...formData, totalSeats: parseInt(e.target.value, 10) })} required />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="partType" className="text-xs font-semibold">Participation Type</Label>
-                    <select 
-                      id="partType"
-                      className="w-full h-10 px-3 rounded-md border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                      value={formData.participationType}
-                      onChange={e => setFormData({ ...formData, participationType: e.target.value as any })}
-                    >
-                      <option value="Individual Only">Individual Only</option>
-                      <option value="Team Only">Team Only</option>
-                      <option value="Both Allowed">Both Allowed</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <Label htmlFor="minTeam" className="text-xs font-semibold">Minimum Team Size</Label>
-                    <Input id="minTeam" type="number" value={formData.minTeamSize} onChange={e => setFormData({ ...formData, minTeamSize: parseInt(e.target.value, 10) })} required />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="maxTeam" className="text-xs font-semibold">Maximum Team Size</Label>
-                    <Input id="maxTeam" type="number" value={formData.maxTeamSize} onChange={e => setFormData({ ...formData, maxTeamSize: parseInt(e.target.value, 10) })} required />
-                  </div>
-                </div>
-              </TabsContent>
-
-              {/* Form Tab 4: Eligibility */}
-              <TabsContent value="eligibility" className="space-y-4 pt-2">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 pt-1">
-                    <Checkbox 
-                      id="allowAllBranches" 
-                      checked={formData.allowedBranches === ""}
-                      onCheckedChange={(checked) => {
-                        if (checked === true) {
-                          setFormData({ ...formData, allowedBranches: "" });
-                        } else {
-                          setFormData({ ...formData, allowedBranches: DEPARTMENTS[0] });
-                        }
-                      }}
-                    />
-                    <Label htmlFor="allowAllBranches" className="text-xs font-bold cursor-pointer">Allow All Departments / Branches</Label>
-                  </div>
-
-                  {formData.allowedBranches !== "" && (
-                    <div className="space-y-1 animate-in fade-in duration-200">
-                      <Label htmlFor="allowedBranches" className="text-xs font-semibold">Allowed Branches</Label>
-                      <MultiSelect
-                        value={formData.allowedBranches}
-                        onChange={(val) => setFormData({ ...formData, allowedBranches: val })}
-                        options={DEPARTMENTS}
-                        placeholder="Select Allowed Branches"
-                      />
+                {/* Form Tab 1: Basic */}
+                <TabsContent value="basic" className="pt-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1 md:col-span-2">
+                      <Label htmlFor="title" className="text-xs font-semibold">Event Name</Label>
+                      <Input id="title" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} placeholder="Enter event name" required />
                     </div>
-                  )}
-                </div>
+                    
+                    <div className="space-y-1 md:col-span-2">
+                      <Label htmlFor="category" className="text-xs font-semibold">Event Category</Label>
+                      <select 
+                        id="category"
+                        className="w-full h-10 px-3 rounded-md border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 bg-background"
+                        value={formData.category}
+                        onChange={e => setFormData({ ...formData, category: e.target.value })}
+                      >
+                        <option value="Workshop">Workshop</option>
+                        <option value="Competition">Competition</option>
+                        <option value="Seminar">Seminar</option>
+                        <option value="Hackathon">Hackathon</option>
+                        <option value="General">General Event</option>
+                      </select>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold">Allowed Year Levels</Label>
-                  <div className="flex gap-4">
-                    {['FE', 'SE', 'TE', 'BE'].map(year => (
-                      <div key={year} className="flex items-center gap-1.5">
+                    <div className="space-y-1 md:col-span-2">
+                      <Label htmlFor="description" className="text-xs font-semibold">Event Description</Label>
+                      <Textarea id="description" className="min-h-[100px] md:min-h-[140px]" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="Detail the event description..." required />
+                    </div>
+
+                    <div className="space-y-1 md:col-span-2">
+                      <Label htmlFor="objectives" className="text-xs font-semibold">Event Objectives</Label>
+                      <Textarea id="objectives" className="min-h-[100px] md:min-h-[140px]" value={formData.objectives} onChange={e => setFormData({ ...formData, objectives: e.target.value })} placeholder="What will the participants learn or achieve..." />
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {/* Form Tab 2: Schedule */}
+                <TabsContent value="schedule" className="pt-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label htmlFor="date" className="text-xs font-semibold">Event Date</Label>
+                      <Input id="date" type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} required />
+                    </div>
+                    <div className="space-y-1 hidden md:block"></div> {/* Filler for grid alignment */}
+                    
+                    <div className="space-y-1">
+                      <Label htmlFor="startTime" className="text-xs font-semibold">Start Time</Label>
+                      <Input id="startTime" placeholder="Ex. 10:00 AM" value={formData.startTime} onChange={e => setFormData({ ...formData, startTime: e.target.value })} required />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="endTime" className="text-xs font-semibold">End Time</Label>
+                      <Input id="endTime" placeholder="Ex. 05:00 PM" value={formData.endTime} onChange={e => setFormData({ ...formData, endTime: e.target.value })} required />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label htmlFor="regStart" className="text-xs font-semibold">Registration Start Date</Label>
+                      <Input id="regStart" type="date" value={formData.registrationStartDate} onChange={e => setFormData({ ...formData, registrationStartDate: e.target.value })} required />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="regEnd" className="text-xs font-semibold">Registration End Date</Label>
+                      <Input id="regEnd" type="date" value={formData.registrationEndDate} onChange={e => setFormData({ ...formData, registrationEndDate: e.target.value })} required />
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {/* Form Tab 3: Venue & Capacity */}
+                <TabsContent value="venue" className="pt-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1 md:col-span-2">
+                      <Label htmlFor="venue" className="text-xs font-semibold">Venue / Lab</Label>
+                      <Input id="venue" value={formData.venue} onChange={e => setFormData({ ...formData, venue: e.target.value })} required />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="building" className="text-xs font-semibold">Building</Label>
+                      <Input id="building" value={formData.building} onChange={e => setFormData({ ...formData, building: e.target.value })} placeholder="Ex. Main Building" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="roomNumber" className="text-xs font-semibold">Room Number</Label>
+                      <Input id="roomNumber" value={formData.roomNumber} onChange={e => setFormData({ ...formData, roomNumber: e.target.value })} placeholder="Ex. 201" />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label htmlFor="totalSeats" className="text-xs font-semibold">Total Seats Capacity</Label>
+                      <Input id="totalSeats" type="number" value={formData.totalSeats} onChange={e => setFormData({ ...formData, totalSeats: parseInt(e.target.value, 10) })} required />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="partType" className="text-xs font-semibold">Participation Type</Label>
+                      <select 
+                        id="partType"
+                        className="w-full h-10 px-3 rounded-md border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 bg-background"
+                        value={formData.participationType}
+                        onChange={e => setFormData({ ...formData, participationType: e.target.value as any })}
+                      >
+                        <option value="Individual Only">Individual Only</option>
+                        <option value="Team Only">Team Only</option>
+                        <option value="Both Allowed">Both Allowed</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label htmlFor="minTeam" className="text-xs font-semibold">Minimum Team Size</Label>
+                      <Input id="minTeam" type="number" value={formData.minTeamSize} onChange={e => setFormData({ ...formData, minTeamSize: parseInt(e.target.value, 10) })} required />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="maxTeam" className="text-xs font-semibold">Maximum Team Size</Label>
+                      <Input id="maxTeam" type="number" value={formData.maxTeamSize} onChange={e => setFormData({ ...formData, maxTeamSize: parseInt(e.target.value, 10) })} required />
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {/* Form Tab 4: Eligibility */}
+                <TabsContent value="eligibility" className="pt-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-3 md:col-span-2">
+                      <div className="flex items-center gap-2 pt-1">
                         <Checkbox 
-                          id={`year-${year}`} 
-                          checked={formData.allowedYears.includes(year)}
-                          onCheckedChange={() => handleYearToggle(year)}
+                          id="allowAllBranches" 
+                          checked={formData.allowedBranches === ""}
+                          onCheckedChange={(checked) => {
+                            if (checked === true) {
+                              setFormData({ ...formData, allowedBranches: "" });
+                            } else {
+                              setFormData({ ...formData, allowedBranches: DEPARTMENTS[0] });
+                            }
+                          }}
                         />
-                        <Label htmlFor={`year-${year}`} className="text-xs font-medium cursor-pointer">{year}</Label>
+                        <Label htmlFor="allowAllBranches" className="text-xs font-bold cursor-pointer">Allow All Departments / Branches</Label>
                       </div>
-                    ))}
-                  </div>
-                </div>
 
-                <div className="space-y-1">
-                  <Label htmlFor="requiredSkills" className="text-xs font-semibold">Required Skills (comma separated)</Label>
-                  <Input id="requiredSkills" value={formData.requiredSkills} onChange={e => setFormData({ ...formData, requiredSkills: e.target.value })} placeholder="Ex. React, MongoDB, Python" />
-                </div>
+                      {formData.allowedBranches !== "" && (
+                        <div className="space-y-1 animate-in fade-in duration-200">
+                          <Label htmlFor="allowedBranches" className="text-xs font-semibold">Allowed Branches</Label>
+                          <MultiSelect
+                            value={formData.allowedBranches}
+                            onChange={(val) => setFormData({ ...formData, allowedBranches: val })}
+                            options={DEPARTMENTS}
+                            placeholder="Select Allowed Branches"
+                          />
+                        </div>
+                      )}
+                    </div>
 
-                <div className="space-y-1">
-                  <Label htmlFor="eligibilityCriteria" className="text-xs font-semibold">Detailed Eligibility Notes</Label>
-                  <Textarea id="eligibilityCriteria" value={formData.eligibilityCriteria} onChange={e => setFormData({ ...formData, eligibilityCriteria: e.target.value })} placeholder="Detail any other prerequisites..." />
-                </div>
-              </TabsContent>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label className="text-xs font-semibold">Allowed Year Levels</Label>
+                      <div className="flex flex-wrap gap-4">
+                        {['FE', 'SE', 'TE', 'BE'].map(year => (
+                          <div key={year} className="flex items-center gap-1.5">
+                            <Checkbox 
+                              id={`year-${year}`} 
+                              checked={formData.allowedYears.includes(year)}
+                              onCheckedChange={() => handleYearToggle(year)}
+                            />
+                            <Label htmlFor={`year-${year}`} className="text-xs font-medium cursor-pointer">{year}</Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
 
-              {/* Form Tab 5: Media & Extra */}
-              <TabsContent value="media" className="space-y-4 pt-2">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <Label htmlFor="imageFile" className="text-xs font-semibold">Banner Image Upload</Label>
-                    <Input id="imageFile" type="file" accept="image/*" className="cursor-pointer" onChange={e => setImageFile(e.target.files?.[0] || null)} />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="imageUrl" className="text-xs font-semibold">Or Image URL</Label>
-                    <Input id="imageUrl" value={formData.imageUrl} onChange={e => setFormData({ ...formData, imageUrl: e.target.value })} placeholder="https://..." />
-                  </div>
-                </div>
+                    <div className="space-y-1 md:col-span-2">
+                      <Label htmlFor="requiredSkills" className="text-xs font-semibold">Required Skills (comma separated)</Label>
+                      <Input id="requiredSkills" value={formData.requiredSkills} onChange={e => setFormData({ ...formData, requiredSkills: e.target.value })} placeholder="Ex. React, MongoDB, Python" />
+                    </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t pt-4">
-                  <div className="space-y-1">
-                    <Label htmlFor="orgName" className="text-xs font-semibold">Organizer Name</Label>
-                    <Input id="orgName" value={formData.organizer} onChange={e => setFormData({ ...formData, organizer: e.target.value })} required />
+                    <div className="space-y-1 md:col-span-2">
+                      <Label htmlFor="eligibilityCriteria" className="text-xs font-semibold">Detailed Eligibility Notes</Label>
+                      <Textarea id="eligibilityCriteria" className="min-h-[100px] md:min-h-[140px]" value={formData.eligibilityCriteria} onChange={e => setFormData({ ...formData, eligibilityCriteria: e.target.value })} placeholder="Detail any other prerequisites..." />
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="coordName" className="text-xs font-semibold">Coordinator Name</Label>
-                    <Input id="coordName" value={formData.coordinatorName} onChange={e => setFormData({ ...formData, coordinatorName: e.target.value })} />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="coordContact" className="text-xs font-semibold">Coordinator Contact</Label>
-                    <Input id="coordContact" value={formData.coordinatorContact} onChange={e => setFormData({ ...formData, coordinatorContact: e.target.value })} />
-                  </div>
-                </div>
+                </TabsContent>
 
-                <div className="space-y-1">
-                  <Label htmlFor="rules" className="text-xs font-semibold">Event Agenda / Rules Markdown</Label>
-                  <Textarea id="rules" value={formData.rules} onChange={e => setFormData({ ...formData, rules: e.target.value })} placeholder="List down regulations and rules..." />
-                </div>
+                {/* Form Tab 5: Media & Extra */}
+                <TabsContent value="media" className="pt-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label htmlFor="imageFile" className="text-xs font-semibold">Banner Image Upload</Label>
+                      <Input id="imageFile" type="file" accept="image/*" className="cursor-pointer bg-background" onChange={e => setImageFile(e.target.files?.[0] || null)} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="imageUrl" className="text-xs font-semibold">Or Image URL</Label>
+                      <Input id="imageUrl" value={formData.imageUrl} onChange={e => setFormData({ ...formData, imageUrl: e.target.value })} placeholder="https://..." />
+                    </div>
 
-                <div className="space-y-1">
-                  <Label htmlFor="schedule" className="text-xs font-semibold">Event Agenda Schedule</Label>
-                  <Textarea id="schedule" value={formData.schedule} onChange={e => setFormData({ ...formData, schedule: e.target.value })} placeholder="List down timings and events timeline..." />
-                </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="orgName" className="text-xs font-semibold">Organizer Name</Label>
+                      <Input id="orgName" value={formData.organizer} onChange={e => setFormData({ ...formData, organizer: e.target.value })} required />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="coordName" className="text-xs font-semibold">Coordinator Name</Label>
+                      <Input id="coordName" value={formData.coordinatorName} onChange={e => setFormData({ ...formData, coordinatorName: e.target.value })} />
+                    </div>
+                    <div className="space-y-1 md:col-span-2">
+                      <Label htmlFor="coordContact" className="text-xs font-semibold">Coordinator Contact</Label>
+                      <Input id="coordContact" value={formData.coordinatorContact} onChange={e => setFormData({ ...formData, coordinatorContact: e.target.value })} />
+                    </div>
 
-                <div className="flex gap-6 border-t pt-4">
-                  <div className="flex items-center gap-2">
-                    <Checkbox id="isPub" checked={formData.isPublished} onCheckedChange={checked => setFormData({ ...formData, isPublished: checked === true })} />
-                    <Label htmlFor="isPub" className="text-xs font-bold cursor-pointer">Publish Event Immediately</Label>
+                    <div className="space-y-1 md:col-span-2">
+                      <Label htmlFor="rules" className="text-xs font-semibold">Event Agenda / Rules Markdown</Label>
+                      <Textarea id="rules" className="min-h-[100px] md:min-h-[140px]" value={formData.rules} onChange={e => setFormData({ ...formData, rules: e.target.value })} placeholder="List down regulations and rules..." />
+                    </div>
+
+                    <div className="space-y-1 md:col-span-2">
+                      <Label htmlFor="schedule" className="text-xs font-semibold">Event Agenda Schedule</Label>
+                      <Textarea id="schedule" className="min-h-[100px] md:min-h-[140px]" value={formData.schedule} onChange={e => setFormData({ ...formData, schedule: e.target.value })} placeholder="List down timings and events timeline..." />
+                    </div>
+
+                    <div className="flex flex-wrap gap-6 md:col-span-2 border-t pt-4">
+                      <div className="flex items-center gap-2">
+                        <Checkbox id="isPub" checked={formData.isPublished} onCheckedChange={checked => setFormData({ ...formData, isPublished: checked === true })} />
+                        <Label htmlFor="isPub" className="text-xs font-bold cursor-pointer">Publish Event Immediately</Label>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <Checkbox id="isCancelled" checked={formData.statusOverride === 'Cancelled'} onCheckedChange={checked => setFormData({ ...formData, statusOverride: checked === true ? 'Cancelled' : 'Active' })} />
+                        <Label htmlFor="isCancelled" className="text-xs font-bold text-rose-500 cursor-pointer">Mark Event Cancelled</Label>
+                      </div>
+                    </div>
                   </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Checkbox id="isCancelled" checked={formData.statusOverride === 'Cancelled'} onCheckedChange={checked => setFormData({ ...formData, statusOverride: checked === true ? 'Cancelled' : 'Active' })} />
-                    <Label htmlFor="isCancelled" className="text-xs font-bold text-rose-500 cursor-pointer">Mark Event Cancelled</Label>
-                  </div>
-                </div>
-              </TabsContent>
-            </Tabs>
+                </TabsContent>
+              </Tabs>
 
-            <DialogFooter className="border-t pt-4">
-              <Button type="button" variant="outline" className="rounded-xl h-10" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-              <Button type="submit" className="rounded-xl h-10 bg-primary hover:bg-primary/95 text-white font-bold" disabled={isSaving}>
+            </div>
+
+            {/* Sticky Footer */}
+            <DialogFooter className="sticky bottom-0 bg-background border-t p-6 flex flex-col-reverse sm:flex-row gap-3 sm:space-x-0 justify-end w-full shrink-0">
+              <Button type="button" variant="outline" className="w-full sm:w-auto rounded-xl h-10" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+              <Button type="submit" className="w-full sm:w-auto rounded-xl h-10 bg-primary hover:bg-primary/95 text-white font-bold" disabled={isSaving}>
                 {isSaving ? 'Saving...' : (currentEvent ? 'Update Event' : 'Create Event')}
               </Button>
             </DialogFooter>

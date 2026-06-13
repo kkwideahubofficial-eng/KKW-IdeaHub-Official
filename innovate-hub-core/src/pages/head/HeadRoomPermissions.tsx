@@ -288,7 +288,7 @@ const HeadRoomPermissions = () => {
       </div>
 
       {/* Head Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-8">
         <Card className="bg-amber-50 border-amber-200 text-amber-700">
           <CardContent className="p-4 text-center">
             <div className="text-xs font-bold uppercase tracking-wider">Pending Head Action</div>
