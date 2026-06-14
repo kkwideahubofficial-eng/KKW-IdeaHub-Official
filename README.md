@@ -1,4 +1,4 @@
-# IdeaHub & SnapCart Ecosystem
+# IdeaHub
 
 Welcome to the **IdeaHub and SnapCart Ecosystem** repository! This monorepo houses multiple interconnected applications that power the IdeaHub platform and SnapCart logistics system.
 
