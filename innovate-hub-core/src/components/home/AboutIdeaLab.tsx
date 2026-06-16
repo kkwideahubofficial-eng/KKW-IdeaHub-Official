@@ -42,10 +42,10 @@ const AboutIdeaLab = () => {
               <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
                 AICTE IDEA Lab
               </h2>
-              <p className="text-lg font-semibold text-slate-800">
+              <p className="text-lg font-bold text-slate-900">
                 Innovation starts with access to the right tools.
               </p>
-              <p className="text-slate-500 text-sm sm:text-base leading-relaxed">
+              <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
                 The IDEA (Idea Development, Evaluation and Application) Lab at KKWIEER provides students, researchers, and entrepreneurs a collaborative space to design and fabricate physical prototypes, moving from concept to physical creation under one roof.
               </p>
             </div>
@@ -58,8 +58,8 @@ const AboutIdeaLab = () => {
                     <Check className="w-3.5 h-3.5 stroke-[3]" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-slate-800">{pt.title}</h4>
-                    <p className="text-[11px] text-slate-400 mt-0.5">{pt.desc}</p>
+                    <h4 className="text-sm font-bold text-slate-900">{pt.title}</h4>
+                    <p className="text-xs text-slate-500 font-medium mt-1 leading-relaxed">{pt.desc}</p>
                   </div>
                 </div>
               ))}
