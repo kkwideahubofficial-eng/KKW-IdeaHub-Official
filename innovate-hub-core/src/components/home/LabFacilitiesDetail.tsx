@@ -103,18 +103,6 @@ const LabFacilitiesDetail = () => {
                   <div className="p-2 rounded-lg bg-blue-50 text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-300">
                     <Settings className="w-5 h-5 stroke-[2]" />
                   </div>
-                  
-                  {/* Status Indicator */}
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                    machine.isAvailable 
-                      ? "bg-emerald-50 text-emerald-700 border border-emerald-100" 
-                      : "bg-rose-50 text-rose-700 border border-rose-100"
-                  }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${
-                      machine.isAvailable ? "bg-emerald-500" : "bg-rose-500"
-                    }`} />
-                    {machine.isAvailable ? "Available" : "Reserved"}
-                  </span>
                 </div>
 
                 {/* Details */}
