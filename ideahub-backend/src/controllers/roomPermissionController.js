@@ -315,6 +315,23 @@ export const createRoomRequest = async (req, res) => {
       } catch (err) {
         console.error('Failed to send faculty verification email:', err);
       }
+
+      // Notify Coordinator and Head
+      try {
+        const admins = await User.find({ role: { $in: ['coordinator', 'head'] } });
+        for (const admin of admins) {
+          await sendEmail(
+            admin.email,
+            `New Room Permission Request - ${requestId}`,
+            `<h2>Dear ${admin.name},</h2>
+             <p>A new room permission request <b>${requestId}</b> for <b>${facilityRequired}</b> has been submitted by <b>${applicantDetails.applicantName}</b>.</p>
+             <p>It is currently awaiting Faculty Verification.</p>
+             <p>Please log in to the dashboard to monitor the request.</p>`
+          );
+        }
+      } catch (err) {
+        console.error('Failed to send admin email:', err);
+      }
     }
 
     res.status(201).json(savedRequest);
@@ -402,6 +419,23 @@ export const updateRoomRequest = async (req, res) => {
       } catch (err) {
         console.error('Failed to send faculty email:', err);
       }
+
+      // Notify Coordinator and Head
+      try {
+        const admins = await User.find({ role: { $in: ['coordinator', 'head'] } });
+        for (const admin of admins) {
+          await sendEmail(
+            admin.email,
+            `Resubmitted Room Permission Request - ${request.requestId}`,
+            `<h2>Dear ${admin.name},</h2>
+             <p>The room permission request <b>${request.requestId}</b> has been resubmitted with updates by <b>${applicantDetails.applicantName}</b>.</p>
+             <p>It is currently awaiting Faculty Verification.</p>
+             <p>Please log in to the dashboard to monitor the updated request.</p>`
+          );
+        }
+      } catch (err) {
+        console.error('Failed to send admin email:', err);
+      }
     }
 
     await request.save();
@@ -469,6 +503,17 @@ export const facultyVerifyRequest = async (req, res) => {
           'New Room Request Awaiting Review',
           `Room Permission Request ${request.requestId} is verified by faculty and awaits your review.`
         );
+        try {
+          await sendEmail(
+            coord.email,
+            `Action Required: Room Permission Request - ${request.requestId}`,
+            `<h2>Dear ${coord.name},</h2>
+             <p>The room permission request <b>${request.requestId}</b> has been verified by the Faculty and is now awaiting your review.</p>
+             <p>Please log in to the dashboard to process this request.</p>`
+          );
+        } catch (err) {
+          console.error('Failed to send coordinator email:', err);
+        }
       }
     } else {
       // Declined by Faculty
@@ -573,6 +618,18 @@ export const coordinatorDecision = async (req, res) => {
           'New Request Awaiting Head Approval',
           `Room request ${request.requestId} is forwarded by Coordinator and awaits your approval.`
         );
+        try {
+          await sendEmail(
+            head.email,
+            `Action Required: Room Permission Request - ${request.requestId}`,
+            `<h2>Dear ${head.name},</h2>
+             <p>The room permission request <b>${request.requestId}</b> has been approved and forwarded by the Coordinator.</p>
+             <p>It is now awaiting your final approval.</p>
+             <p>Please log in to the dashboard to process this request.</p>`
+          );
+        } catch (err) {
+          console.error('Failed to send head email:', err);
+        }
       }
     } else if (decision === 'reject') {
       request.status = 'Rejected';

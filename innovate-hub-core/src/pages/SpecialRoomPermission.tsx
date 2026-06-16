@@ -25,7 +25,8 @@ import {
   Printer,
   Download,
   Info,
-  Check
+  Check,
+  Loader2
 } from "lucide-react";
 
 interface RoomDetails {
@@ -243,6 +244,7 @@ const SpecialRoomPermission = () => {
   const [selectedRequestDetails, setSelectedRequestDetails] = useState<any | null>(null);
   const [rooms, setRooms] = useState<RoomDetails[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     fetchSpecialRooms();
@@ -441,6 +443,7 @@ const SpecialRoomPermission = () => {
       }
     }
 
+    setIsSubmitting(true);
     try {
       const payload = {
         facilityRequired: selectedRoom?.name,
@@ -483,6 +486,8 @@ const SpecialRoomPermission = () => {
       fetchStats();
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Failed to submit request.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1131,11 +1136,14 @@ const SpecialRoomPermission = () => {
                       )}
                       
                       <div className="flex flex-col sm:flex-row gap-2 sm:gap-2">
-                        <Button variant="ghost" onClick={() => handleFormSubmit("Draft")} className="h-11 sm:h-10 text-sm font-semibold w-full sm:w-auto min-h-[44px]">Save Draft</Button>
+                        <Button variant="ghost" onClick={() => handleFormSubmit("Draft")} disabled={isSubmitting} className="h-11 sm:h-10 text-sm font-semibold w-full sm:w-auto min-h-[44px]">Save Draft</Button>
                         {formStep < 3 ? (
                           <Button onClick={nextStep} className="h-11 sm:h-10 text-sm font-semibold w-full sm:w-auto min-h-[44px]">Next Step</Button>
                         ) : (
-                          <Button onClick={() => handleFormSubmit("Submitted")} className="bg-green-600 hover:bg-green-700 h-11 sm:h-10 text-sm font-semibold w-full sm:w-auto min-h-[44px]">Submit Application</Button>
+                          <Button onClick={() => handleFormSubmit("Submitted")} disabled={isSubmitting} className="bg-green-600 hover:bg-green-700 h-11 sm:h-10 text-sm font-semibold w-full sm:w-auto min-h-[44px]">
+                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Submit Application
+                          </Button>
                         )}
                       </div>
                     </div>

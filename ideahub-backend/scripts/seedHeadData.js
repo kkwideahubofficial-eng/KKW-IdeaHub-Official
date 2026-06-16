@@ -32,23 +32,32 @@ const seedData = async () => {
         // await MachineryRequest.deleteMany({});
         // await Machinery.deleteMany({});
         
-        // 1. Create Head User
-        const headEmail = 'head@ideahub.com';
-        let headUser = await User.findOne({ email: headEmail });
-        if (!headUser) {
-            const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash('head1234', salt);
-            headUser = await User.create({
-                name: 'Dr. Head of Dept',
-                email: headEmail,
-                passwordHash: hashedPassword,
-                role: 'head',
-                department: 'Innovation',
-                phone: '1234567890'
-            });
-            console.log('Created Head User:', headEmail);
-        } else {
-            console.log('Head User exists:', headEmail);
+        // 1. Create Head Users
+        let headUser; // Store first head user for machinery backward compatibility
+        const headEmails = ['roshangaikwad1902@gmail.com', 'rnmunje@kkwagh.edu.in'];
+        for (const email of headEmails) {
+            let hUser = await User.findOne({ email });
+            if (!hUser) {
+                const salt = await bcrypt.genSalt(10);
+                const hashedPassword = await bcrypt.hash('123456', salt);
+                hUser = await User.create({
+                    name: 'Dr. Head of Dept',
+                    email: email,
+                    passwordHash: hashedPassword,
+                    role: 'head',
+                    department: 'Innovation',
+                    phone: '1234567890'
+                });
+                console.log('Created Head User:', email);
+            } else {
+                const salt = await bcrypt.genSalt(10);
+                const hashedPassword = await bcrypt.hash('123456', salt);
+                hUser.passwordHash = hashedPassword;
+                hUser.role = 'head'; // Ensure role is updated
+                await hUser.save();
+                console.log('Updated Head User password and role to head:', email);
+            }
+            if (!headUser) headUser = hUser;
         }
 
         // 2. Create Student User
@@ -94,22 +103,28 @@ const seedData = async () => {
             console.log('Updated Team Member User password to 123456:', teamMemberEmail);
         }
 
-        // 2.5 Create Coordinator User
-        const coordEmail = 'coordinator@ideahub.com';
-        let coordUser = await User.findOne({ email: coordEmail });
-        if (!coordUser) {
-            const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash('coord1234', salt);
-            coordUser = await User.create({
-                name: 'Mr. Coordinator',
-                email: coordEmail,
-                passwordHash: hashedPassword,
-                role: 'coordinator',
-                phone: '1122334455'
-            });
-            console.log('Created Coordinator User:', coordEmail);
-        } else {
-            console.log('Coordinator User exists:', coordEmail);
+        // 2.5 Create Coordinator Users
+        const coordinatorEmails = ['roshangaikwad2006@gmail.com', 'rngaikwad370124@kkwagh.edu.in'];
+        for (const coordEmail of coordinatorEmails) {
+            let coordUser = await User.findOne({ email: coordEmail });
+            if (!coordUser) {
+                const salt = await bcrypt.genSalt(10);
+                const hashedPassword = await bcrypt.hash('123456', salt);
+                coordUser = await User.create({
+                    name: 'Coordinator',
+                    email: coordEmail,
+                    passwordHash: hashedPassword,
+                    role: 'coordinator',
+                    phone: '1122334455'
+                });
+                console.log('Created Coordinator User:', coordEmail);
+            } else {
+                const salt = await bcrypt.genSalt(10);
+                const hashedPassword = await bcrypt.hash('123456', salt);
+                coordUser.passwordHash = hashedPassword;
+                await coordUser.save();
+                console.log('Updated Coordinator User password to 123456:', coordEmail);
+            }
         }
 
         // 3. Create Machinery
@@ -318,10 +333,10 @@ const seedData = async () => {
         console.log('Created Scheduled Request (FUTURE: 9:10-9:15 PM today) - MAT-SEED-005');
 
         console.log('--- SEEDING COMPLETE ---');
-        console.log('Head Creds:        head@ideahub.com / head1234');
+        console.log('Head Creds:        roshangaikwad1902@gmail.com, rnmunje@kkwagh.edu.in / 123456');
         console.log('Student Creds:     student@test.com / student1');
         console.log('Team Member Creds: teammember@gmail.com / 123456');
-        console.log('Coordinator Creds: coordinator@ideahub.com / coord1234');
+        console.log('Coordinator Creds: roshangaikwad2006@gmail.com, rngaikwad370124@kkwagh.edu.in / 123456');
         console.log('');
         console.log('MAT-SEED-004 => status: Machine Scheduled | slot: 8:00-8:05 AM TODAY (PAST - for completion reminder test)');
         console.log('MAT-SEED-005 => status: Machine Scheduled | slot: 9:10-9:15 PM TODAY (FUTURE - approved by coord+head)');

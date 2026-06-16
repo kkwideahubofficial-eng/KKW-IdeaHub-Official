@@ -10,8 +10,8 @@ async function testBackend() {
         // 1. Login as Head
         console.log('\n[1] Testing Head Login...');
         const headLogin = await axios.post(`${API_URL}/auth/login`, {
-            email: 'head@ideahub.com',
-            password: 'head1234'
+            email: 'roshangaikwad1902@gmail.com',
+            password: '123456'
         });
         
         if (headLogin.status === 200 && headLogin.data.token) {
@@ -27,8 +27,8 @@ async function testBackend() {
         // 1.5 Login as Coordinator
         console.log('\n[1.5] Testing Coordinator Login...');
         const coordLogin = await axios.post(`${API_URL}/auth/login`, {
-            email: 'coordinator@ideahub.com',
-            password: 'coord1234'
+            email: 'roshangaikwad2006@gmail.com',
+            password: '123456'
         });
 
         if (coordLogin.status === 200 && coordLogin.data.token) {

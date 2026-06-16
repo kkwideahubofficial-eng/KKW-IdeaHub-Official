@@ -386,18 +386,29 @@ export const createRequest = async (req, res) => {
         }
       }
       
-      const coordinators = await User.find({ role: 'coordinator' });
-      for (const coord of coordinators) {
+      const admins = await User.find({ role: { $in: ['coordinator', 'head'] } });
+      for (const admin of admins) {
         await createInAppNotification(
-          coord._id,
+          admin._id,
           'New Request Awaiting Review',
           `New request ${requestId} for project "${projectName}" submitted by ${isExternal ? (externalFullName || 'External User') : req.user.name}.`
         );
         await sendPushNotification(
-          coord._id,
+          admin._id,
           'New Material/Machinery Request',
           `${isExternal ? (externalFullName || 'External User') : req.user.name} submitted request ${requestId}`
         );
+        try {
+          await sendEmail(
+            admin.email,
+            `New Machinery/Material Request - ${requestId}`,
+            `<h2>Dear ${admin.name},</h2>
+             <p>A new machinery/material request <b>${requestId}</b> for project <b>${projectName}</b> has been submitted by <b>${isExternal ? (externalFullName || 'External User') : req.user.name}</b>.</p>
+             <p>Please log in to the dashboard to review the request.</p>`
+          );
+        } catch (err) {
+          console.error('Failed to send admin email:', err);
+        }
       }
     }
 
@@ -484,14 +495,25 @@ export const updateRequest = async (req, res) => {
         date: new Date()
       });
 
-      // Notify Coordinator
-      const coordinators = await User.find({ role: 'coordinator' });
-      for (const coord of coordinators) {
+      // Notify Coordinator and Head
+      const admins = await User.find({ role: { $in: ['coordinator', 'head'] } });
+      for (const admin of admins) {
         await createInAppNotification(
-          coord._id,
+          admin._id,
           'Resubmitted Request Review Needed',
           `Request ${request.requestId} has been resubmitted with updates by ${req.user.name}.`
         );
+        try {
+          await sendEmail(
+            admin.email,
+            `Resubmitted Machinery/Material Request - ${request.requestId}`,
+            `<h2>Dear ${admin.name},</h2>
+             <p>The machinery/material request <b>${request.requestId}</b> has been resubmitted with updates by <b>${req.user.name}</b>.</p>
+             <p>Please log in to the dashboard to review the updated request.</p>`
+          );
+        } catch (err) {
+          console.error('Failed to send admin email:', err);
+        }
       }
     }
 
