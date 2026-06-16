@@ -11,6 +11,12 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { CartDrawer } from "../cart/CartDrawer";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 
 interface UserData {
   id: string;
@@ -19,6 +25,12 @@ interface UserData {
   role: 'coordinator' | 'team' | 'head' | 'delivery_boy' | 'admin';
   userType?: 'INTERNAL' | 'EXTERNAL';
   teamName?: string;
+}
+
+interface NavItem {
+  name: string;
+  path?: string;
+  dropdownItems?: { name: string; path: string }[];
 }
 
 const Navigation = () => {
@@ -85,7 +97,7 @@ const Navigation = () => {
       ];
     }
 
-    const links = [
+    const links: NavItem[] = [
       { name: "Home", path: "/" },
     ];
 
@@ -111,7 +123,15 @@ const Navigation = () => {
 
     links.push(
       { name: "E-commerce", path: "/ecommerce" },
-      { name: "Lab Info", path: "/lab-info" }
+      {
+        name: "About Us",
+        dropdownItems: [
+          { name: "KKWIEER", path: "/kkwieer" },
+          { name: "AICTE – IDEA Lab", path: "/aicte-idea-lab" },
+          { name: "Leadership Team", path: "/leadership-team" },
+          { name: "Contact Details", path: "/contact-details" }
+        ]
+      }
     );
 
     if (user?.role === 'coordinator') {
@@ -161,16 +181,39 @@ const Navigation = () => {
                     </div>
                   </SheetHeader>
                   <div className="flex flex-col space-y-3 mt-6">
-                    {navLinks.map((link) => (
-                      <Link
-                        key={link.path}
-                        to={link.path}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="px-3 py-2 rounded-md text-sm font-medium transition-colors bg-accent text-accent-foreground hover:bg-accent/80"
-                      >
-                        {link.name}
-                      </Link>
-                    ))}
+                    {navLinks.map((link) => {
+                      if (link.dropdownItems) {
+                        return (
+                          <div key={link.name} className="space-y-1.5 pl-1">
+                            <div className="px-3 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              {link.name}
+                            </div>
+                            <div className="flex flex-col space-y-1 pl-2 border-l border-primary/20">
+                              {link.dropdownItems.map((sub) => (
+                                <Link
+                                  key={sub.path}
+                                  to={sub.path}
+                                  onClick={() => setMobileMenuOpen(false)}
+                                  className="px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-accent text-accent-foreground/90 hover:text-accent-foreground"
+                                >
+                                  {sub.name}
+                                </Link>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return (
+                        <Link
+                          key={link.path}
+                          to={link.path!}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="px-3 py-2 rounded-md text-sm font-medium transition-colors bg-accent text-accent-foreground hover:bg-accent/80"
+                        >
+                          {link.name}
+                        </Link>
+                      );
+                    })}
 
                     <div className="my-4 border-t border-border" />
 
@@ -214,15 +257,44 @@ const Navigation = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-1">
-            {navLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                className="px-3 py-2 rounded-md text-sm font-medium transition-colors bg-accent text-accent-foreground hover:bg-accent/80"
-              >
-                {link.name}
-              </Link>
-            ))}
+            {navLinks.map((link) => {
+              if (link.dropdownItems) {
+                return (
+                  <DropdownMenu key={link.name}>
+                    <DropdownMenuTrigger asChild>
+                      <button className="px-3 py-2 rounded-md text-sm font-medium transition-colors bg-accent text-accent-foreground hover:bg-accent/80 flex items-center gap-1.5 outline-none">
+                        {link.name}
+                        <svg className="w-3.5 h-3.5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-48 bg-white border border-slate-200 rounded-xl shadow-lg p-1.5 z-[100]">
+                      {link.dropdownItems.map((sub) => (
+                        <DropdownMenuItem key={sub.path} asChild>
+                          <Link
+                            to={sub.path}
+                            className="w-full px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-50 hover:text-[#7C3AED] transition-colors flex items-center justify-between group outline-none"
+                          >
+                            <span>{sub.name}</span>
+                            <span className="opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold text-[#7C3AED]">&rarr;</span>
+                          </Link>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                );
+              }
+              return (
+                <Link
+                  key={link.path}
+                  to={link.path!}
+                  className="px-3 py-2 rounded-md text-sm font-medium transition-colors bg-accent text-accent-foreground hover:bg-accent/80"
+                >
+                  {link.name}
+                </Link>
+              );
+            })}
           </div>
 
           {/* Auth Buttons */}

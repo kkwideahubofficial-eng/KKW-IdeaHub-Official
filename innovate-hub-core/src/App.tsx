@@ -16,7 +16,10 @@ import Achievements from "./pages/Achievements";
 import AchievementDetail from "./pages/AchievementDetail";
 import Events from "./pages/Events";
 import EventDetail from "./pages/EventDetail";
-import LabInfo from "./pages/LabInfo";
+import Kkwieer from "./pages/Kkwieer";
+import AicteIdeaLab from "./pages/AicteIdeaLab";
+import LeadershipTeam from "./pages/LeadershipTeam";
+import ContactDetails from "./pages/ContactDetails";
 import Ecommerce from "./pages/Ecommerce";
 import NotFound from "./pages/NotFound";
 import MyBookings from "./pages/MyBookings";
@@ -318,7 +321,11 @@ const App = () => (
               <Route path="/achievements/:id" element={<AchievementDetail />} />
               <Route path="/events" element={<Events />} />
               <Route path="/events/:id" element={<EventDetail />} />
-              <Route path="/lab-info" element={<LabInfo />} />
+              <Route path="/kkwieer" element={<Kkwieer />} />
+              <Route path="/aicte-idea-lab" element={<AicteIdeaLab />} />
+              <Route path="/lab-info" element={<Navigate to="/aicte-idea-lab" replace />} />
+              <Route path="/leadership-team" element={<LeadershipTeam />} />
+              <Route path="/contact-details" element={<ContactDetails />} />
               <Route path="/ecommerce" element={<Ecommerce />} />
               <Route
                 path="/checkout"
