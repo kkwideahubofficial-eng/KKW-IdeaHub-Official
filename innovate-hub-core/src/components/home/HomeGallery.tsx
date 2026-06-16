@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Plus, Pencil, Trash, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface GalleryItem {
   id: string;
@@ -7,7 +9,7 @@ interface GalleryItem {
   image: string;
 }
 
-const galleryItems: GalleryItem[] = [
+const defaultGalleryItems: GalleryItem[] = [
   {
     id: "g1",
     category: "Machinery",
@@ -61,25 +63,124 @@ const galleryItems: GalleryItem[] = [
 const categories = ["All", "Workshops", "Hackathons", "Project Expo", "Machinery", "Achievements"];
 
 const HomeGallery = () => {
+  const [items, setItems] = useState<GalleryItem[]>([]);
   const [activeFilter, setActiveFilter] = useState("All");
+  const [isCoordinator, setIsCoordinator] = useState(false);
+  
+  // Dialog state
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<GalleryItem | null>(null);
+  const [form, setForm] = useState({
+    title: "",
+    category: "Workshops" as GalleryItem["category"],
+    image: ""
+  });
+
+  // Load items and role checks
+  useEffect(() => {
+    const stored = localStorage.getItem("idea_hub_gallery");
+    if (stored) {
+      try {
+        setItems(JSON.parse(stored));
+      } catch {
+        setItems(defaultGalleryItems);
+      }
+    } else {
+      setItems(defaultGalleryItems);
+    }
+
+    const rawUser = localStorage.getItem("idea_hub_user");
+    if (rawUser) {
+      try {
+        const parsed = JSON.parse(rawUser);
+        if (parsed.role === "coordinator" || parsed.role === "head") {
+          setIsCoordinator(true);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }, []);
+
+  const saveItems = (newItems: GalleryItem[]) => {
+    setItems(newItems);
+    localStorage.setItem("idea_hub_gallery", JSON.stringify(newItems));
+  };
+
+  const handleOpenDialog = (item: GalleryItem | null = null) => {
+    setEditingItem(item);
+    if (item) {
+      setForm({
+        title: item.title,
+        category: item.category,
+        image: item.image
+      });
+    } else {
+      setForm({
+        title: "",
+        category: "Workshops",
+        image: ""
+      });
+    }
+    setIsDialogOpen(true);
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.title || !form.image) return;
+
+    if (editingItem) {
+      // Edit mode
+      const updated = items.map((it) =>
+        it.id === editingItem.id ? { ...it, ...form } : it
+      );
+      saveItems(updated);
+    } else {
+      // Add mode
+      const newItem: GalleryItem = {
+        id: "gallery_" + Date.now(),
+        ...form
+      };
+      saveItems([newItem, ...items]);
+    }
+
+    setIsDialogOpen(false);
+  };
+
+  const handleDelete = (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this gallery image?")) return;
+    const filtered = items.filter((it) => it.id !== id);
+    saveItems(filtered);
+  };
 
   const filteredItems = activeFilter === "All"
-    ? galleryItems
-    : galleryItems.filter(item => item.category === activeFilter);
+    ? items
+    : items.filter(item => item.category === activeFilter);
 
   return (
-    <section className="py-20 bg-slate-50 border-b border-slate-200/60">
+    <section className="py-20 bg-slate-50 border-b border-slate-200/60 relative">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Section Heading */}
-        <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
-          <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-            Inside IDEA Lab
-          </h2>
-          <div className="w-12 h-1 bg-primary mx-auto rounded-full" />
-          <p className="text-slate-500 text-sm sm:text-base">
-            Glimpse into the collaborative culture, hands-on fabrication activities, and national award ceremonies.
-          </p>
+        {/* Section Heading & Coordinator Add Trigger */}
+        <div className="flex flex-col md:flex-row justify-between items-center max-w-6xl mx-auto mb-12 gap-6">
+          <div className="text-center md:text-left space-y-2">
+            <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+              Inside IDEA Lab
+            </h2>
+            <div className="w-12 h-1 bg-primary rounded-full mx-auto md:mx-0" />
+            <p className="text-slate-500 text-sm sm:text-base">
+              Glimpse into the collaborative culture, hands-on fabrication activities, and national award ceremonies.
+            </p>
+          </div>
+
+          {isCoordinator && (
+            <Button 
+              onClick={() => handleOpenDialog(null)}
+              className="gap-2 shadow-md bg-primary hover:bg-primary/95 text-white font-bold rounded-xl px-5 py-3 h-auto"
+            >
+              <Plus className="w-4 h-4" /> Add Gallery Image
+            </Button>
+          )}
         </div>
 
         {/* Filters */}
@@ -112,9 +213,9 @@ const HomeGallery = () => {
                 className="w-full h-full object-cover opacity-80 group-hover:scale-105 group-hover:opacity-60 transition-all duration-500 ease-out"
                 loading="lazy"
               />
-              
+
               {/* Bottom text overlay on hover */}
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent flex flex-col justify-end p-5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/20 to-transparent flex flex-col justify-end p-5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
                 <span className="text-[10px] font-extrabold text-blue-400 uppercase tracking-widest">
                   {item.category}
                 </span>
@@ -122,11 +223,115 @@ const HomeGallery = () => {
                   {item.title}
                 </h3>
               </div>
+
+              {/* Coordinator Edit/Delete Overlays */}
+              {isCoordinator && (
+                <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
+                  <button 
+                    onClick={() => handleOpenDialog(item)}
+                    className="p-2 bg-white/90 backdrop-blur-xs hover:bg-white rounded-lg text-slate-700 hover:text-primary transition-all border border-slate-200/60 shadow-xs"
+                    title="Edit Image"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(item.id)}
+                    className="p-2 bg-rose-600 hover:bg-rose-700 rounded-lg text-white transition-all shadow-xs"
+                    title="Delete Image"
+                  >
+                    <Trash className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
 
       </div>
+
+      {/* Coordinator Add/Edit Custom Modal */}
+      {isDialogOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="text-base font-extrabold text-slate-900">
+                {editingItem ? "Edit Gallery Image" : "Add Image to Gallery"}
+              </h3>
+              <button 
+                onClick={() => setIsDialogOpen(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleFormSubmit} className="p-6 space-y-4 text-left">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  Image Title
+                </label>
+                <input 
+                  type="text" 
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  placeholder="e.g. 3D Design Prototyping Workshop"
+                  className="w-full h-10 px-3.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 bg-slate-50/50 font-medium"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  Filter Category
+                </label>
+                <select 
+                  value={form.category}
+                  onChange={(e) => setForm({ ...form, category: e.target.value as GalleryItem["category"] })}
+                  className="w-full h-10 px-3 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 bg-slate-50/50 font-semibold text-slate-700"
+                >
+                  {categories.slice(1).map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  Image URL
+                </label>
+                <input 
+                  type="url" 
+                  value={form.image}
+                  onChange={(e) => setForm({ ...form, image: e.target.value })}
+                  placeholder="https://images.unsplash.com/photo-..."
+                  className="w-full h-10 px-3.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 bg-slate-50/50 font-mono text-xs"
+                  required
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="pt-4 flex gap-3 border-t border-slate-100 mt-6">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsDialogOpen(false)}
+                  className="flex-1 rounded-xl font-bold h-11 text-slate-600"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  className="flex-1 rounded-xl font-bold h-11 bg-primary text-white hover:bg-primary/95"
+                >
+                  {editingItem ? "Save Changes" : "Add Image"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </section>
   );
 };
