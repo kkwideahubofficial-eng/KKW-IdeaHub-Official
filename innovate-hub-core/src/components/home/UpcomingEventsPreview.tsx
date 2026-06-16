@@ -115,11 +115,11 @@ const UpcomingEventsPreview = () => {
         </div>
 
         {/* Events Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 max-w-6xl mx-auto">
           {events.map((event) => (
             <div 
               key={event._id}
-              className="flex flex-col justify-between p-6 bg-slate-50 border border-slate-200/80 rounded-2xl shadow-xs hover:shadow-md hover:border-primary/20 transition-all duration-300 group"
+              className="flex flex-col justify-between p-4 sm:p-6 bg-slate-50 border border-slate-200/80 rounded-2xl shadow-xs hover:shadow-md hover:border-primary/20 transition-all duration-300 group"
             >
               <div className="space-y-4">
                 {/* Category & Status */}

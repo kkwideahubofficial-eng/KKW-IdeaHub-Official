@@ -50,11 +50,11 @@ const WhyChooseIdeaLab = () => {
         </div>
 
         {/* Feature Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8 max-w-6xl mx-auto">
           {features.map((feat, idx) => (
             <div
               key={idx}
-              className="flex gap-4 p-6 bg-white border border-slate-200/80 rounded-2xl shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-300 group"
+              className="flex flex-col sm:flex-row gap-3 sm:gap-4 p-4 sm:p-6 bg-white border border-slate-200/80 rounded-2xl shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-300 group text-center sm:text-left items-center sm:items-start"
             >
               {/* Icon Container */}
               <div className="w-12 h-12 rounded-xl bg-blue-50 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-white transition-colors duration-300">

@@ -1333,12 +1333,32 @@ const SpecialRoomPermission = () => {
                           if (node.key === 'IDEA Hub Head Review' && ['IDEA Hub Head Review', 'Approved', 'Conditional Approval', 'Completed'].includes(currentStatus)) isDone = true;
                           if (node.key === 'Final Decision' && ['Approved', 'Conditional Approval', 'Rejected', 'Completed'].includes(currentStatus)) isDone = true;
 
+                          let extraInfo = '';
+                          if (isDone) {
+                            if (node.key === 'Faculty Verified' && selectedRequestDetails.facultyRecommendation?.facultyName) {
+                              extraInfo = `by Prof. ${selectedRequestDetails.facultyRecommendation.facultyName}`;
+                            } else if (node.key === 'Coordinator Approved') {
+                              const coordNode = selectedRequestDetails.approvalHistory?.find((h: any) => h.role === 'Coordinator' && (h.action === 'Coordinator Approved' || h.action === 'Approved'));
+                              if (coordNode?.byName) {
+                                extraInfo = `by ${coordNode.byName}`;
+                              }
+                            } else if (node.key === 'Final Decision' && ['Approved', 'Conditional Approval', 'Completed'].includes(currentStatus)) {
+                              const headNode = selectedRequestDetails.approvalHistory?.find((h: any) => h.role === 'Head' && (h.action === 'Approved' || h.action === 'Conditional Approval'));
+                              if (headNode?.byName) {
+                                extraInfo = `by ${headNode.byName}`;
+                              }
+                            }
+                          }
+
                           return (
                             <div key={index} className="relative">
                               <span className={`absolute -left-6 top-0 w-3.5 h-3.5 rounded-full border flex items-center justify-center ${isDone ? 'bg-primary border-primary text-white' : 'bg-background border-slate-300'}`}>
                                 {isDone && <Check className="w-2 h-2" />}
                               </span>
-                              <div className={`${isDone ? 'text-slate-800 font-bold' : 'text-slate-400 font-medium'}`}>{node.label}</div>
+                              <div className={`${isDone ? 'text-slate-800 font-bold' : 'text-slate-400 font-medium'}`}>
+                                {node.label}
+                                {extraInfo && <span className="text-[10px] text-muted-foreground font-normal block mt-0.5">{extraInfo}</span>}
+                              </div>
                             </div>
                           );
                         })}
@@ -1367,7 +1387,7 @@ const SpecialRoomPermission = () => {
                           {selectedRequestDetails.approvalHistory.map((hist: any, hIdx: number) => (
                             <div key={hIdx} className="bg-secondary/20 p-2.5 rounded-xl text-2xs border">
                               <div className="flex justify-between font-semibold text-muted-foreground">
-                                <span>{hist.role} ({hist.byName})</span>
+                                <span>{hist.role} {hist.byName ? `(${hist.byName})` : ''}</span>
                                 <span>{new Date(hist.date).toLocaleDateString()}</span>
                               </div>
                               <div className="mt-1 font-medium">Action: <span className="font-bold text-slate-700">{hist.action}</span></div>

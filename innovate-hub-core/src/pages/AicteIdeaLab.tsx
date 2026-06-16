@@ -319,10 +319,10 @@ const AicteIdeaLab = () => {
               </div>
 
               {/* Grid Layout converting long paragraphs into content blocks */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8">
                 
                 {/* Block 1 */}
-                <div className="flex flex-col h-full bg-slate-50/50 p-8 rounded-2xl border border-slate-100 hover:border-primary/20 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+                <div className="flex flex-col h-full bg-slate-50/50 p-4 sm:p-8 rounded-2xl border border-slate-100 hover:border-primary/20 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
                   <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-6 group-hover:bg-primary group-hover:text-white transition-colors duration-300">
                     <Layers className="w-6 h-6" />
                   </div>
@@ -333,7 +333,7 @@ const AicteIdeaLab = () => {
                 </div>
 
                 {/* Block 2 */}
-                <div className="flex flex-col h-full bg-slate-50/50 p-8 rounded-2xl border border-slate-100 hover:border-primary/20 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+                <div className="flex flex-col h-full bg-slate-50/50 p-4 sm:p-8 rounded-2xl border border-slate-100 hover:border-primary/20 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
                   <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-6 group-hover:bg-primary group-hover:text-white transition-colors duration-300">
                     <Lightbulb className="w-6 h-6" />
                   </div>
@@ -344,7 +344,7 @@ const AicteIdeaLab = () => {
                 </div>
 
                 {/* Block 3 */}
-                <div className="flex flex-col h-full bg-slate-50/50 p-8 rounded-2xl border border-slate-100 hover:border-primary/20 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+                <div className="flex flex-col h-full bg-slate-50/50 p-4 sm:p-8 rounded-2xl border border-slate-100 hover:border-primary/20 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group col-span-2 lg:col-span-1">
                   <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-6 group-hover:bg-primary group-hover:text-white transition-colors duration-300">
                     <Users2 className="w-6 h-6" />
                   </div>
@@ -383,11 +383,11 @@ const AicteIdeaLab = () => {
               </div>
 
               {/* 6 Feature Benefit Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {importanceCards.map((card, idx) => (
                   <div 
                     key={idx}
-                    className="bg-white p-6 rounded-2xl border border-slate-200/80 hover:border-primary/30 shadow-sm hover:shadow-lg transition-all duration-300 flex items-start gap-4 group"
+                    className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 hover:border-primary/30 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-3 sm:gap-4 group"
                   >
                     <div className={`p-3 rounded-xl ${card.color} shrink-0`}>
                       <card.icon className="w-6 h-6" />
@@ -427,13 +427,12 @@ const AicteIdeaLab = () => {
 
               {/* Responsive Grid representing facilities
                   - 4 columns on desktop
-                  - 2 columns on tablet
-                  - 1 column on mobile */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  - 2 columns on mobile/tablet */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                 {facilities.map((fac, index) => (
                   <div 
                     key={index}
-                    className="p-6 rounded-2xl bg-slate-50 border border-slate-100 hover:border-primary/20 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between h-full group"
+                    className="p-4 sm:p-6 rounded-2xl bg-slate-50 border border-slate-100 hover:border-primary/20 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between h-full group"
                   >
                     <div>
                       <div className="w-10 h-10 rounded-lg bg-primary/5 text-primary flex items-center justify-center mb-4 group-hover:bg-primary group-hover:text-white transition-colors">

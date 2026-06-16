@@ -13,7 +13,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { 
   Calendar, Check, X, Clock, Users, User, Loader2, Database, ShieldAlert, 
   Settings, FileDown, Eye, RefreshCw, Layers, Printer, Search, Download, SendHorizonal,
-  FileText
+  FileText, History
 } from "lucide-react";
 import { toast } from "sonner";
 import api from "../lib/axios";
@@ -1227,7 +1227,7 @@ const CoordinatorDashboard = () => {
       {/* Confirmation Dialog for Machine Completion */}
       {showCompletionDialog && completionRequest && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <Card className="w-full max-w-md bg-card shadow-2xl border border-border/80">
+          <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto bg-card shadow-2xl border border-border/80">
             <CardHeader className="border-b pb-3 bg-slate-50/50">
               <CardTitle className="text-sm font-extrabold text-foreground">Complete Machine Usage</CardTitle>
             </CardHeader>
@@ -1555,6 +1555,31 @@ const CoordinatorDashboard = () => {
                         ))}
                       </div>
                     )}
+                  </div>
+                </div>
+              )}
+
+              {/* Approval History Logs */}
+              {selectedResRequest.approvalHistory && selectedResRequest.approvalHistory.length > 0 && (
+                <div className="border-t pt-4 space-y-2">
+                  <h4 className="font-bold text-slate-800 flex items-center gap-1.5">
+                    <History className="w-4 h-4 text-slate-600" /> Approval History Logs
+                  </h4>
+                  <div className="space-y-2 border rounded-md p-3 bg-slate-50/50">
+                    {selectedResRequest.approvalHistory.map((h: any, i: number) => (
+                      <div key={i} className="flex justify-between items-start border-b border-border/40 pb-2 last:border-0 last:pb-0 text-xs">
+                        <div>
+                          <div className="font-semibold text-foreground flex items-center gap-1.5">
+                            <Badge variant="secondary" className="text-[8px] uppercase tracking-wide font-bold">{h.role}</Badge>
+                            <span>{h.action} {h.byName ? `(${h.byName})` : ''}</span>
+                          </div>
+                          {h.remarks && <p className="text-3xs text-muted-foreground mt-0.5 font-medium">Remarks: {h.remarks}</p>}
+                        </div>
+                        <span className="text-[10px] text-muted-foreground font-mono self-center">
+                          {new Date(h.date).toLocaleDateString()}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}

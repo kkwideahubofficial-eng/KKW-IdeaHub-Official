@@ -594,7 +594,7 @@ const HeadRoomPermissions = () => {
                     {selectedRequest.approvalHistory.map((hist: any, hIdx: number) => (
                       <div key={hIdx} className="bg-secondary/15 p-2 rounded border text-xs">
                         <div className="flex justify-between font-semibold">
-                          <span>{hist.role} - {hist.byName}</span>
+                          <span>{hist.role} {hist.byName ? `- ${hist.byName}` : ''}</span>
                           <span>{new Date(hist.date).toLocaleDateString()}</span>
                         </div>
                         <div className="mt-1">Action: <span className="font-bold">{hist.action}</span> | Remarks: <span className="italic text-muted-foreground">"{hist.remarks || 'None'}"</span></div>
@@ -640,19 +640,36 @@ const HeadRoomPermissions = () => {
                     { label: "Faculty Recommended", active: selectedRequest.facultyRecommendation?.verified || ['Faculty Verified', 'Coordinator Review', 'IDEA Hub Head Review', 'Approved', 'Conditional Approval', 'Completed'].includes(selectedRequest.status) },
                     { label: "Coordinator Approved", active: ['IDEA Hub Head Review', 'Approved', 'Conditional Approval', 'Completed'].includes(selectedRequest.status) },
                     { label: "Head Approved", active: ['Approved', 'Conditional Approval', 'Completed'].includes(selectedRequest.status) }
-                  ].map((step, sIdx, arr) => (
-                    <div key={step.label} className="flex items-center flex-1 last:flex-initial">
-                      <div className="flex items-center gap-1.5">
-                        <span className={`w-4 h-4 rounded-full flex items-center justify-center border text-4xs ${step.active ? 'bg-green-600 border-green-600 text-white' : 'bg-slate-100 border-slate-300 text-slate-400'}`}>
-                          {step.active ? "✓" : sIdx + 1}
-                        </span>
-                        <span className={step.active ? 'text-slate-800 font-bold' : 'text-slate-400 font-normal'}>{step.label}</span>
+                  ].map((step, sIdx, arr) => {
+                    const getStepLabel = (label: string) => {
+                      if (label === "Faculty Recommended" && step.active) {
+                        return `Faculty Rec. (${selectedRequest.facultyRecommendation?.facultyName || 'Verified'})`;
+                      }
+                      if (label === "Coordinator Approved" && step.active) {
+                        const nameVal = selectedRequest.approvalHistory?.find((h: any) => h.role === 'Coordinator' && (h.action === 'Coordinator Approved' || h.action === 'Approved'))?.byName;
+                        return `Coord. Approved ${nameVal ? `(${nameVal})` : ''}`;
+                      }
+                      if (label === "Head Approved" && step.active) {
+                        const nameVal = selectedRequest.approvalHistory?.find((h: any) => h.role === 'Head' && (h.action === 'Approved' || h.action === 'Conditional Approval'))?.byName;
+                        return `Head Approved ${nameVal ? `(${nameVal})` : ''}`;
+                      }
+                      return label;
+                    };
+
+                    return (
+                      <div key={step.label} className="flex items-center flex-1 last:flex-initial">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`w-4 h-4 rounded-full flex items-center justify-center border text-4xs ${step.active ? 'bg-green-600 border-green-600 text-white' : 'bg-slate-100 border-slate-300 text-slate-400'}`}>
+                            {step.active ? "✓" : sIdx + 1}
+                          </span>
+                          <span className={step.active ? 'text-slate-800 font-bold' : 'text-slate-400 font-normal'}>{getStepLabel(step.label)}</span>
+                        </div>
+                        {sIdx < arr.length - 1 && (
+                          <div className={`flex-1 h-px mx-2 ${step.active ? 'bg-green-600' : 'bg-slate-200'}`} />
+                        )}
                       </div>
-                      {sIdx < arr.length - 1 && (
-                        <div className={`flex-1 h-px mx-2 ${step.active ? 'bg-green-600' : 'bg-slate-200'}`} />
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 

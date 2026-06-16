@@ -244,21 +244,39 @@ const VerifyRequest = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="border p-2.5 rounded bg-slate-50 text-center">
                     <div className="font-semibold text-2xs text-muted-foreground">Coordinator</div>
-                    <div className={`text-xs font-bold mt-1 flex items-center justify-center gap-1 ${isValid ? 'text-green-700' : 'text-amber-600'}`}>
+                    <div className={`text-xs font-bold mt-1 flex flex-col items-center justify-center gap-0.5 ${isValid ? 'text-green-700' : 'text-amber-600'}`}>
                       {isValid ? (
-                        <><CheckCircle className="w-3.5 h-3.5" /> VERIFIED</>
+                        <>
+                          <div className="flex items-center gap-1">
+                            <CheckCircle className="w-3.5 h-3.5" /> VERIFIED
+                          </div>
+                          <span className="text-[10px] text-muted-foreground font-normal">
+                            {request.approvalHistory?.find((h: any) => h.role?.toUpperCase() === 'COORDINATOR')?.byName || 'Coordinator'}
+                          </span>
+                        </>
                       ) : (
-                        <><AlertTriangle className="w-3.5 h-3.5" /> PENDING</>
+                        <div className="flex items-center gap-1">
+                          <AlertTriangle className="w-3.5 h-3.5" /> PENDING
+                        </div>
                       )}
                     </div>
                   </div>
                   <div className="border p-2.5 rounded bg-slate-50 text-center">
                     <div className="font-semibold text-2xs text-muted-foreground">Lab Head</div>
-                    <div className={`text-xs font-bold mt-1 flex items-center justify-center gap-1 ${isValid ? 'text-green-700' : 'text-amber-600'}`}>
+                    <div className={`text-xs font-bold mt-1 flex flex-col items-center justify-center gap-0.5 ${isValid ? 'text-green-700' : 'text-amber-600'}`}>
                       {isValid ? (
-                        <><CheckCircle className="w-3.5 h-3.5" /> VERIFIED</>
+                        <>
+                          <div className="flex items-center gap-1">
+                            <CheckCircle className="w-3.5 h-3.5" /> VERIFIED
+                          </div>
+                          <span className="text-[10px] text-muted-foreground font-normal">
+                            {request.approvalHistory?.find((h: any) => h.role?.toUpperCase() === 'HEAD')?.byName || 'Lab Head'}
+                          </span>
+                        </>
                       ) : (
-                        <><XCircle className="w-3.5 h-3.5" /> UNSIGNED</>
+                        <div className="flex items-center gap-1">
+                          <XCircle className="w-3.5 h-3.5" /> UNSIGNED
+                        </div>
                       )}
                     </div>
                   </div>

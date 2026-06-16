@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { Plus, Pencil, Trash, X } from "lucide-react";
+import { Plus, Pencil, Trash, X, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import api from "@/lib/axios";
 
 interface GalleryItem {
   id: string;
@@ -62,6 +63,15 @@ const defaultGalleryItems: GalleryItem[] = [
 
 const categories = ["All", "Workshops", "Hackathons", "Project Expo", "Machinery", "Achievements"];
 
+const getFullImageUrl = (imagePath: string) => {
+  if (!imagePath) return "";
+  if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
+    return imagePath;
+  }
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+  return `${baseUrl}/${imagePath}`;
+};
+
 const HomeGallery = () => {
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [activeFilter, setActiveFilter] = useState("All");
@@ -70,6 +80,7 @@ const HomeGallery = () => {
   // Dialog state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<GalleryItem | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState({
     title: "",
     category: "Workshops" as GalleryItem["category"],
@@ -125,18 +136,40 @@ const HomeGallery = () => {
     setIsDialogOpen(true);
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      const res = await api.post("/machinery/upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      if (res.data?.url) {
+        setForm((prev) => ({ ...prev, image: res.data.url }));
+      }
+    } catch (err) {
+      console.error("Failed to upload image", err);
+      alert("Failed to upload image. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title || !form.image) return;
 
     if (editingItem) {
-      // Edit mode
       const updated = items.map((it) =>
         it.id === editingItem.id ? { ...it, ...form } : it
       );
       saveItems(updated);
     } else {
-      // Add mode
       const newItem: GalleryItem = {
         id: "gallery_" + Date.now(),
         ...form
@@ -201,14 +234,14 @@ const HomeGallery = () => {
         </div>
 
         {/* Masonry / Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 max-w-6xl mx-auto">
           {filteredItems.map((item) => (
             <div 
               key={item.id}
               className="group relative overflow-hidden rounded-2xl bg-slate-900 border border-slate-200/60 shadow-xs aspect-square"
             >
               <img 
-                src={item.image} 
+                src={getFullImageUrl(item.image)} 
                 alt={item.title} 
                 className="w-full h-full object-cover opacity-80 group-hover:scale-105 group-hover:opacity-60 transition-all duration-500 ease-out"
                 loading="lazy"
@@ -252,9 +285,9 @@ const HomeGallery = () => {
       {/* Coordinator Add/Edit Custom Modal */}
       {isDialogOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
             {/* Header */}
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center shrink-0">
               <h3 className="text-base font-extrabold text-slate-900">
                 {editingItem ? "Edit Gallery Image" : "Add Image to Gallery"}
               </h3>
@@ -267,52 +300,88 @@ const HomeGallery = () => {
             </div>
 
             {/* Form */}
-            <form onSubmit={handleFormSubmit} className="p-6 space-y-4 text-left">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  Image Title
-                </label>
-                <input 
-                  type="text" 
-                  value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  placeholder="e.g. 3D Design Prototyping Workshop"
-                  className="w-full h-10 px-3.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 bg-slate-50/50 font-medium"
-                  required
-                />
-              </div>
+            <form onSubmit={handleFormSubmit} className="flex flex-col flex-1 overflow-hidden">
+              <div className="p-6 space-y-4 text-left overflow-y-auto flex-1">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    Image Title
+                  </label>
+                  <input 
+                    type="text" 
+                    value={form.title}
+                    onChange={(e) => setForm({ ...form, title: e.target.value })}
+                    placeholder="e.g. 3D Design Prototyping Workshop"
+                    className="w-full h-10 px-3.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 bg-slate-50/50 font-medium"
+                    required
+                  />
+                </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  Filter Category
-                </label>
-                <select 
-                  value={form.category}
-                  onChange={(e) => setForm({ ...form, category: e.target.value as GalleryItem["category"] })}
-                  className="w-full h-10 px-3 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 bg-slate-50/50 font-semibold text-slate-700"
-                >
-                  {categories.slice(1).map((cat) => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    Filter Category
+                  </label>
+                  <select 
+                    value={form.category}
+                    onChange={(e) => setForm({ ...form, category: e.target.value as GalleryItem["category"] })}
+                    className="w-full h-10 px-3 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 bg-slate-50/50 font-semibold text-slate-700"
+                  >
+                    {categories.slice(1).map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                  Image URL
-                </label>
-                <input 
-                  type="url" 
-                  value={form.image}
-                  onChange={(e) => setForm({ ...form, image: e.target.value })}
-                  placeholder="https://images.unsplash.com/photo-..."
-                  className="w-full h-10 px-3.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 bg-slate-50/50 font-mono text-xs"
-                  required
-                />
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                    Image Source
+                  </label>
+                  
+                  {/* Upload Section */}
+                  <div className="p-4 bg-slate-50 border border-dashed border-slate-250 rounded-xl space-y-3">
+                    <div className="flex items-center gap-3">
+                      <label className="cursor-pointer bg-white hover:bg-slate-50 border border-slate-200 shadow-3xs rounded-xl px-4 py-2 text-xs font-bold text-slate-700 flex items-center gap-2 transition-colors">
+                        <Upload className="w-3.5 h-3.5 text-primary" />
+                        {uploading ? "Uploading..." : "Choose Image File"}
+                        <input 
+                          type="file" 
+                          accept="image/*"
+                          onChange={handleFileUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                    
+                    <div className="text-[10px] font-bold text-slate-400 text-center uppercase tracking-widest">— OR ENTER DIRECT URL —</div>
+
+                    <input 
+                      type="url" 
+                      value={form.image}
+                      onChange={(e) => setForm({ ...form, image: e.target.value })}
+                      placeholder="https://images.unsplash.com/photo-..."
+                      className="w-full h-9 px-3 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white font-mono"
+                    />
+                  </div>
+                </div>
+
+                {/* Preview */}
+                {form.image && (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Selected Image Preview:
+                    </label>
+                    <div className="relative aspect-video rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+                      <img 
+                        src={getFullImageUrl(form.image)} 
+                        alt="Preview" 
+                        className="w-full h-full object-cover" 
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Actions */}
-              <div className="pt-4 flex gap-3 border-t border-slate-100 mt-6">
+              <div className="p-6 pt-4 flex gap-3 border-t border-slate-100 shrink-0">
                 <Button 
                   type="button" 
                   variant="outline" 
@@ -323,6 +392,7 @@ const HomeGallery = () => {
                 </Button>
                 <Button 
                   type="submit" 
+                  disabled={uploading}
                   className="flex-1 rounded-xl font-bold h-11 bg-primary text-white hover:bg-primary/95"
                 >
                   {editingItem ? "Save Changes" : "Add Image"}

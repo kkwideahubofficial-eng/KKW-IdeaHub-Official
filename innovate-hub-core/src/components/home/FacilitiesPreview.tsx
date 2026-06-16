@@ -55,7 +55,7 @@ const FacilitiesPreview = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8">
           {previewLabs.map((lab, index) => (
             <Link 
               key={index}
@@ -74,9 +74,9 @@ const FacilitiesPreview = () => {
               </div>
 
               {/* Text content */}
-              <div className="p-6 flex flex-col flex-grow justify-between">
+              <div className="p-4 sm:p-6 flex flex-col flex-grow justify-between">
                 <div className="space-y-2">
-                  <h3 className="text-lg font-bold text-slate-900 group-hover:text-primary transition-colors">
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 group-hover:text-primary transition-colors">
                     {lab.title}
                   </h3>
                   <p className="text-xs sm:text-sm text-slate-500 leading-relaxed line-clamp-3">

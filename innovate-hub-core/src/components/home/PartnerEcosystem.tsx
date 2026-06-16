@@ -55,26 +55,28 @@ const PartnerEcosystem = () => {
         </div>
 
         {/* Partners Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 max-w-6xl mx-auto">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 max-w-6xl mx-auto">
           {partners.map((partner, idx) => (
             <div 
               key={idx}
-              className={`bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between items-center text-center h-full select-none transition-all duration-300 group hover:shadow-md ${partner.colorClass} ${partner.bgAccent}`}
+              className={`bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between items-center text-center h-full select-none transition-all duration-300 group hover:shadow-md ${partner.colorClass} ${partner.bgAccent} ${
+                idx === partners.length - 1 ? "col-span-2 lg:col-span-1" : ""
+              }`}
             >
               {/* Logo / Acronym */}
               <div className="flex flex-col items-center">
-                <span className="font-black text-2xl tracking-tight text-slate-800 group-hover:scale-105 transition-transform duration-300 block">
+                <span className="font-black text-xl sm:text-2xl tracking-tight text-slate-800 group-hover:scale-105 transition-transform duration-300 block">
                   {partner.acronym}
                 </span>
                 
                 {/* Category Badge */}
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider bg-slate-100 px-2 py-0.5 rounded-sm mt-3">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider bg-slate-100 px-2 py-0.5 rounded-sm mt-2.5 sm:mt-3">
                   {partner.badge}
                 </span>
               </div>
 
               {/* Full Description */}
-              <p className="text-xs text-slate-400 font-semibold leading-relaxed mt-4">
+              <p className="text-[10px] sm:text-xs text-slate-400 font-semibold leading-relaxed mt-3 sm:mt-4">
                 {partner.name}
               </p>
             </div>

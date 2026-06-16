@@ -10,7 +10,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { CartDrawer } from "../cart/CartDrawer";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -171,8 +170,8 @@ const Navigation = () => {
                     <Menu className="block h-6 w-6" aria-hidden="true" />
                   </button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-[280px] sm:w-[350px]">
-                  <SheetHeader>
+                <SheetContent side="left" className="w-[280px] sm:w-[350px] flex flex-col h-full">
+                  <SheetHeader className="shrink-0">
                     <div className="flex items-center space-x-2 pb-4 border-b">
                       <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
                         <span className="text-primary-foreground font-bold text-lg">I</span>
@@ -180,7 +179,7 @@ const Navigation = () => {
                       <SheetTitle className="text-lg font-bold">IDEA Hub</SheetTitle>
                     </div>
                   </SheetHeader>
-                  <div className="flex flex-col space-y-3 mt-6">
+                  <div className="flex flex-col space-y-3 mt-6 overflow-y-auto flex-1 pr-1 pb-6">
                     {navLinks.map((link) => {
                       if (link.dropdownItems) {
                         return (
@@ -299,9 +298,6 @@ const Navigation = () => {
 
           {/* Auth Buttons */}
           <div className="hidden md:flex items-center space-x-2">
-            {/* Cart Trigger */}
-            <CartDrawer />
-            
             {user?.role ? (
               <Button
                 variant="ghost"

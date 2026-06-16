@@ -32,7 +32,7 @@ const Footer = () => {
             <h3 className="text-white font-bold text-base tracking-wide uppercase">
               Quick Links
             </h3>
-            <ul className="space-y-2">
+            <ul className="grid grid-cols-2 sm:grid-cols-1 gap-x-4 gap-y-2 sm:gap-x-0 sm:gap-y-0 sm:space-y-2">
               {[
                 { label: "Book Room", path: "/book-slots" },
                 { label: "Machine Permission", path: "/machinery" },
@@ -46,7 +46,7 @@ const Footer = () => {
                     to={link.path}
                     className="hover:text-blue-400 transition-colors flex items-center gap-1.5 group text-xs sm:text-sm"
                   >
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-700 group-hover:bg-blue-400 transition-colors" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-700 group-hover:bg-blue-400 transition-colors shrink-0" />
                     {link.label}
                   </Link>
                 </li>
@@ -59,7 +59,7 @@ const Footer = () => {
             <h3 className="text-white font-bold text-base tracking-wide uppercase">
               About Us
             </h3>
-            <ul className="space-y-2">
+            <ul className="grid grid-cols-2 sm:grid-cols-1 gap-x-4 gap-y-2 sm:gap-x-0 sm:gap-y-0 sm:space-y-2">
               {[
                 { label: "KKWIEER", path: "/kkwieer" },
                 { label: "AICTE IDEA Lab", path: "/aicte-idea-lab" },
@@ -71,7 +71,7 @@ const Footer = () => {
                     to={link.path}
                     className="hover:text-blue-400 transition-colors flex items-center gap-1.5 group text-xs sm:text-sm"
                   >
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-700 group-hover:bg-blue-400 transition-colors" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-700 group-hover:bg-blue-400 transition-colors shrink-0" />
                     {link.label}
                   </Link>
                 </li>

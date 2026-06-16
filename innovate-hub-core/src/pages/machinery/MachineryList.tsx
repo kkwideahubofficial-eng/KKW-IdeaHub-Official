@@ -528,22 +528,47 @@ const MachineryList = () => {
       );
     }
 
+    const getExtraName = (stepName: string) => {
+      if (!selectedRequest?.approvalHistory) return '';
+      if (stepName === "Coord Approved") {
+        const isApproved = ['Coordinator Approved', 'Head Review', 'Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Active Booking', 'Work Completed', 'Closed', 'Completed'].includes(status);
+        if (isApproved) {
+          const coordNode = selectedRequest.approvalHistory.find((h: any) => h.role?.toUpperCase() === 'COORDINATOR' && (h.action?.includes('Approve') || h.action?.includes('Allocated') || h.action?.includes('Scheduled') || h.action?.includes('Issued')));
+          return coordNode?.byName || '';
+        }
+      }
+      if (stepName === "Approved") {
+        const isApproved = ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Active Booking', 'Work Completed', 'Closed', 'Completed'].includes(status);
+        if (isApproved) {
+          const headNode = selectedRequest.approvalHistory.find((h: any) => h.role?.toUpperCase() === 'HEAD' && h.action?.includes('Approved'));
+          return headNode?.byName || '';
+        }
+      }
+      return '';
+    };
+
     return (
-      <div className="w-full py-4 overflow-x-auto">
+      <div className="w-full pt-4 pb-8 overflow-x-auto">
         <div className="flex justify-between items-center min-w-[650px] px-4">
-          {steps.map((step, idx) => (
-            <div key={idx} className="flex items-center flex-1 last:flex-none">
-              <div className="flex flex-col items-center relative">
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 text-[10px] font-bold transition-all ${step.active ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-muted-foreground border-border'}`}>
-                  {idx + 1}
+          {steps.map((step, idx) => {
+            const extraName = getExtraName(step.name);
+            return (
+              <div key={idx} className="flex items-center flex-1 last:flex-none">
+                <div className="flex flex-col items-center relative">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 text-[10px] font-bold transition-all ${step.active ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-muted-foreground border-border'}`}>
+                    {idx + 1}
+                  </div>
+                  <div className="absolute top-6 flex flex-col items-center w-24 text-center">
+                    <span className="text-[10px] font-semibold text-foreground leading-tight">{step.name}</span>
+                    {extraName && <span className="text-[8px] text-muted-foreground font-normal leading-tight mt-0.5">{extraName}</span>}
+                  </div>
                 </div>
-                <span className="text-[10px] font-medium text-foreground mt-1 absolute top-6 whitespace-nowrap">{step.name}</span>
+                {idx < steps.length - 1 && (
+                  <div className={`h-[2px] flex-1 mx-2 transition-all ${steps[idx + 1].active ? 'bg-primary' : 'bg-border'}`} />
+                )}
               </div>
-              {idx < steps.length - 1 && (
-                <div className={`h-[2px] flex-1 mx-2 transition-all ${steps[idx + 1].active ? 'bg-primary' : 'bg-border'}`} />
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     );
@@ -1334,7 +1359,7 @@ const MachineryList = () => {
                         <div>
                           <div className="font-semibold text-foreground flex items-center gap-1.5">
                             <Badge variant="secondary" className="text-[8px] uppercase tracking-wide font-bold">{h.role}</Badge>
-                            <span>{h.action}</span>
+                            <span>{h.action} {h.byName ? `(${h.byName})` : ''}</span>
                           </div>
                           {h.remarks && <p className="text-3xs text-muted-foreground mt-0.5 font-medium">Remarks: {h.remarks}</p>}
                         </div>
@@ -1378,7 +1403,7 @@ const MachineryList = () => {
       {/* Confirmation Dialog for Machine Completion */}
       {showCompletionDialog && completionRequest && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <Card className="w-full max-w-md bg-card shadow-2xl border border-border/80">
+          <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto bg-card shadow-2xl border border-border/80">
             <CardHeader className="border-b pb-3 bg-slate-50/50">
               <CardTitle className="text-sm font-extrabold text-foreground">Complete Machine Usage</CardTitle>
             </CardHeader>
@@ -1448,7 +1473,7 @@ const MachineryList = () => {
       {/* Request Extension Dialog */}
       {showExtensionDialog && extensionRequest && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <Card className="w-full max-w-md bg-card shadow-2xl border border-border/80 text-xs">
+          <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto bg-card shadow-2xl border border-border/80 text-xs">
             <CardHeader className="border-b pb-3 bg-slate-50/50">
               <CardTitle className="text-sm font-extrabold text-foreground">Request Booking Extension</CardTitle>
             </CardHeader>

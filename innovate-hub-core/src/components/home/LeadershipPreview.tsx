@@ -42,11 +42,13 @@ const LeadershipPreview = () => {
         </div>
 
         {/* Steering Committee Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8 max-w-5xl mx-auto">
           {coordinators.map((coordinator, idx) => (
             <div 
               key={idx}
-              className="flex flex-col items-center text-center p-6 bg-slate-50 border border-slate-200/80 rounded-2xl shadow-xs hover:shadow-md hover:border-primary/20 transition-all duration-300 group"
+              className={`flex flex-col items-center text-center p-4 sm:p-6 bg-slate-50 border border-slate-200/80 rounded-2xl shadow-xs hover:shadow-md hover:border-primary/20 transition-all duration-300 group ${
+                idx === coordinators.length - 1 ? "col-span-2 lg:col-span-1" : ""
+              }`}
             >
               {/* Photo Frame */}
               <div className="w-28 h-32 rounded-xl overflow-hidden border border-slate-200 bg-white shadow-inner mb-4 flex-shrink-0">

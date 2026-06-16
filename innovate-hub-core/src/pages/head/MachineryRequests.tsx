@@ -623,29 +623,41 @@ const MachineryRequests = () => {
 
               {/* Coordinator review checks & remarks */}
               <div className="border-t pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h3 className="font-bold text-primary mb-1.5 uppercase tracking-wider text-[10px]">Coordinator Review Checks</h3>
-                  <div className="p-3 border rounded bg-slate-50 space-y-1 text-3xs font-semibold">
-                    <p className={viewDialog.request.coordinatorChecks?.machineAvailability ? 'text-green-700' : 'text-slate-500'}>
-                      {viewDialog.request.coordinatorChecks?.machineAvailability ? '✓' : '✗'} Machine Slot Availability Check
-                    </p>
-                    <p className={viewDialog.request.coordinatorChecks?.materialAvailability ? 'text-green-700' : 'text-slate-500'}>
-                      {viewDialog.request.coordinatorChecks?.materialAvailability ? '✓' : '✗'} Materials stock reservation check
-                    </p>
-                    <p className={viewDialog.request.coordinatorChecks?.projectFeasibility ? 'text-green-700' : 'text-slate-500'}>
-                      {viewDialog.request.coordinatorChecks?.projectFeasibility ? '✓' : '✗'} Project feasibility evaluation
-                    </p>
-                    <p className={viewDialog.request.coordinatorChecks?.studentEligibility ? 'text-green-700' : 'text-slate-500'}>
-                      {viewDialog.request.coordinatorChecks?.studentEligibility ? '✓' : '✗'} Applicant eligibility checked
-                    </p>
-                  </div>
-                </div>
-                <div>
-                  <h3 className="font-bold text-primary mb-1.5 uppercase tracking-wider text-[10px]">Coordinator Remarks</h3>
-                  <p className="p-3 border rounded bg-slate-50 italic">
-                    "{viewDialog.request.coordinatorRemarks || 'No remarks added by Coordinator.'}"
-                  </p>
-                </div>
+                {(() => {
+                  const coordNode = viewDialog.request.approvalHistory?.find((h: any) => h.role?.toUpperCase() === 'COORDINATOR' && (h.action?.includes('Approve') || h.action?.includes('Allocated') || h.action?.includes('Scheduled') || h.action?.includes('Issued') || h.action?.includes('Verified')));
+                  const coordName = coordNode?.byName || viewDialog.request.approvalHistory?.find((h: any) => h.role?.toUpperCase() === 'COORDINATOR')?.byName;
+                  return (
+                    <>
+                      <div>
+                        <h3 className="font-bold text-primary mb-1.5 uppercase tracking-wider text-[10px]">
+                          Coordinator Review Checks {coordName ? `(by ${coordName})` : ''}
+                        </h3>
+                        <div className="p-3 border rounded bg-slate-50 space-y-1 text-3xs font-semibold">
+                          <p className={viewDialog.request.coordinatorChecks?.machineAvailability ? 'text-green-700' : 'text-slate-500'}>
+                            {viewDialog.request.coordinatorChecks?.machineAvailability ? '✓' : '✗'} Machine Slot Availability Check
+                          </p>
+                          <p className={viewDialog.request.coordinatorChecks?.materialAvailability ? 'text-green-700' : 'text-slate-500'}>
+                            {viewDialog.request.coordinatorChecks?.materialAvailability ? '✓' : '✗'} Materials stock reservation check
+                          </p>
+                          <p className={viewDialog.request.coordinatorChecks?.projectFeasibility ? 'text-green-700' : 'text-slate-500'}>
+                            {viewDialog.request.coordinatorChecks?.projectFeasibility ? '✓' : '✗'} Project feasibility evaluation
+                          </p>
+                          <p className={viewDialog.request.coordinatorChecks?.studentEligibility ? 'text-green-700' : 'text-slate-500'}>
+                            {viewDialog.request.coordinatorChecks?.studentEligibility ? '✓' : '✗'} Applicant eligibility checked
+                          </p>
+                        </div>
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-primary mb-1.5 uppercase tracking-wider text-[10px]">
+                          Coordinator Remarks {coordName ? `(by ${coordName})` : ''}
+                        </h3>
+                        <p className="p-3 border rounded bg-slate-50 italic">
+                          "{viewDialog.request.coordinatorRemarks || 'No remarks added by Coordinator.'}"
+                        </p>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               {/* External User Team Details */}
@@ -695,7 +707,7 @@ const MachineryRequests = () => {
                         <div>
                           <div className="font-semibold text-foreground flex items-center gap-1.5">
                             <Badge variant="secondary" className="text-[8px] uppercase tracking-wide font-bold">{h.role}</Badge>
-                            <span>{h.action}</span>
+                            <span>{h.action} {h.byName ? `(${h.byName})` : ''}</span>
                           </div>
                           {h.remarks && <p className="text-3xs text-muted-foreground mt-0.5">Remarks: {h.remarks}</p>}
                         </div>
