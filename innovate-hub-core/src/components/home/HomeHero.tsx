@@ -55,13 +55,13 @@ const HomeHero = () => {
   }, [nextSlide]);
 
   return (
-    <section className="relative h-[650px] w-full bg-slate-950 overflow-hidden flex items-center">
+    <section className="relative h-[650px] w-full bg-slate-950 overflow-hidden flex items-end">
       {/* Background Slider */}
       {images.map((src, idx) => (
         <div
           key={idx}
           className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-            idx === current ? "opacity-40 z-0" : "opacity-0 -z-10"
+            idx === current ? "opacity-85 z-0" : "opacity-0 -z-10"
           }`}
         >
           <img
@@ -70,61 +70,24 @@ const HomeHero = () => {
             className="w-full h-full object-cover"
             loading={idx === 0 ? "eager" : "lazy"}
           />
-          {/* Vignette Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-900/40 to-slate-950/20" />
+          {/* Subtle Bottom Vignette Overlay to ensure CTA buttons are readable */}
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent" />
         </div>
       ))}
 
-      {/* Main Content & Right-aligned Quick Stats */}
-      <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-between py-12 md:py-16">
-        {/* Empty top spacing */}
-        <div />
-
-        {/* Content Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center mt-8">
-          {/* Left: Headline & CTAs */}
-          <div className="lg:col-span-8 space-y-6 text-white text-left">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-bold uppercase tracking-wider">
-              AICTE IDEA Lab @ KKWIEER
-            </span>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight drop-shadow-md">
-              Empowering the Next <br />
-              <span className="text-blue-500">Generation of Innovators</span>
-            </h1>
-            <p className="text-base sm:text-lg text-slate-300 max-w-xl leading-relaxed drop-shadow-xs">
-              Providing state-of-the-art machinery, precision prototyping tools, and dedicated mentorship to turn creative ideas into physical solutions.
-            </p>
-            <div className="flex flex-wrap gap-4 pt-2">
-              <Link to="/book-slots">
-                <Button size="lg" className="bg-primary hover:bg-primary/95 text-white font-bold rounded-xl px-6 py-4 shadow-lg">
-                  Book a Slot <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-              <Link to="/aicte-idea-lab">
-                <Button size="lg" variant="outline" className="border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 font-bold rounded-xl px-6 py-4">
-                  Explore Facilities
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom: Quick Stats Grid (Visible immediately in Hero) */}
-        <div className="w-full max-w-5xl mx-auto">
-          <div className="p-5 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-2xl shadow-xl">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-              {stats.map((stat, idx) => (
-                <div key={idx} className="space-y-1">
-                  <p className="text-2xl sm:text-3xl font-extrabold text-blue-500 tracking-tight">
-                    {stat.value}
-                  </p>
-                  <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400">
-                    {stat.label}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
+      {/* Main Content (CTA buttons only) */}
+      <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+        <div className="flex flex-wrap gap-4 pt-2">
+          <Link to="/book-slots">
+            <Button size="lg" className="bg-primary hover:bg-primary/95 text-white font-bold rounded-xl px-6 py-4 shadow-lg">
+              Book a Slot <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
+          <Link to="/aicte-idea-lab">
+            <Button size="lg" variant="outline" className="border-slate-100 text-white hover:bg-white hover:text-slate-900 font-bold rounded-xl px-6 py-4 bg-black/20 backdrop-blur-xs">
+              Explore Facilities
+            </Button>
+          </Link>
         </div>
       </div>
 
