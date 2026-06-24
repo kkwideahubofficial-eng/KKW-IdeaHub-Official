@@ -1,73 +1,79 @@
-# Welcome to your Lovable project
+# IdeaHub
 
-## Project info
+Welcome to the **IdeaHub and SnapCart Ecosystem** repository! This monorepo houses multiple interconnected applications that power the IdeaHub platform and SnapCart logistics system.
 
-**URL**: https://lovable.dev/projects/76ec1f28-a26d-446a-84be-da0dfdf81b56
+## 📦 Project Structure
 
-## How can I edit this code?
+The repository is organized into the following core components:
 
-There are several ways of editing your application.
+- **IdeaHub Frontend (`/innovate-hub-core`)**: The main user interface built with React, Vite, and Tailwind CSS.
+- **IdeaHub Backend (`/ideahub-backend`)**: The core API server built with Node.js, Express, and MongoDB.
+- **SnapCart Socket Server (`/innovate-hub-core/snapcart/socket`)**: Real-time communication server for SnapCart operations.
+- **SnapCart Driver App (`/innovate-hub-core/snapcart/frontend`)**: Dedicated frontend application for SnapCart drivers.
 
-**Use Lovable**
+## 🛠️ Tech Stack
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/76ec1f28-a26d-446a-84be-da0dfdf81b56) and start prompting.
+- **Frontend**: React 18, Vite, Tailwind CSS, shadcn/ui, Zustand, React Query
+- **Backend**: Node.js, Express.js, MongoDB (Mongoose), Socket.io, JWT Authentication
+- **Real-time**: Socket.io for live updates
+- **Tools**: Concurrently (for monorepo management)
 
-Changes made via Lovable will be committed automatically to this repo.
+## 🚀 Getting Started
 
-**Use your preferred IDE**
+### Prerequisites
+Make sure you have the following installed:
+- [Node.js](https://nodejs.org/) (v18 or higher recommended)
+- [MongoDB](https://www.mongodb.com/) (Local instance or Atlas URI)
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Installation
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+1. **Clone the repository**:
+   ```bash
+   git clone <repository-url>
+   cd "IdeaHub New - Copy - Copy"
+   ```
 
-Follow these steps:
+2. **Install all dependencies** across the monorepo:
+   ```bash
+   npm run install:all
+   ```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+3. **Set up Environment Variables**:
+   You will need to create `.env` files in the respective directories (e.g., `ideahub-backend/.env` and `innovate-hub-core/.env`). *Make sure to check `.env.example` files if available.*
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### Running the Application
 
-# Step 3: Install the necessary dependencies.
-npm i
+You can start the entire ecosystem using the provided batch script for Windows:
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```cmd
+start_all.bat
+```
+
+Alternatively, you can run the primary IdeaHub frontend and backend using standard npm commands:
+
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### 📡 Services & Ports
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+When running the full ecosystem locally, the services will be available at the following ports:
 
-**Use GitHub Codespaces**
+| Service | Local URL | Port |
+|---------|-----------|------|
+| **IdeaHub Frontend** | http://localhost:5173 | `5173` |
+| **IdeaHub Backend** | http://localhost:5000 | `5000` |
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
 
-## What technologies are used for this project?
+## 📜 Available Scripts (Root Level)
 
-This project is built with:
+- `npm run install:all`: Installs dependencies for all projects in the monorepo.
+- `npm run dev`: Starts the IdeaHub frontend and backend concurrently.
+- `npm run render-build`: Prepares the full build for deployment, copying the frontend dist into the backend public directory.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## 🤝 Contributing
 
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/76ec1f28-a26d-446a-84be-da0dfdf81b56) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+1. Create a feature branch (`git checkout -b feature/my-feature`)
+2. Commit your changes (`git commit -m 'Add my feature'`)
+3. Push to the branch (`git push origin feature/my-feature`)
+4. Open a Pull Request
