@@ -1573,7 +1573,7 @@ const MachineryRequestForm = () => {
                   {[
                     { label: "I verify that all information provided is accurate and true to our best knowledge.", field: "infoAccurate" },
                     { label: "I confirm that all uploaded design files and CAD schematics belong to our team.", field: "filesBelongToTeam" },
-                    { label: "We agree to adhere to all IDEA Hub guidelines, lab policies, and safety instructions.", field: "agreeToRules" },
+                    { label: "We agree to adhere to all AICTE IDEA Lab guidelines, lab policies, and safety instructions.", field: "agreeToRules" },
                     { label: "We accept full responsibility for resource usage, damages, or proper return of tools.", field: "acceptResponsibility" }
                   ].map((dec) => (
                     <div key={dec.field} className="flex items-start space-x-2.5 p-1">

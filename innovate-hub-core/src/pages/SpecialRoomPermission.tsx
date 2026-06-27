@@ -567,11 +567,11 @@ const SpecialRoomPermission = () => {
             <div class="sig-col">Student Sign</div>
             <div class="sig-col">Faculty Advisor</div>
             <div class="sig-col">Coordinator Sign</div>
-            <div class="sig-col">IDEA Hub Head Sign</div>
+            <div class="sig-col">AICTE IDEA Lab Head Sign</div>
           </div>
 
           <div class="footer">
-            Generated from IDEA Hub Room Permission Module. Valid ONLY with QR/Official signatures.
+            Generated from AICTE IDEA Lab Room Permission Module. Valid ONLY with QR/Official signatures.
           </div>
           <script>window.print();</script>
         </body>
@@ -1107,7 +1107,7 @@ const SpecialRoomPermission = () => {
                             { key: 'noDamage', text: "I agree to not damage any equipment or furniture inside the room." },
                             { key: 'timings', text: "I agree to strictly follow the allocated timings and vacate immediately after." },
                             { key: 'returnEquipment', text: "I agree to return all borrowed markers, connection cables, or equipment." },
-                            { key: 'policies', text: "I agree to follow all official IDEA Hub guidelines and policies." }
+                            { key: 'policies', text: "I agree to follow all official AICTE IDEA Lab guidelines and policies." }
                           ].map(rule => (
                             <div key={rule.key} className="flex items-start space-x-3 py-2 cursor-pointer">
                               <Checkbox 

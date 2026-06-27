@@ -90,7 +90,7 @@ router.post('/send-test', requireAuth, async (req, res) => {
     }
 
     const notificationPayload = JSON.stringify({
-      title: 'IdeaHub Test',
+      title: 'AICTE IDEA Lab Test',
       body: `Hello ${req.user.name || 'User'}, this is a test notification!`,
       icon: '/icons/icon-192.png',
     });

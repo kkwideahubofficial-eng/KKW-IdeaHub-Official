@@ -364,7 +364,7 @@ const ManageEvents = () => {
         allowedBranches: '',
         allowedYears: [],
         requiredSkills: '',
-        organizer: 'IDEA Hub',
+        organizer: 'AICTE IDEA Lab',
         coordinatorName: '',
         coordinatorContact: '',
         imageUrl: '',
@@ -576,7 +576,7 @@ const ManageEvents = () => {
     
     const doc = new jsPDF('landscape');
     doc.setFontSize(16);
-    doc.text(`IDEA Hub - Event Participant list`, 14, 20);
+    doc.text(`AICTE IDEA Lab - Event Participant list`, 14, 20);
     doc.setFontSize(11);
     doc.text(`Event: ${activeEventName}`, 14, 28);
     doc.text(`Export Date: ${new Date().toLocaleDateString()}`, 14, 34);

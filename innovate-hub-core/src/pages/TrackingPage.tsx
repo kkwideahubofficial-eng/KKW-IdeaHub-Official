@@ -16,7 +16,7 @@ interface Location {
 interface OrderDetails {
     _id: string;
     status: "pending" | "processing" | "out of delivery" | "delivered" | "shipped" | "cancelled";
-    shippingAddress: { // Matched IdeaHub Backend
+    shippingAddress: { // Matched AICTE IDEA Lab Backend
         fullName: string;
         addressLine1: string;
         city: string;

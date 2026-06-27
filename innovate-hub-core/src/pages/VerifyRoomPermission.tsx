@@ -53,7 +53,7 @@ const VerifyRoomPermission = () => {
             {isValid ? "VERIFICATION VALID" : "VERIFICATION INVALID"}
           </h2>
           <p className="text-2xs text-muted-foreground mt-1">
-            IDEA Hub Digital Security System
+            AICTE IDEA Lab Digital Security System
           </p>
         </div>
 
@@ -146,7 +146,7 @@ const VerifyRoomPermission = () => {
                   </div>
                 </div>
                 <div className="border p-2.5 rounded bg-slate-50 text-center mt-2">
-                  <div className="font-semibold text-2xs text-muted-foreground">IDEA Hub Head</div>
+                  <div className="font-semibold text-2xs text-muted-foreground">AICTE IDEA Lab Head</div>
                   <div className={`text-xs font-bold mt-1 flex flex-col items-center justify-center gap-0.5 ${isValid ? 'text-green-700' : 'text-red-700'}`}>
                     {isValid ? (
                       <>
@@ -154,7 +154,7 @@ const VerifyRoomPermission = () => {
                           <CheckCircle className="w-3.5 h-3.5" /> SIGNED
                         </div>
                         <span className="text-[10px] text-muted-foreground font-normal">
-                          {request.approvalHistory?.find((h: any) => h.role === 'Head')?.byName || 'IDEA Hub Head'}
+                          {request.approvalHistory?.find((h: any) => h.role === 'Head')?.byName || 'AICTE IDEA Lab Head'}
                         </span>
                       </>
                     ) : (

@@ -35,8 +35,8 @@ export default defineConfig(({ mode }) => ({
         enabled: true
       },
       manifest: {
-        name: "IdeaHub App",
-        short_name: "IdeaHub",
+        name: "AICTE IDEA Lab",
+        short_name: "AICTE IDEA Lab",
         start_url: "/",
         display: "standalone",
         background_color: "#ffffff",

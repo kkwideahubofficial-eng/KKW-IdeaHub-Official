@@ -61,7 +61,7 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/10 py-12 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Login to IDEA Hub</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">Login to AICTE IDEA Lab</CardTitle>
           <CardDescription className="text-center">
             Enter your credentials to access your account
           </CardDescription>

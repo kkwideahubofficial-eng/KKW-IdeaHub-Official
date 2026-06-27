@@ -202,7 +202,7 @@ const ManageAchievements = () => {
                 <Input id="eventYear" type="number" min={2000} max={2099} value={form.eventYear} onChange={(e) => setForm({...form, eventYear: e.target.value})} />
               </div>
               <div>
-                <Label>IDEA Hub Contributions</Label>
+                <Label>AICTE IDEA Lab Contributions</Label>
                 <div className="grid grid-cols-1 gap-2">
                   {[
                     { key: 'workspaceProvided', label: 'Workspace Provided' },

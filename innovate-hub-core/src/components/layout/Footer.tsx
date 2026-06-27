@@ -9,14 +9,14 @@ const Footer = () => {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-10">
           
-          {/* Column 1: IDEA Hub Overview */}
+          {/* Column 1: AICTE IDEA Lab Overview */}
           <div className="space-y-4">
             <Link to="/" className="flex items-center space-x-2 group outline-none">
               <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center shadow-md group-hover:bg-blue-500 transition-colors">
-                <span className="text-white font-bold text-base">I</span>
+                <span className="text-white font-bold text-base">A</span>
               </div>
               <span className="text-xl font-bold text-white tracking-tight group-hover:text-blue-400 transition-colors">
-                IDEA Hub
+                AICTE IDEA Lab
               </span>
             </Link>
             <p className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
@@ -136,10 +136,10 @@ const Footer = () => {
       <div className="border-t border-slate-800 py-6 bg-slate-950/40">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-medium text-slate-500">
           <div>
-            © 2026 IDEA Hub | AICTE IDEA Lab | KKWIEER
+            © 2026 AICTE IDEA Lab | KKWIEER
           </div>
           <div>
-            Developed by IDEA Hub Development Team
+            Developed by AICTE IDEA Lab Development Team
           </div>
         </div>
       </div>

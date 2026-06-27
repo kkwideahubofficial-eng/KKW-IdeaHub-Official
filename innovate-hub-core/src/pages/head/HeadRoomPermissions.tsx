@@ -253,7 +253,7 @@ const HeadRoomPermissions = () => {
       <div className="border-b pb-4 mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            IDEA Hub Head: Approvals & Analytics
+            AICTE IDEA Lab Head: Approvals & Analytics
           </h1>
           <p className="text-muted-foreground mt-1">
             Make final decisions on room bookings, review facility usage analytics, and track monthly schedules.
@@ -332,7 +332,7 @@ const HeadRoomPermissions = () => {
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between pb-3 border-b">
             <div>
-              <CardTitle className="text-md">IDEA Hub Monthly Calendar</CardTitle>
+              <CardTitle className="text-md">AICTE IDEA Lab Monthly Calendar</CardTitle>
               <CardDescription className="text-2xs">Review color-coded schedule overview.</CardDescription>
             </div>
             <div className="flex items-center gap-1">

@@ -126,7 +126,7 @@ const LabInfo = () => {
         <div className="container mx-auto px-4 relative z-10">
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-foreground tracking-tight mb-6 leading-tight">
-              About <span className="text-primary">IDEA Hub</span>
+              About <span className="text-primary">AICTE IDEA Lab</span>
             </h1>
             <p className="text-lg sm:text-xl text-muted-foreground font-light leading-relaxed max-w-2xl mx-auto">
               A state-of-the-art innovation laboratory dedicated to fostering creativity, 
@@ -283,7 +283,7 @@ const LabInfo = () => {
           <Card className="border-none shadow-none bg-transparent">
              <div className="space-y-6 text-lg text-muted-foreground leading-relaxed text-center">
               <p>
-                <strong className="text-foreground">IDEA Hub</strong> is a premier innovation laboratory established to bridge the gap between 
+                <strong className="text-foreground">AICTE IDEA Lab</strong> is a premier innovation laboratory established to bridge the gap between 
                 theoretical knowledge and practical application. Our 5,000 square foot facility houses 
                 cutting-edge equipment and technology that enables students, faculty, and external 
                 collaborators to bring their innovative concepts to life.

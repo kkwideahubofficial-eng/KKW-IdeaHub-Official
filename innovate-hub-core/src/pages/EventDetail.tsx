@@ -904,7 +904,7 @@ const EventDetail = () => {
               <div className="flex items-start gap-2.5">
                 <Checkbox id="decl2" checked={declaration2} onCheckedChange={(checked) => setDeclaration2(checked === true)} />
                 <Label htmlFor="decl2" className="text-xs leading-none cursor-pointer text-muted-foreground font-medium">
-                  I agree to follow all event rules and code of conduct set by the IDEA Hub cell.
+                  I agree to follow all event rules and code of conduct set by the AICTE IDEA Lab cell.
                 </Label>
               </div>
             </div>

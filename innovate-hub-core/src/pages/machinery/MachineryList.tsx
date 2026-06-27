@@ -395,7 +395,7 @@ const MachineryList = () => {
     const shareUrl = `${window.location.origin}/verify-request/${req.requestId}`;
     if (navigator.share) {
       navigator.share({
-        title: `IDEA Hub Permission: ${req.requestId}`,
+        title: `AICTE IDEA Lab Permission: ${req.requestId}`,
         text: `Verify permission status for project ${req.projectName}`,
         url: shareUrl,
       }).catch(() => {});
@@ -827,7 +827,7 @@ const MachineryList = () => {
         <TabsContent value="materials" className="space-y-6">
           <Card className="shadow-sm border-border/75">
             <CardHeader>
-              <CardTitle className="text-base font-bold">IDEA Hub Material Inventory</CardTitle>
+              <CardTitle className="text-base font-bold">AICTE IDEA Lab Material Inventory</CardTitle>
               <CardDescription className="text-xs">Live stock tracking for prototype and project consumables</CardDescription>
             </CardHeader>
             <CardContent>

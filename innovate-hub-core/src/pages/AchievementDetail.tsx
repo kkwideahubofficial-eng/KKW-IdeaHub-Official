@@ -162,7 +162,7 @@ const AchievementDetail = () => {
                 <div className="rounded-3xl border border-border/60 bg-gradient-to-br from-muted/25 via-background to-primary/5 p-6 shadow-sm">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">IDEA Hub Recognition</p>
+                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">AICTE IDEA Lab Recognition</p>
                       <h2 className="mt-2 text-2xl font-bold text-foreground">{achievement.title}</h2>
                       <p className="mt-2 max-w-2xl whitespace-pre-line text-sm leading-6 text-muted-foreground">
                         {achievement.description}
@@ -210,7 +210,7 @@ const AchievementDetail = () => {
             <Card className="border-border/60 shadow-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-xl">
-                  <Shield className="h-5 w-5 text-primary" /> IDEA Hub Support
+                  <Shield className="h-5 w-5 text-primary" /> AICTE IDEA Lab Support
                 </CardTitle>
                 <CardDescription>Workshops, mentoring, and infrastructure used for this result.</CardDescription>
               </CardHeader>
@@ -225,7 +225,7 @@ const AchievementDetail = () => {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">No IDEA Hub contribution flags were stored for this entry.</p>
+                  <p className="text-sm text-muted-foreground">No AICTE IDEA Lab contribution flags were stored for this entry.</p>
                 )}
               </CardContent>
             </Card>

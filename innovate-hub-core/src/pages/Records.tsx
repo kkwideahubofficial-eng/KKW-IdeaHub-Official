@@ -97,7 +97,7 @@ const Records = () => {
 
     // Header
     doc.setFontSize(18);
-    doc.text("IdeaHub - Booking Records Report", 14, 20);
+    doc.text("AICTE IDEA Lab - Booking Records Report", 14, 20);
     
     doc.setFontSize(11);
     doc.text(`Report Filter: ${filters.find(f => f.value === filter)?.label}`, 14, 30);

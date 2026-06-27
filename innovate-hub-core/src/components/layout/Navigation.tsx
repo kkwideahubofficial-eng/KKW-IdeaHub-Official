@@ -174,9 +174,9 @@ const Navigation = () => {
                   <SheetHeader className="shrink-0">
                     <div className="flex items-center space-x-2 pb-4 border-b">
                       <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
-                        <span className="text-primary-foreground font-bold text-lg">I</span>
+                        <span className="text-primary-foreground font-bold text-lg">A</span>
                       </div>
-                      <SheetTitle className="text-lg font-bold">IDEA Hub</SheetTitle>
+                      <SheetTitle className="text-lg font-bold">AICTE IDEA Lab</SheetTitle>
                     </div>
                   </SheetHeader>
                   <div className="flex flex-col space-y-3 mt-6 overflow-y-auto flex-1 pr-1 pb-6">
@@ -248,9 +248,9 @@ const Navigation = () => {
             {/* Logo */}
             <Link to="/" className="flex items-center space-x-2">
               <div className="w-10 h-10 bg-primary rounded flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-xl">I</span>
+                <span className="text-primary-foreground font-bold text-xl">A</span>
               </div>
-              <span className="text-xl font-semibold text-foreground">IDEA Hub</span>
+              <span className="text-xl font-semibold text-foreground">AICTE IDEA Lab</span>
             </Link>
           </div>
 

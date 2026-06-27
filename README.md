@@ -1,13 +1,13 @@
-# IdeaHub
+# AICTE IDEA Lab
 
-Welcome to the **IdeaHub and SnapCart Ecosystem** repository! This monorepo houses multiple interconnected applications that power the IdeaHub platform and SnapCart logistics system.
+Welcome to the **AICTE IDEA Lab and SnapCart Ecosystem** repository! This monorepo houses multiple interconnected applications that power the AICTE IDEA Lab platform and SnapCart logistics system.
 
 ## 📦 Project Structure
 
 The repository is organized into the following core components:
 
-- **IdeaHub Frontend (`/innovate-hub-core`)**: The main user interface built with React, Vite, and Tailwind CSS.
-- **IdeaHub Backend (`/ideahub-backend`)**: The core API server built with Node.js, Express, and MongoDB.
+- **AICTE IDEA Lab Frontend (`/innovate-hub-core`)**: The main user interface built with React, Vite, and Tailwind CSS.
+- **AICTE IDEA Lab Backend (`/ideahub-backend`)**: The core API server built with Node.js, Express, and MongoDB.
 - **SnapCart Socket Server (`/innovate-hub-core/snapcart/socket`)**: Real-time communication server for SnapCart operations.
 - **SnapCart Driver App (`/innovate-hub-core/snapcart/frontend`)**: Dedicated frontend application for SnapCart drivers.
 
@@ -49,7 +49,7 @@ You can start the entire ecosystem using the provided batch script for Windows:
 start_all.bat
 ```
 
-Alternatively, you can run the primary IdeaHub frontend and backend using standard npm commands:
+Alternatively, you can run the primary AICTE IDEA Lab frontend and backend using standard npm commands:
 
 ```bash
 npm run dev
@@ -61,14 +61,14 @@ When running the full ecosystem locally, the services will be available at the f
 
 | Service | Local URL | Port |
 |---------|-----------|------|
-| **IdeaHub Frontend** | http://localhost:5173 | `5173` |
-| **IdeaHub Backend** | http://localhost:5000 | `5000` |
+| **AICTE IDEA Lab Frontend** | http://localhost:5173 | `5173` |
+| **AICTE IDEA Lab Backend** | http://localhost:5000 | `5000` |
 
 
 ## 📜 Available Scripts (Root Level)
 
 - `npm run install:all`: Installs dependencies for all projects in the monorepo.
-- `npm run dev`: Starts the IdeaHub frontend and backend concurrently.
+- `npm run dev`: Starts the AICTE IDEA Lab frontend and backend concurrently.
 - `npm run render-build`: Prepares the full build for deployment, copying the frontend dist into the backend public directory.
 
 ## 🤝 Contributing
