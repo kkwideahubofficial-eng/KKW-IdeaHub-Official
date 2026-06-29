@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Check } from "lucide-react";
+import { Check, ExternalLink } from "lucide-react";
 
 const Kkwieer = () => {
   return (
@@ -30,6 +30,17 @@ const Kkwieer = () => {
           <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">
             K. K. Wagh Institute of Engineering Education and Research
           </h1>
+          <div className="pt-3 flex justify-center">
+            <a 
+              href="https://www.kkwagh.edu.in/engineering" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/20 text-xs font-semibold text-primary bg-primary/5 hover:bg-primary/10 transition-all shadow-sm group hover:scale-[1.02] duration-200"
+            >
+              <span>Visit Official College Website</span>
+              <ExternalLink className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            </a>
+          </div>
         </div>
 
         {/* NAAC Logo (Right) */}
@@ -78,7 +89,7 @@ const Kkwieer = () => {
               The institute was established in the year 1984 at Bhausahebnagar (Tal. Niphad, Dist. Nashik) and shifted to Nashik City in September 1986. A land of 8.2 hectares was generously donated by Shri. Kakusheth Udesi of Hirabai Haridas Charitable Trust, Mumbai. The Society started building infrastructure at this campus (known as Hirabai Haridas Vidya Nagari) in the year 1987. As of date it is fully developed and provides accommodation for College building, offices, classrooms, drawing halls, laboratories, workshops, etc. Building with a built-up area of 32,199 Sq.m. is one of the largest buildings in the City. All laboratories, classrooms, etc. are designed as per the needs of the students.
             </p>
             <p>
-              The institute is approved by the All India Council for Technical Education (AICTE), New Delhi, and the Government of Maharashtra, permanently affiliated to Savitribai Phule Pune University and recognized under section 2(F) and 12(B) of (UGC ACT 1956). The institute is adjudged as Grade 'A' by the Government of Maharashtra. The institute is Accredited by the National Assessment and Accreditation Council (NAAC) with an 'A' Grade, Accredited by HLACT International. It is the only institute in Nashik to be grouped thrice under the 'Platinum Category' by the AICTE CII Survey of Industry Linked Institutes and according to the NIRF ranking survey, 2016 ranked 85th amongst all engineering institutes in India.
+              The institute is approved by the All India Council for Technical Education (AICTE), New Delhi, and the Government of Maharashtra, permanently affiliated to Savitribai Phule Pune University and recognized under section 2(F) and 12(B) of (UGC ACT 1956). The institute is adjudged as Grade 'A' by the Government of Maharashtra. The institute is Accredited by the National Assessment and Accreditation Council (NAAC) with an 'A' Grade, Accredited by HLACT International. It is the only institute in Nashik to be grouped thrice under the 'Platinum Category' by the AICTE CII Survey of Industry Linked Institutes.
             </p>
             <p>
               The Teaching and Non-Teaching Staff of the institute is a blend of senior experienced and young dynamic faculty members devoted to the noble cause of education. Many of our students were the toppers in the university examinations and are in great demand from Multinational Companies in India and Abroad. Our training and placement wing tries hard to seek good jobs for our students.
@@ -128,7 +139,7 @@ const Kkwieer = () => {
                   <h4 className="text-base font-bold text-slate-900">Institute Vision</h4>
                 </div>
                 <p className="text-sm sm:text-base text-slate-700 leading-relaxed font-medium">
-                  "Empowering Through Quality Technical Education"
+                  "To be a premier institution that nurtures a legacy of academic excellence, character development and civic responsibility"
                 </p>
               </CardContent>
             </Card>
@@ -140,11 +151,40 @@ const Kkwieer = () => {
                   <div className="w-1.5 h-6 bg-primary rounded-full" />
                   <h4 className="text-base font-bold text-slate-900">Institute Mission</h4>
                 </div>
-                <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">
-                  "Committed to serve the needs of the society at large by imparting state-of-the-art Engineering education and to provide Knowledge and develop Attitudes, Skills and Values leading to the establishment of quality conscious and sustainable research-oriented Educational Institute."
-                </p>
+                <ul className="text-xs sm:text-sm text-slate-700 space-y-3 leading-relaxed">
+                  {[
+                    "Create a dynamic learning environment that encourages innovation, critical thinking, and lifelong learning.",
+                    "Empower individuals with knowledge, skills, and values by providing holistic and quality education that fosters their intellectual, social, and emotional development.",
+                    "Cater to the requirement of skilled manpower for various organizations, industries, allied sectors, and society at large.",
+                    "Inculcate and imbibe moral and ethical values and contribute to nation-building and sustainable development by shaping individuals into leaders, innovators, and responsible global citizens."
+                  ].map((item, index) => (
+                    <li key={index} className="flex items-start gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0 mt-1.5" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
               </CardContent>
             </Card>
+          </section>
+
+          {/* Official Website Call-to-Action Card */}
+          <section className="bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 border border-primary/10 rounded-2xl p-6 text-center space-y-4 shadow-sm">
+            <h4 className="text-lg font-bold text-slate-900">Explore More About KKWIEER</h4>
+            <p className="text-sm text-slate-600 max-w-[600px] mx-auto leading-relaxed">
+              Discover detailed information about various engineering departments, admissions procedures, campus infrastructure, experienced faculty members, recent academic achievements, and the latest updates directly on our official portal.
+            </p>
+            <div className="pt-2">
+              <a 
+                href="https://www.kkwagh.edu.in/engineering" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 active:bg-primary/95 transition-all shadow-md hover:shadow-lg group hover:scale-[1.02] duration-200"
+              >
+                <span>Visit Official Website</span>
+                <ExternalLink className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+              </a>
+            </div>
           </section>
 
         </main>

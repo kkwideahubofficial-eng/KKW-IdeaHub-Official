@@ -29,7 +29,7 @@ interface UserData {
 interface NavItem {
   name: string;
   path?: string;
-  dropdownItems?: { name: string; path: string }[];
+  dropdownItems?: { name: string; path: string; isExternal?: boolean }[];
 }
 
 const Navigation = () => {
@@ -126,6 +126,7 @@ const Navigation = () => {
         name: "About Us",
         dropdownItems: [
           { name: "KKWIEER", path: "/kkwieer" },
+          { name: "Official College Website", path: "https://www.kkwagh.edu.in/engineering", isExternal: true },
           { name: "AICTE – IDEA Lab", path: "/aicte-idea-lab" },
           { name: "Leadership Team", path: "/leadership-team" },
           { name: "Contact Details", path: "/contact-details" }
@@ -188,16 +189,30 @@ const Navigation = () => {
                               {link.name}
                             </div>
                             <div className="flex flex-col space-y-1 pl-2 border-l border-primary/20">
-                              {link.dropdownItems.map((sub) => (
-                                <Link
-                                  key={sub.path}
-                                  to={sub.path}
-                                  onClick={() => setMobileMenuOpen(false)}
-                                  className="px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-accent text-accent-foreground/90 hover:text-accent-foreground"
-                                >
-                                  {sub.name}
-                                </Link>
-                              ))}
+                              {link.dropdownItems.map((sub) => 
+                                sub.isExternal ? (
+                                  <a
+                                    key={sub.path}
+                                    href={sub.path}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={() => setMobileMenuOpen(false)}
+                                    className="px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-accent text-accent-foreground/90 hover:text-accent-foreground flex items-center justify-between group"
+                                  >
+                                    <span>{sub.name}</span>
+                                    <span className="text-xs opacity-60">↗</span>
+                                  </a>
+                                ) : (
+                                  <Link
+                                    key={sub.path}
+                                    to={sub.path}
+                                    onClick={() => setMobileMenuOpen(false)}
+                                    className="px-3 py-1.5 rounded-md text-sm font-medium transition-colors hover:bg-accent text-accent-foreground/90 hover:text-accent-foreground"
+                                  >
+                                    {sub.name}
+                                  </Link>
+                                )
+                              )}
                             </div>
                           </div>
                         );
@@ -271,13 +286,25 @@ const Navigation = () => {
                     <DropdownMenuContent className="w-48 bg-white border border-slate-200 rounded-xl shadow-lg p-1.5 z-[100]">
                       {link.dropdownItems.map((sub) => (
                         <DropdownMenuItem key={sub.path} asChild>
-                          <Link
-                            to={sub.path}
-                            className="w-full px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-50 hover:text-[#7C3AED] transition-colors flex items-center justify-between group outline-none"
-                          >
-                            <span>{sub.name}</span>
-                            <span className="opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold text-[#7C3AED]">&rarr;</span>
-                          </Link>
+                          {sub.isExternal ? (
+                            <a
+                              href={sub.path}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-full px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-50 hover:text-[#7C3AED] transition-colors flex items-center justify-between group outline-none"
+                            >
+                              <span>{sub.name}</span>
+                              <span className="opacity-60 group-hover:opacity-100 transition-opacity text-[10px] font-bold text-slate-400 group-hover:text-[#7C3AED]">↗</span>
+                            </a>
+                          ) : (
+                            <Link
+                              to={sub.path}
+                              className="w-full px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-50 hover:text-[#7C3AED] transition-colors flex items-center justify-between group outline-none"
+                            >
+                              <span>{sub.name}</span>
+                              <span className="opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold text-[#7C3AED]">&rarr;</span>
+                            </Link>
+                          )}
                         </DropdownMenuItem>
                       ))}
                     </DropdownMenuContent>
