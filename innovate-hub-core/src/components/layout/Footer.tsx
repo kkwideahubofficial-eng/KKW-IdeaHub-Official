@@ -60,18 +60,32 @@ const Footer = () => {
             <ul className="grid grid-cols-2 sm:grid-cols-1 gap-x-4 gap-y-2 sm:gap-x-0 sm:gap-y-0 sm:space-y-2">
               {[
                 { label: "KKWIEER", path: "/kkwieer" },
+                { label: "Official College Website", path: "https://www.kkwagh.edu.in/engineering", isExternal: true },
                 { label: "AICTE IDEA Lab", path: "/aicte-idea-lab" },
                 { label: "Leadership Team", path: "/leadership-team" },
                 { label: "Contact Details", path: "/contact-details" }
               ].map((link, idx) => (
                 <li key={idx}>
-                  <Link 
-                    to={link.path}
-                    className="hover:text-blue-400 transition-colors flex items-center gap-1.5 group text-xs sm:text-sm"
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-700 group-hover:bg-blue-400 transition-colors shrink-0" />
-                    {link.label}
-                  </Link>
+                  {link.isExternal ? (
+                    <a 
+                      href={link.path}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-blue-400 transition-colors flex items-center gap-1.5 group text-xs sm:text-sm"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-700 group-hover:bg-blue-400 transition-colors shrink-0" />
+                      {link.label}
+                      <span className="text-[10px] opacity-60">↗</span>
+                    </a>
+                  ) : (
+                    <Link 
+                      to={link.path}
+                      className="hover:text-blue-400 transition-colors flex items-center gap-1.5 group text-xs sm:text-sm"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-700 group-hover:bg-blue-400 transition-colors shrink-0" />
+                      {link.label}
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>
