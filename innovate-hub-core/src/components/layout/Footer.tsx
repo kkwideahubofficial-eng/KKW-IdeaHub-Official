@@ -12,9 +12,7 @@ const Footer = () => {
           {/* Column 1: AICTE IDEA Lab Overview */}
           <div className="space-y-4">
             <Link to="/" className="flex items-center space-x-2 group outline-none">
-              <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center shadow-md group-hover:bg-blue-500 transition-colors">
-                <span className="text-white font-bold text-base">A</span>
-              </div>
+              <img src="/logo.svg" alt="AICTE IDEA Lab Logo" className="w-12 h-12 object-contain bg-white rounded p-1" />
               <span className="text-xl font-bold text-white tracking-tight group-hover:text-blue-400 transition-colors">
                 AICTE IDEA Lab
               </span>

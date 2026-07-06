@@ -173,9 +173,7 @@ const Navigation = () => {
                 <SheetContent side="left" className="w-[280px] sm:w-[350px] flex flex-col h-full">
                   <SheetHeader className="shrink-0">
                     <div className="flex items-center space-x-2 pb-4 border-b">
-                      <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
-                        <span className="text-primary-foreground font-bold text-lg">A</span>
-                      </div>
+                      <img src="/logo.svg" alt="AICTE IDEA Lab Logo" className="w-12 h-12 object-contain" />
                       <SheetTitle className="text-lg font-bold">AICTE IDEA Lab</SheetTitle>
                     </div>
                   </SheetHeader>
@@ -247,9 +245,7 @@ const Navigation = () => {
 
             {/* Logo */}
             <Link to="/" className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-primary rounded flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-xl">A</span>
-              </div>
+              <img src="/logo.svg" alt="AICTE IDEA Lab Logo" className="w-16 h-16 object-contain" />
               <span className="text-xl font-semibold text-foreground">AICTE IDEA Lab</span>
             </Link>
           </div>

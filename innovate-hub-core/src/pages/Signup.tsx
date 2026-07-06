@@ -159,6 +159,9 @@ const Signup = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/10 py-12 px-4">
       <Card className="w-full max-w-md my-8">
         <CardHeader className="space-y-1">
+          <div className="flex justify-center mb-2">
+            <img src="/logo.svg" alt="AICTE IDEA Lab Logo" className="h-32 w-auto object-contain drop-shadow-sm" />
+          </div>
           <CardTitle className="text-2xl font-bold text-center">Create an Account</CardTitle>
           <CardDescription className="text-center">
             Join AICTE IDEA Lab to start your innovation journey
