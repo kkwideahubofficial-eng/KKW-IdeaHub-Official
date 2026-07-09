@@ -28,7 +28,8 @@ import {
   Layers,
   Settings,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  RefreshCw
 } from "lucide-react";
 
 const BRANCHES = [
@@ -98,12 +99,42 @@ const ManageRoomPermissions = () => {
     setReportModalOpen(false);
   };
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        fetchRequests(true),
+        fetchStats()
+      ]);
+      toast.success("Room permissions data refreshed!");
+    } catch {
+      toast.error("Failed to refresh data");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   useEffect(() => {
     fetchRequests();
     fetchStats();
   }, [search, statusFilter, roomFilter, dateFilter, branchFilter, yearFilter]);
 
-  const fetchRequests = async () => {
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        Promise.all([
+          fetchRequests(true),
+          fetchStats()
+        ]).catch(err => console.error("Auto refresh coordinator room permissions failed", err));
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [search, statusFilter, roomFilter, dateFilter, branchFilter, yearFilter]);
+
+  const fetchRequests = async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
     try {
       let url = "/room-permissions?";
       const params = [];
@@ -119,9 +150,9 @@ const ManageRoomPermissions = () => {
       setRequests(res.data);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to load room permission requests.");
+      if (!isSilent) toast.error("Failed to load room permission requests.");
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   };
 
@@ -186,6 +217,15 @@ const ManageRoomPermissions = () => {
         </div>
         <div className="flex flex-col items-end gap-2 shrink-0">
           <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="flex items-center gap-2 shadow-xs shrink-0 bg-white border border-border text-slate-700 hover:bg-slate-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
             <Button onClick={() => navigate("/coordinator/manage-special-rooms")} variant="outline" className="flex items-center gap-2 shadow-xs shrink-0">
               <Settings className="w-4 h-4" /> Manage Special Rooms
             </Button>

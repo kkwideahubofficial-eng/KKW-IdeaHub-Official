@@ -33,7 +33,8 @@ import {
   RotateCcw,
   Check,
   AlertCircle,
-  FileText
+  FileText,
+  RefreshCw
 } from "lucide-react";
 
 const BRANCHES = [
@@ -109,6 +110,25 @@ const HeadRoomPermissions = () => {
     setReportModalOpen(false);
   };
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        fetchRequests(true),
+        fetchStats(),
+        fetchAnalytics(),
+        fetchCalendarBookings()
+      ]);
+      toast.success("Room permissions data refreshed!");
+    } catch {
+      toast.error("Failed to refresh data");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   useEffect(() => {
     fetchRequests();
     fetchStats();
@@ -116,7 +136,22 @@ const HeadRoomPermissions = () => {
     fetchCalendarBookings();
   }, [search, statusFilter, roomFilter, dateFilter, branchFilter, yearFilter]);
 
-  const fetchRequests = async () => {
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        Promise.all([
+          fetchRequests(true),
+          fetchStats(),
+          fetchAnalytics(),
+          fetchCalendarBookings()
+        ]).catch(err => console.error("Auto refresh head room permissions failed", err));
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [search, statusFilter, roomFilter, dateFilter, branchFilter, yearFilter]);
+
+  const fetchRequests = async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
     try {
       let url = "/room-permissions?";
       const params = [];
@@ -132,9 +167,9 @@ const HeadRoomPermissions = () => {
       setRequests(res.data);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to load requests.");
+      if (!isSilent) toast.error("Failed to load requests.");
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   };
 
@@ -260,9 +295,20 @@ const HeadRoomPermissions = () => {
           </p>
         </div>
         <div className="flex flex-col items-end gap-2 shrink-0">
-          <Button onClick={() => setReportModalOpen(true)} className="flex items-center gap-2 shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white shrink-0">
-            <FileText className="w-4 h-4" /> Download Reports
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="flex items-center gap-2 shadow-xs shrink-0 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+            <Button onClick={() => setReportModalOpen(true)} className="flex items-center gap-2 shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white shrink-0">
+              <FileText className="w-4 h-4" /> Download Reports
+            </Button>
+          </div>
           {/* Quick Download Buttons */}
           <div className="flex flex-wrap items-center gap-1.5 bg-slate-50 border border-slate-200/60 p-1 rounded-lg">
             <span className="text-3xs font-semibold text-muted-foreground px-1.5">Quick Download:</span>

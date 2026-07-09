@@ -26,7 +26,8 @@ import {
   Download,
   Info,
   Check,
-  Loader2
+  Loader2,
+  RefreshCw
 } from "lucide-react";
 
 interface RoomDetails {
@@ -245,6 +246,36 @@ const SpecialRoomPermission = () => {
   const [rooms, setRooms] = useState<RoomDetails[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        fetchMyRequests(),
+        fetchStats(),
+        fetchSpecialRooms()
+      ]);
+      toast.success("Room permissions data refreshed!");
+    } catch {
+      toast.error("Failed to refresh data");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        Promise.all([
+          fetchMyRequests(),
+          fetchStats()
+        ]).catch(err => console.error("Auto refresh room permissions failed", err));
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     fetchSpecialRooms();
@@ -595,23 +626,35 @@ const SpecialRoomPermission = () => {
           </p>
         </div>
         
-        {/* Navigation Tabs */}
-        <div className="grid grid-cols-2 gap-2 w-full bg-slate-100/60 p-1.5 rounded-xl sm:flex sm:w-auto sm:gap-2 sm:bg-muted sm:p-1 sm:rounded-lg self-stretch sm:self-start">
+        <div className="flex flex-wrap items-center gap-3 self-stretch sm:self-auto w-full sm:w-auto justify-end">
           <Button
-            variant={activeTab === "book" ? "default" : "ghost"}
-            onClick={() => { setActiveTab("book"); setFormStep(1); }}
-            className={`flex items-center justify-center gap-2 h-11 sm:h-9 w-full sm:w-auto text-sm ${activeTab === 'book' ? 'bg-white text-slate-900 shadow-sm sm:bg-primary sm:text-primary-foreground font-semibold' : 'text-slate-600 sm:text-slate-600 font-semibold'}`}
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="flex items-center justify-center gap-2 h-11 sm:h-9 w-full sm:w-auto text-sm bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold shadow-xs"
           >
-            <Users className="w-4 h-4" /> Book Room
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+            Refresh
           </Button>
 
-          <Button
-            variant={activeTab === "history" ? "default" : "ghost"}
-            onClick={() => setActiveTab("history")}
-            className={`flex items-center justify-center gap-2 h-11 sm:h-9 w-full sm:w-auto text-sm ${activeTab === 'history' ? 'bg-white text-slate-900 shadow-sm sm:bg-primary sm:text-primary-foreground font-semibold' : 'text-slate-600 sm:text-slate-600 font-semibold'}`}
-          >
-            <FileText className="w-4 h-4" /> My Requests
-          </Button>
+          {/* Navigation Tabs */}
+          <div className="grid grid-cols-2 gap-2 flex-1 w-full bg-slate-100/60 p-1.5 rounded-xl sm:flex sm:flex-none sm:w-auto sm:gap-2 sm:bg-muted sm:p-1 sm:rounded-lg">
+            <Button
+              variant={activeTab === "book" ? "default" : "ghost"}
+              onClick={() => { setActiveTab("book"); setFormStep(1); }}
+              className={`flex items-center justify-center gap-2 h-11 sm:h-9 w-full sm:w-auto text-sm ${activeTab === 'book' ? 'bg-white text-slate-900 shadow-sm sm:bg-primary sm:text-primary-foreground font-semibold' : 'text-slate-600 sm:text-slate-600 font-semibold'}`}
+            >
+              <Users className="w-4 h-4" /> Book Room
+            </Button>
+
+            <Button
+              variant={activeTab === "history" ? "default" : "ghost"}
+              onClick={() => setActiveTab("history")}
+              className={`flex items-center justify-center gap-2 h-11 sm:h-9 w-full sm:w-auto text-sm ${activeTab === 'history' ? 'bg-white text-slate-900 shadow-sm sm:bg-primary sm:text-primary-foreground font-semibold' : 'text-slate-600 sm:text-slate-600 font-semibold'}`}
+            >
+              <FileText className="w-4 h-4" /> My Requests
+            </Button>
+          </div>
         </div>
       </div>
 

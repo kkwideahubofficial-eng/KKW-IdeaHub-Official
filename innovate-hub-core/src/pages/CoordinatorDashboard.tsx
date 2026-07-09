@@ -368,9 +368,38 @@ const CoordinatorDashboard = () => {
     }
   };
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        fetchRoomBookings(),
+        fetchResourcePortalData()
+      ]);
+      toast.success("Coordinator dashboard refreshed!");
+    } catch {
+      toast.error("Failed to refresh dashboard");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   useEffect(() => {
     fetchRoomBookings();
     fetchResourcePortalData();
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        Promise.all([
+          fetchRoomBookings(),
+          fetchResourcePortalData()
+        ]).catch(err => console.error("Auto refresh coordinator dashboard failed", err));
+      }
+    }, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -615,7 +644,17 @@ const CoordinatorDashboard = () => {
             <h1 className="text-3xl font-extrabold text-foreground tracking-tight">Coordinator Dashboard</h1>
             <p className="text-muted-foreground text-sm">Review applications, coordinate reservations, and track inventory allocation.</p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap sm:flex-nowrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="gap-2 h-9 bg-white shadow-xs border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
             <TabsList 
               className="bg-muted/30 p-1 rounded-lg border border-border/60 w-full flex overflow-x-auto whitespace-nowrap justify-start lg:inline-flex lg:justify-center [&::-webkit-scrollbar]:hidden h-auto"
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}

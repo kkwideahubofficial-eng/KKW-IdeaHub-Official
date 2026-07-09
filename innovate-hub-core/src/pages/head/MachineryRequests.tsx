@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Check, X, Eye, FileDown, Loader2, Calendar, Clock, AlertTriangle, ShieldCheck, CheckCircle2, FileText } from "lucide-react";
+import { Check, X, Eye, FileDown, Loader2, Calendar, Clock, AlertTriangle, ShieldCheck, CheckCircle2, FileText, RefreshCw } from "lucide-react";
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return "";
@@ -108,18 +108,42 @@ const MachineryRequests = () => {
     setReportModalOpen(false);
   };
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await fetchRequests(true);
+      toast.success("Requests data refreshed!");
+    } catch {
+      toast.error("Failed to refresh data");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   useEffect(() => {
     fetchRequests();
   }, []);
 
-  const fetchRequests = async () => {
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchRequests(true).catch(err => console.error("Auto refresh requests failed", err));
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchRequests = async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
     try {
       const res = await api.get("/machinery/requests");
       setRequests(res.data);
     } catch {
-      toast.error("Failed to load requests");
+      if (!isSilent) toast.error("Failed to load requests");
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   };
 
@@ -223,6 +247,15 @@ const MachineryRequests = () => {
                 <option value="External">External User</option>
               </select>
             </div>
+            <Button 
+              variant="outline"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="flex items-center gap-2 h-8 text-xs font-semibold shrink-0 bg-white border border-border text-slate-700 hover:bg-slate-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
             <Button onClick={() => setReportModalOpen(true)} className="flex items-center gap-2 shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white shrink-0 h-8 text-xs font-semibold">
               <FileText className="w-4 h-4" /> Download Reports
             </Button>

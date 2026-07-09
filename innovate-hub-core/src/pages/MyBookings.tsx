@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
-import { Loader2, FileDown } from "lucide-react";
+import { Loader2, FileDown, RefreshCw } from "lucide-react";
 
 interface BookingHistoryEntry {
   status: 'pending' | 'approved' | 'rejected';
@@ -69,25 +69,48 @@ const MyBookings = () => {
     }
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [bookingsRes, machineryRes] = await Promise.all([
-          api.get("/bookings/my-history"),
-          api.get("/machinery/requests") // Student gets their own requests
-        ]);
-        
-        setBookings(bookingsRes.data.bookings || []);
-        setMachineryRequests(machineryRes.data || []);
-      } catch (error) {
-        toast.error("Failed to fetch some history data.");
-        console.error("Error fetching historyData:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-    fetchData();
+  const fetchHistoryData = async (isSilent = false) => {
+    if (!isSilent) setIsLoading(true);
+    try {
+      const [bookingsRes, machineryRes] = await Promise.all([
+        api.get("/bookings/my-history"),
+        api.get("/machinery/requests") // Student gets their own requests
+      ]);
+      setBookings(bookingsRes.data.bookings || []);
+      setMachineryRequests(machineryRes.data || []);
+    } catch (error) {
+      if (!isSilent) toast.error("Failed to fetch some history data.");
+      console.error("Error fetching historyData:", error);
+    } finally {
+      if (!isSilent) setIsLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await fetchHistoryData(true);
+      toast.success("History data refreshed!");
+    } catch {
+      toast.error("Failed to refresh data");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchHistoryData();
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchHistoryData(true).catch(err => console.error("Auto refresh history failed", err));
+      }
+    }, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const getStatusVariant = (status: string) => {
@@ -280,7 +303,18 @@ const MyBookings = () => {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-6">My Bookings & Requests</h1>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 border-b pb-4">
+        <h1 className="text-3xl font-bold">My Bookings & Requests</h1>
+        <Button
+          variant="outline"
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="flex items-center gap-2 shadow-xs bg-white border border-border text-slate-700 hover:bg-slate-50"
+        >
+          <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
+      </div>
       
       <Tabs defaultValue="machinery" className="space-y-6">
         <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">

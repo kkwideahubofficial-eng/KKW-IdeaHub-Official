@@ -13,7 +13,7 @@ import {
   Calendar as CalendarIcon, Clock, CheckCircle, XCircle, AlertTriangle, 
   FileText, Search, ArrowRight, PlusCircle, History, BookOpen, Layers,
   Printer, Share2, Download, Eye, Play, Check, Users, ShieldAlert, Award, Settings,
-  Database
+  Database, RefreshCw
 } from "lucide-react";
 import { getNextAvailableDate, formatTime12Hour } from "@/lib/dateUtils";
 
@@ -307,8 +307,31 @@ const MachineryList = () => {
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await fetchInitialData(true);
+      toast.success("Dashboard data refreshed!");
+    } catch {
+      toast.error("Failed to refresh data");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   useEffect(() => {
     fetchInitialData();
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchInitialData(true).catch(err => console.error("Auto refresh failed", err));
+      }
+    }, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -336,8 +359,8 @@ const MachineryList = () => {
     }
   }, [completeId, requests]);
 
-  const fetchInitialData = async () => {
-    setLoading(true);
+  const fetchInitialData = async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
     try {
       const [mRes, matRes, rRes] = await Promise.all([
         api.get("/machinery"),
@@ -348,9 +371,9 @@ const MachineryList = () => {
       setMaterials(matRes.data);
       setRequests(rRes.data);
     } catch (error) {
-      toast.error("Failed to load dashboard data");
+      if (!isSilent) toast.error("Failed to load dashboard data");
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   };
 
@@ -596,7 +619,16 @@ const MachineryList = () => {
           </h1>
           <p className="text-muted-foreground text-sm mt-1">KK Wagh AICTE IDEA Lab Permission Management System</p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto items-center">
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="w-full sm:w-auto gap-2 shadow-xs bg-white text-slate-700 border-border hover:bg-slate-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
           <Button 
             onClick={handleNewRequestClick}
             className="w-full gap-2 shadow-md hover:scale-[1.02] transition-transform bg-primary text-primary-foreground border-none font-bold"
