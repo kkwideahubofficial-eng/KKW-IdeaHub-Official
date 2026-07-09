@@ -76,6 +76,7 @@ const task = () => {
             let reminderCount = 0;
             for (const req of reminderBookings) {
                 try {
+                    const frontendUrl = process.env.FRONTEND_ORIGIN || 'http://localhost:8080';
                     await sendEmail(
                         req.applicantDetails.email,
                         `Booking Reminder: ${req.facilityRequired} - ${req.requestId}`,
@@ -86,6 +87,7 @@ const task = () => {
                          <p><b>Project:</b> ${req.teamDetails.projectName}</p>
                          <br/>
                          <p>Please ensure you bring the official permission PDF and follow all IDEA Hub rules and guidelines during usage.</p>
+                         <p>Check booking details and instructions here: <a href="${frontendUrl}/verify-room-permission/${req._id}">View Booking Details</a></p>
                          <br/><p>Regards,<br/>IDEA Hub Team</p>`
                     );
                     req.reminderSent = true;
@@ -124,6 +126,7 @@ const task = () => {
 
                             // Send email
                             if (req.studentId?.email) {
+                                const frontendUrl = process.env.FRONTEND_ORIGIN || 'http://localhost:8080';
                                 await sendEmail(
                                     req.studentId.email,
                                     `Machinery Booking Completion Reminder - ${req.requestId}`,
@@ -132,6 +135,7 @@ const task = () => {
                                      <p><b>Scheduled Time:</b> ${primaryMachine.startTime} - ${primaryMachine.endTime} on ${new Date(primaryMachine.usageDate).toLocaleDateString()}</p>
                                      <br/>
                                      <p>Please log in to the IDEA Hub portal and confirm if your work is completed to release the machine, or request a booking extension if you need more time.</p>
+                                     <p>Mark your work as completed or request an extension here: <a href="${frontendUrl}/verify-request/${req.requestId}">Track Request & Action</a></p>
                                      <br/><p>Regards,<br/>IDEA Hub Team</p>`
                                 );
                             }

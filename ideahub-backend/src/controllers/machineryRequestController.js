@@ -370,7 +370,8 @@ export const createRequest = async (req, res) => {
         );
       } else if (externalEmail) {
         // Email external applicant with tracking details
-        const trackUrl = `${req.protocol}://${req.get('host')}`.replace('5000', '8080') + `/verify-request/${requestId}`;
+        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
+        const trackUrl = `${frontendUrl}/verify-request/${requestId}`;
         const subject = `IDEA Hub: Request Submitted Successfully - ${requestId}`;
         const bodyText = `<p>Dear ${externalFullName},</p>
                           <p>Your machinery/material request has been submitted successfully to KK Wagh AICTE IDEA Lab.</p>
@@ -399,12 +400,14 @@ export const createRequest = async (req, res) => {
           `${isExternal ? (externalFullName || 'External User') : req.user.name} submitted request ${requestId}`
         );
         try {
+          const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
           await sendEmail(
             admin.email,
             `New Machinery/Material Request - ${requestId}`,
             `<h2>Dear ${admin.name},</h2>
              <p>A new machinery/material request <b>${requestId}</b> for project <b>${projectName}</b> has been submitted by <b>${isExternal ? (externalFullName || 'External User') : req.user.name}</b>.</p>
-             <p>Please log in to the dashboard to review the request.</p>`
+             <p>Process this request on your dashboard: <a href="${frontendUrl}${admin.role === 'head' ? '/head-dashboard' : '/coordinator-dashboard'}">Go to Dashboard</a></p>
+             <br/><p>Regards,<br/>IDEA Hub Team</p>`
           );
         } catch (err) {
           console.error('Failed to send admin email:', err);
@@ -504,12 +507,14 @@ export const updateRequest = async (req, res) => {
           `Request ${request.requestId} has been resubmitted with updates by ${req.user.name}.`
         );
         try {
+          const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
           await sendEmail(
             admin.email,
             `Resubmitted Machinery/Material Request - ${request.requestId}`,
             `<h2>Dear ${admin.name},</h2>
              <p>The machinery/material request <b>${request.requestId}</b> has been resubmitted with updates by <b>${req.user.name}</b>.</p>
-             <p>Please log in to the dashboard to review the updated request.</p>`
+             <p>Review updated details on your dashboard: <a href="${frontendUrl}${admin.role === 'head' ? '/head-dashboard' : '/coordinator-dashboard'}">Go to Dashboard</a></p>
+             <br/><p>Regards,<br/>IDEA Hub Team</p>`
           );
         } catch (err) {
           console.error('Failed to send admin email:', err);
@@ -805,6 +810,7 @@ export const updateRequestStatus = async (req, res) => {
       const studentEmail = request.studentId.email;
       const studentName = request.studentId.name;
       const machineNames = request.requestedMachines.map(m => m.machineName).join(', ') || 'IDEA Lab Resources';
+      const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
       
       let subject = `IDEA Hub: Request Status Updated - ${request.requestId}`;
       let bodyText = `<p>Dear ${studentName},</p>
@@ -812,7 +818,7 @@ export const updateRequestStatus = async (req, res) => {
 
       if (remarks) bodyText += `<p><b>Remarks:</b> ${remarks}</p>`;
       if (conditions) bodyText += `<p><b>Approval Conditions:</b> ${conditions}</p>`;
-      bodyText += `<br/><p>Please log in to your Student Dashboard to check details.</p>
+      bodyText += `<br/><p>Monitor details and print receipts: <a href="${frontendUrl}/verify-request/${request.requestId}">Track Request Status</a></p>
                   <p>Regards,<br/>IDEA Hub Team</p>`;
 
       try {
@@ -837,9 +843,10 @@ export const updateRequestStatus = async (req, res) => {
         bodyText += `<p><b>External Usage Charges:</b> ₹${request.totalCharges} (Machine: ₹${request.machineCharges}, Material: ₹${request.materialCharges})</p>
                      <p><b>Payment Status:</b> ${request.paymentStatus}</p>`;
       }
+      const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
       bodyText += `<br/><p>You can track updates and verify your request details using this link: 
-                  <a href="${req.protocol}://${req.get('host')}`.replace('5000', '8080') + `/verify-request/${request.requestId}">Track Request</a></p>
-                  <p>Regards,<br/>IDEA Hub Team</p>`;
+                   <a href="${frontendUrl}/verify-request/${request.requestId}">Track Request</a></p>
+                   <p>Regards,<br/>IDEA Hub Team</p>`;
 
       try {
         await sendEmail(externalEmail, subject, bodyText);
@@ -1043,7 +1050,7 @@ export const downloadMachineryPdf = async (req, res) => {
       project: request.projectName,
       team: request.teamName || request.students[0]?.name || '',
       status: request.status,
-      url: `${baseUrl.replace('5000', '8080')}/verify-request/${request.requestId}`,
+      url: `${process.env.FRONTEND_ORIGIN || baseUrl.replace('5000', '8080')}/verify-request/${request.requestId}`,
     });
 
     // Compile data structure for PDF generator

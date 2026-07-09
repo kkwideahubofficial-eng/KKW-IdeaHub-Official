@@ -5,7 +5,7 @@ import api from "@/lib/axios";
 
 interface GalleryItem {
   id: string;
-  category: "Workshops" | "Hackathons" | "Project Expo" | "Machinery" | "Achievements";
+  category: string;
   title: string;
   image: string;
 }
@@ -61,7 +61,7 @@ const defaultGalleryItems: GalleryItem[] = [
   },
 ];
 
-const categories = ["All", "Workshops", "Hackathons", "Project Expo", "Machinery", "Achievements"];
+const DEFAULT_CATEGORIES = ["All", "Workshops", "Hackathons", "Project Expo", "Machinery", "Achievements"];
 
 const getFullImageUrl = (imagePath: string) => {
   if (!imagePath) return "";
@@ -76,29 +76,56 @@ const HomeGallery = () => {
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [activeFilter, setActiveFilter] = useState("All");
   const [isCoordinator, setIsCoordinator] = useState(false);
+  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
   
   // Dialog state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<GalleryItem | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
   const [form, setForm] = useState({
     title: "",
-    category: "Workshops" as GalleryItem["category"],
+    category: "Workshops",
     image: ""
   });
 
   // Load items and role checks
   useEffect(() => {
+    // Load categories
+    const storedCats = localStorage.getItem("idea_hub_gallery_categories");
+    let loadedCats = DEFAULT_CATEGORIES;
+    if (storedCats) {
+      try {
+        loadedCats = JSON.parse(storedCats);
+      } catch (e) {
+        console.error("Failed to parse categories", e);
+      }
+    }
+
+    // Load items
     const stored = localStorage.getItem("idea_hub_gallery");
+    let loadedItems = defaultGalleryItems;
     if (stored) {
       try {
-        setItems(JSON.parse(stored));
+        loadedItems = JSON.parse(stored);
       } catch {
-        setItems(defaultGalleryItems);
+        loadedItems = defaultGalleryItems;
       }
-    } else {
-      setItems(defaultGalleryItems);
     }
+    setItems(loadedItems);
+
+    // Make sure all categories from loadedItems are in loadedCats
+    const uniqueItemCats = Array.from(new Set(loadedItems.map(item => item.category)));
+    const mergedCats = [...loadedCats];
+    uniqueItemCats.forEach(cat => {
+      if (!mergedCats.includes(cat)) {
+        mergedCats.push(cat);
+      }
+    });
+
+    setCategories(mergedCats);
+    localStorage.setItem("idea_hub_gallery_categories", JSON.stringify(mergedCats));
 
     const rawUser = localStorage.getItem("idea_hub_user");
     if (rawUser) {
@@ -120,6 +147,8 @@ const HomeGallery = () => {
 
   const handleOpenDialog = (item: GalleryItem | null = null) => {
     setEditingItem(item);
+    setShowNewCategoryInput(false);
+    setNewCategoryName("");
     if (item) {
       setForm({
         title: item.title,
@@ -129,7 +158,7 @@ const HomeGallery = () => {
     } else {
       setForm({
         title: "",
-        category: "Workshops",
+        category: categories[1] || "Workshops",
         image: ""
       });
     }
@@ -164,15 +193,39 @@ const HomeGallery = () => {
     e.preventDefault();
     if (!form.title || !form.image) return;
 
+    let finalCategory = form.category;
+    if (showNewCategoryInput) {
+      const trimmedNewCat = newCategoryName.trim();
+      if (!trimmedNewCat) {
+        alert("Please enter a category name.");
+        return;
+      }
+      const caseMatched = categories.find(c => c.toLowerCase() === trimmedNewCat.toLowerCase());
+      if (caseMatched) {
+        finalCategory = caseMatched;
+      } else {
+        const updatedCats = [...categories, trimmedNewCat];
+        setCategories(updatedCats);
+        localStorage.setItem("idea_hub_gallery_categories", JSON.stringify(updatedCats));
+        finalCategory = trimmedNewCat;
+      }
+    }
+
+    const itemData = {
+      title: form.title,
+      category: finalCategory,
+      image: form.image
+    };
+
     if (editingItem) {
       const updated = items.map((it) =>
-        it.id === editingItem.id ? { ...it, ...form } : it
+        it.id === editingItem.id ? { ...it, ...itemData } : it
       );
       saveItems(updated);
     } else {
       const newItem: GalleryItem = {
         id: "gallery_" + Date.now(),
-        ...form
+        ...itemData
       };
       saveItems([newItem, ...items]);
     }
@@ -184,6 +237,64 @@ const HomeGallery = () => {
     if (!window.confirm("Are you sure you want to delete this gallery image?")) return;
     const filtered = items.filter((it) => it.id !== id);
     saveItems(filtered);
+  };
+
+  const handleCreateCategory = () => {
+    const catName = window.prompt("Enter new category name:");
+    if (!catName) return;
+    const trimmed = catName.trim();
+    if (!trimmed) return;
+
+    if (categories.some(c => c.toLowerCase() === trimmed.toLowerCase())) {
+      alert("This category already exists.");
+      return;
+    }
+
+    const updatedCats = [...categories, trimmed];
+    setCategories(updatedCats);
+    localStorage.setItem("idea_hub_gallery_categories", JSON.stringify(updatedCats));
+  };
+
+  const handleRenameCategory = (oldName: string) => {
+    const newName = window.prompt(`Rename category "${oldName}" to:`, oldName);
+    if (!newName) return;
+    const trimmed = newName.trim();
+    if (!trimmed || trimmed === oldName) return;
+
+    if (categories.some(c => c.toLowerCase() === trimmed.toLowerCase() && c.toLowerCase() !== oldName.toLowerCase())) {
+      alert("A category with this name already exists.");
+      return;
+    }
+
+    const updatedCats = categories.map(c => c === oldName ? trimmed : c);
+    setCategories(updatedCats);
+    localStorage.setItem("idea_hub_gallery_categories", JSON.stringify(updatedCats));
+
+    const updatedItems = items.map(item => 
+      item.category === oldName ? { ...item, category: trimmed } : item
+    );
+    saveItems(updatedItems);
+
+    if (activeFilter === oldName) {
+      setActiveFilter(trimmed);
+    }
+  };
+
+  const handleDeleteCategory = (catToDelete: string) => {
+    if (!window.confirm(`Are you sure you want to delete the category "${catToDelete}"? All gallery items in this category will also be deleted.`)) {
+      return;
+    }
+
+    const updatedCats = categories.filter(c => c !== catToDelete);
+    setCategories(updatedCats);
+    localStorage.setItem("idea_hub_gallery_categories", JSON.stringify(updatedCats));
+
+    const updatedItems = items.filter(item => item.category !== catToDelete);
+    saveItems(updatedItems);
+
+    if (activeFilter === catToDelete) {
+      setActiveFilter("All");
+    }
   };
 
   const filteredItems = activeFilter === "All"
@@ -217,20 +328,63 @@ const HomeGallery = () => {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap justify-center gap-2 mb-12">
+        <div className="flex flex-wrap justify-center items-center gap-2 mb-12">
           {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActiveFilter(cat)}
-              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
-                activeFilter === cat
-                  ? "bg-primary text-white shadow-xs"
-                  : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
-              }`}
-            >
-              {cat}
-            </button>
+            <div key={cat} className="relative flex items-center group">
+              <button
+                onClick={() => setActiveFilter(cat)}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                  activeFilter === cat
+                    ? "bg-primary text-white shadow-xs"
+                    : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
+                } ${isCoordinator && cat !== "All" ? "pr-10" : ""}`}
+              >
+                {cat}
+              </button>
+              {isCoordinator && cat !== "All" && (
+                <div className="absolute right-2.5 flex gap-1">
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRenameCategory(cat);
+                    }}
+                    className={`p-0.5 rounded-sm transition-colors ${
+                      activeFilter === cat 
+                        ? "text-white/80 hover:text-white" 
+                        : "text-slate-400 hover:text-primary"
+                    }`}
+                    title={`Rename ${cat}`}
+                  >
+                    <Pencil className="w-2.5 h-2.5" />
+                  </button>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteCategory(cat);
+                    }}
+                    className={`p-0.5 rounded-sm transition-colors ${
+                      activeFilter === cat 
+                        ? "text-white/80 hover:text-rose-300" 
+                        : "text-slate-400 hover:text-rose-600"
+                    }`}
+                    title={`Delete ${cat}`}
+                  >
+                    <Trash className="w-2.5 h-2.5" />
+                  </button>
+                </div>
+              )}
+            </div>
           ))}
+
+          {isCoordinator && (
+            <button
+              onClick={handleCreateCategory}
+              className="px-4 py-1.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-all flex items-center gap-1 shadow-2xs"
+              title="Create New Category"
+            >
+              <Plus className="w-3.5 h-3.5" /> Add Category
+            </button>
+          )}
         </div>
 
         {/* Masonry / Grid */}
@@ -321,15 +475,39 @@ const HomeGallery = () => {
                     Filter Category
                   </label>
                   <select 
-                    value={form.category}
-                    onChange={(e) => setForm({ ...form, category: e.target.value as GalleryItem["category"] })}
+                    value={showNewCategoryInput ? "new-cat" : form.category}
+                    onChange={(e) => {
+                      if (e.target.value === "new-cat") {
+                        setShowNewCategoryInput(true);
+                      } else {
+                        setShowNewCategoryInput(false);
+                        setForm({ ...form, category: e.target.value });
+                      }
+                    }}
                     className="w-full h-10 px-3 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 bg-slate-50/50 font-semibold text-slate-700"
                   >
                     {categories.slice(1).map((cat) => (
                       <option key={cat} value={cat}>{cat}</option>
                     ))}
+                    <option value="new-cat" className="text-primary font-bold">+ Add New Category...</option>
                   </select>
                 </div>
+
+                {showNewCategoryInput && (
+                  <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      New Category Name
+                    </label>
+                    <input 
+                      type="text" 
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      placeholder="e.g. Incubation, Patents"
+                      className="w-full h-10 px-3.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 bg-slate-50/50 font-medium"
+                      required={showNewCategoryInput}
+                    />
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">

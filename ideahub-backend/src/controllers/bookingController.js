@@ -259,6 +259,7 @@ export async function decideBooking(req, res) {
       if (booking.team && booking.team.email) {
         console.log(`[Booking] Sending approval email to: ${booking.team.email} for room: ${room.name}`);
         try {
+            const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
             const emailResult = await sendEmail(
               booking.team.email,
               'Booking Approved - Idea Lab',
@@ -266,6 +267,7 @@ export async function decideBooking(req, res) {
                <p>Your booking for <b>${room.name}</b> on ${booking.slotDate} (${booking.startTime} - ${booking.endTime}) has been approved.</p>
                <p><b>Reason/Note:</b> ${booking.reason || 'None'}</p>
                <p>Please present the QR code in your dashboard upon entry.</p>
+               <p>View your approved slot and show your entry QR Code here: <a href="${frontendUrl}/my-bookings">View My Bookings</a></p>
                <br/>
                <p>Regards,<br/>Idea Lab Team</p>`
             );

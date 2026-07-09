@@ -280,6 +280,7 @@ export const createRoomRequest = async (req, res) => {
 
       // Email to student
       try {
+        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
         await sendEmail(
           applicantDetails.email,
           `Room Permission Request Submitted - ${requestId}`,
@@ -287,6 +288,7 @@ export const createRoomRequest = async (req, res) => {
            <p>Your special room permission request for <b>${facilityRequired}</b> on <b>${schedule.requestedDate}</b> has been submitted successfully.</p>
            <p><b>Request ID:</b> ${requestId}</p>
            <p>We have forwarded a recommendation request to your faculty advisor <b>${facultyRecommendation.facultyName}</b>. Once they verify it, the request will proceed to the Coordinator.</p>
+           <p>You can view the real-time status and details of your request here: <a href="${frontendUrl}/verify-room-permission/${savedRequest._id}">View Request Details</a></p>
            <br/><p>Regards,<br/>IDEA Hub Admin</p>`
         );
       } catch (err) {
@@ -295,8 +297,8 @@ export const createRoomRequest = async (req, res) => {
 
       // Email to Faculty
       try {
-        const baseUrl = `${req.protocol}://${req.get('host')}`;
-        const verifyLink = `${baseUrl.replace('5000', '8080')}/verify-faculty/${savedRequest._id}`; // Redirect to frontend port 8080
+        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
+        const verifyLink = `${frontendUrl}/verify-faculty/${savedRequest._id}`; // Redirect to frontend port 8080
         await sendEmail(
           facultyRecommendation.facultyEmail,
           `IDEA Hub Room Permission Recommendation Required - ${requestId}`,
@@ -318,15 +320,18 @@ export const createRoomRequest = async (req, res) => {
 
       // Notify Coordinator and Head
       try {
+        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
         const admins = await User.find({ role: { $in: ['coordinator', 'head'] } });
         for (const admin of admins) {
+          const dashboardPath = admin.role === 'head' ? '/head-dashboard' : '/coordinator/room-permissions';
           await sendEmail(
             admin.email,
             `New Room Permission Request - ${requestId}`,
             `<h2>Dear ${admin.name},</h2>
              <p>A new room permission request <b>${requestId}</b> for <b>${facilityRequired}</b> has been submitted by <b>${applicantDetails.applicantName}</b>.</p>
              <p>It is currently awaiting Faculty Verification.</p>
-             <p>Please log in to the dashboard to monitor the request.</p>`
+             <p>Review and process this request directly: <a href="${frontendUrl}${dashboardPath}">Go to Dashboard Review</a></p>
+             <br/><p>Regards,<br/>IDEA Hub System</p>`
           );
         }
       } catch (err) {
@@ -403,8 +408,8 @@ export const updateRoomRequest = async (req, res) => {
 
       // Email Faculty
       try {
-        const baseUrl = `${req.protocol}://${req.get('host')}`;
-        const verifyLink = `${baseUrl.replace('5000', '8080')}/verify-faculty/${request._id}`;
+        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
+        const verifyLink = `${frontendUrl}/verify-faculty/${request._id}`;
         await sendEmail(
           facultyRecommendation.facultyEmail,
           `IDEA Hub Room Permission Recommendation Required - ${request.requestId}`,
@@ -422,15 +427,18 @@ export const updateRoomRequest = async (req, res) => {
 
       // Notify Coordinator and Head
       try {
+        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
         const admins = await User.find({ role: { $in: ['coordinator', 'head'] } });
         for (const admin of admins) {
+          const dashboardPath = admin.role === 'head' ? '/head-dashboard' : '/coordinator/room-permissions';
           await sendEmail(
             admin.email,
             `Resubmitted Room Permission Request - ${request.requestId}`,
             `<h2>Dear ${admin.name},</h2>
              <p>The room permission request <b>${request.requestId}</b> has been resubmitted with updates by <b>${applicantDetails.applicantName}</b>.</p>
              <p>It is currently awaiting Faculty Verification.</p>
-             <p>Please log in to the dashboard to monitor the updated request.</p>`
+             <p>Review and process this request directly: <a href="${frontendUrl}${dashboardPath}">Go to Dashboard Review</a></p>
+             <br/><p>Regards,<br/>IDEA Hub System</p>`
           );
         }
       } catch (err) {
@@ -483,13 +491,16 @@ export const facultyVerifyRequest = async (req, res) => {
 
       // Email Student
       try {
+        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
         await sendEmail(
           request.applicantDetails.email,
           `Faculty Recommended Request - ${request.requestId}`,
           `<h2>Dear ${request.applicantDetails.applicantName},</h2>
            <p>Your room request <b>${request.requestId}</b> has been recommended by <b>Prof. ${request.facultyRecommendation.facultyName}</b>.</p>
            <p><b>Remarks:</b> ${remarks || 'None'}</p>
-           <p>The request is now pending with the Coordinator for review.</p>`
+           <p>The request is now pending with the Coordinator for review.</p>
+           <p>Track your request status here: <a href="${frontendUrl}/verify-room-permission/${request._id}">View Request Details</a></p>
+           <br/><p>Regards,<br/>IDEA Hub Admin</p>`
         );
       } catch (err) {
         console.error('Email error:', err);
@@ -504,12 +515,14 @@ export const facultyVerifyRequest = async (req, res) => {
           `Room Permission Request ${request.requestId} is verified by faculty and awaits your review.`
         );
         try {
+          const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
           await sendEmail(
             coord.email,
             `Action Required: Room Permission Request - ${request.requestId}`,
             `<h2>Dear ${coord.name},</h2>
              <p>The room permission request <b>${request.requestId}</b> has been verified by the Faculty and is now awaiting your review.</p>
-             <p>Please log in to the dashboard to process this request.</p>`
+             <p>Review and process this request directly: <a href="${frontendUrl}/coordinator/room-permissions">Go to Coordinator Dashboard</a></p>
+             <br/><p>Regards,<br/>IDEA Hub System</p>`
           );
         } catch (err) {
           console.error('Failed to send coordinator email:', err);
@@ -539,12 +552,15 @@ export const facultyVerifyRequest = async (req, res) => {
 
       // Email Student
       try {
+        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
         await sendEmail(
           request.applicantDetails.email,
           `Request Declined by Faculty - ${request.requestId}`,
           `<h2>Dear ${request.applicantDetails.applicantName},</h2>
            <p>Your room request <b>${request.requestId}</b> has been declined by <b>Prof. ${request.facultyRecommendation.facultyName}</b>.</p>
-           <p><b>Remarks/Reason:</b> ${remarks || 'None'}</p>`
+           <p><b>Remarks/Reason:</b> ${remarks || 'None'}</p>
+           <p>View request details and history here: <a href="${frontendUrl}/verify-room-permission/${request._id}">View Request Details</a></p>
+           <br/><p>Regards,<br/>IDEA Hub System</p>`
         );
       } catch (err) {
         console.error('Email error:', err);
@@ -599,12 +615,15 @@ export const coordinatorDecision = async (req, res) => {
 
       // Email Student
       try {
+        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
         await sendEmail(
           request.applicantDetails.email,
           `Coordinator Approved Room Request - ${request.requestId}`,
           `<h2>Dear ${request.applicantDetails.applicantName},</h2>
            <p>Your request <b>${request.requestId}</b> for <b>${request.facilityRequired}</b> has been approved by the Coordinator <b>${coordinatorName}</b>.</p>
-           <p>It has now been forwarded to the **IDEA Hub Head** for final approval.</p>`
+           <p>It has now been forwarded to the **IDEA Hub Head** for final approval.</p>
+           <p>Track progress of Head approval here: <a href="${frontendUrl}/verify-room-permission/${request._id}">View Request Details</a></p>
+           <br/><p>Regards,<br/>IDEA Hub Admin</p>`
         );
       } catch (err) {
         console.error('Email error:', err);
@@ -619,13 +638,15 @@ export const coordinatorDecision = async (req, res) => {
           `Room request ${request.requestId} is forwarded by Coordinator and awaits your approval.`
         );
         try {
+          const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
           await sendEmail(
             head.email,
             `Action Required: Room Permission Request - ${request.requestId}`,
             `<h2>Dear ${head.name},</h2>
              <p>The room permission request <b>${request.requestId}</b> has been approved and forwarded by the Coordinator.</p>
              <p>It is now awaiting your final approval.</p>
-             <p>Please log in to the dashboard to process this request.</p>`
+             <p>Review and decide on this request directly: <a href="${frontendUrl}/head/room-permissions">Go to Head Dashboard</a></p>
+             <br/><p>Regards,<br/>IDEA Hub System</p>`
           );
         } catch (err) {
           console.error('Failed to send head email:', err);
@@ -652,12 +673,15 @@ export const coordinatorDecision = async (req, res) => {
       );
 
       try {
+        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
         await sendEmail(
           request.applicantDetails.email,
           `Room Request Rejected - ${request.requestId}`,
           `<h2>Dear ${request.applicantDetails.applicantName},</h2>
            <p>Your request <b>${request.requestId}</b> for <b>${request.facilityRequired}</b> has been rejected by the Coordinator.</p>
-           <p><b>Remarks:</b> ${remarks || 'No remarks provided'}</p>`
+           <p><b>Remarks:</b> ${remarks || 'No remarks provided'}</p>
+           <p>Review the rejection history and coordinator notes: <a href="${frontendUrl}/verify-room-permission/${request._id}">View Request Details</a></p>
+           <br/><p>Regards,<br/>IDEA Hub Admin</p>`
         );
       } catch (err) {
         console.error('Email error:', err);
@@ -684,13 +708,16 @@ export const coordinatorDecision = async (req, res) => {
 
       // Email Student
       try {
+        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
         await sendEmail(
           request.applicantDetails.email,
           `Changes Requested for Room Request - ${request.requestId}`,
           `<h2>Dear ${request.applicantDetails.applicantName},</h2>
            <p>Your room request <b>${request.requestId}</b> for <b>${request.facilityRequired}</b> requires changes.</p>
            <p><b>Remarks:</b> ${remarks || 'Please check remarks in portal'}</p>
-           <p>The request status has been reset to **Draft**. You can edit the form and re-submit.</p>`
+           <p>The request status has been reset to **Draft**. You can edit the form and re-submit.</p>
+           <p>You can view changes requested or edit your request directly here: <a href="${frontendUrl}/verify-room-permission/${request._id}">View Request Details</a></p>
+           <br/><p>Regards,<br/>IDEA Hub System</p>`
         );
       } catch (err) {
         console.error('Email error:', err);
@@ -745,12 +772,15 @@ export const headDecision = async (req, res) => {
 
       // Email Student
       try {
+        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
         await sendEmail(
           request.applicantDetails.email,
           `Room Request Approved - ${request.requestId}`,
           `<h2>Dear ${request.applicantDetails.applicantName},</h2>
            <p>Congratulations! Your room permission request <b>${request.requestId}</b> has been **Approved** by the IDEA Hub Head <b>${headName}</b>.</p>
-           <p>You can now log in to the dashboard, view the status timeline, and download/print your official permission form PDF.</p>`
+           <p>You can now log in to the dashboard, view the status timeline, and download/print your official permission form PDF.</p>
+           <p>Download your official permission slip and view approved slot here: <a href="${frontendUrl}/verify-room-permission/${request._id}">View Approved Request</a></p>
+           <br/><p>Regards,<br/>IDEA Hub Team</p>`
         );
       } catch (err) {
         console.error('Email error:', err);
@@ -778,13 +808,16 @@ export const headDecision = async (req, res) => {
 
       // Email Student
       try {
+        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
         await sendEmail(
           request.applicantDetails.email,
           `Conditional Approval - ${request.requestId}`,
           `<h2>Dear ${request.applicantDetails.applicantName},</h2>
            <p>Your room request <b>${request.requestId}</b> has been **Conditionally Approved** by the IDEA Hub Head.</p>
            <p><b>Conditions to satisfy:</b> ${conditions || 'None'}</p>
-           <p><b>Remarks:</b> ${remarks || 'None'}</p>`
+           <p><b>Remarks:</b> ${remarks || 'None'}</p>
+           <p>Review conditional terms and download your permission slip here: <a href="${frontendUrl}/verify-room-permission/${request._id}">View Approved Request</a></p>
+           <br/><p>Regards,<br/>IDEA Hub Team</p>`
         );
       } catch (err) {
         console.error('Email error:', err);
@@ -811,12 +844,15 @@ export const headDecision = async (req, res) => {
 
       // Email Student
       try {
+        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
         await sendEmail(
           request.applicantDetails.email,
           `Request Rejected by Head - ${request.requestId}`,
           `<h2>Dear ${request.applicantDetails.applicantName},</h2>
            <p>Your request <b>${request.requestId}</b> for <b>${request.facilityRequired}</b> has been rejected by the IDEA Hub Head.</p>
-           <p><b>Reason:</b> ${remarks || 'None'}</p>`
+           <p><b>Reason:</b> ${remarks || 'None'}</p>
+           <p>Review final status and notes here: <a href="${frontendUrl}/verify-room-permission/${request._id}">View Request Details</a></p>
+           <br/><p>Regards,<br/>IDEA Hub Team</p>`
         );
       } catch (err) {
         console.error('Email error:', err);
@@ -872,13 +908,16 @@ export const headDecision = async (req, res) => {
 
       // Email Student
       try {
+        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
         await sendEmail(
           request.applicantDetails.email,
           `Changes Requested by IDEA Hub Head - ${request.requestId}`,
           `<h2>Dear ${request.applicantDetails.applicantName},</h2>
            <p>Your room request <b>${request.requestId}</b> for <b>${request.facilityRequired}</b> requires changes according to the Head.</p>
            <p><b>Remarks:</b> ${remarks || 'Please check remarks in portal'}</p>
-           <p>The request status has been reset to **Draft**. You can edit the form and re-submit.</p>`
+           <p>The request status has been reset to **Draft**. You can edit the form and re-submit.</p>
+           <p>View requested changes and edit your request here: <a href="${frontendUrl}/verify-room-permission/${request._id}">View Request Details</a></p>
+           <br/><p>Regards,<br/>IDEA Hub Team</p>`
         );
       } catch (err) {
         console.error('Email error:', err);
@@ -1232,7 +1271,7 @@ export const downloadRoomPermissionPdf = async (req, res) => {
       date: request.schedule.requestedDate,
       time: `${request.schedule.startTime} - ${request.schedule.endTime}`,
       status: request.status,
-      url: `${baseUrl.replace('5000', '8080')}/verify-room-permission/${request._id}` // Frontend verification page
+      url: `${process.env.FRONTEND_ORIGIN || baseUrl.replace('5000', '8080')}/verify-room-permission/${request._id}` // Frontend verification page
     });
 
     const data = {
@@ -1309,6 +1348,7 @@ export const sendManualReminder = async (req, res) => {
 
     // Send email reminder
     try {
+      const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
       await sendEmail(
         request.applicantDetails.email,
         `Booking Reminder: ${request.facilityRequired} - ${request.requestId}`,
@@ -1319,6 +1359,7 @@ export const sendManualReminder = async (req, res) => {
          <p><b>Project:</b> ${request.teamDetails.projectName}</p>
          <br/>
          <p>Please ensure you bring the official permission PDF and follow all IDEA Hub rules and guidelines during usage.</p>
+         <p>Review your booking details here: <a href="${frontendUrl}/verify-room-permission/${request._id}">View Booking Details</a></p>
          <br/><p>Regards,<br/>IDEA Hub Team</p>`
       );
     } catch (emailErr) {
