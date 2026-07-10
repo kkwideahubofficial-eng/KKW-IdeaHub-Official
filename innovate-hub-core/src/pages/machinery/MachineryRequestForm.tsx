@@ -112,6 +112,38 @@ const MachineryRequestForm = () => {
   const navigate = useNavigate();
 
   const [step, setStep] = useState(1);
+  const [availabilityCheck, setAvailabilityCheck] = useState<Record<string, { available: boolean; status: string; message: string; suggestions?: { startTime: string; endTime: string }[] }>>({});
+
+  const checkSlotAvailability = async (mId: string, date: string, start: string, end: string) => {
+    if (!mId || !date || !start || !end) return;
+    try {
+      const res = await api.get(`/machinery/check/availability`, {
+        params: {
+          machineId: mId,
+          date,
+          startTime: start,
+          endTime: end,
+          excludeRequestId: id && id !== "new" ? id : undefined
+        }
+      });
+      
+      setAvailabilityCheck(prev => ({
+        ...prev,
+        [mId]: {
+          available: res.data.available,
+          status: res.data.status,
+          message: res.data.message,
+          suggestions: res.data.suggestions
+        }
+      }));
+
+      if (!res.data.available) {
+        toast.error(`Slot warning: The selected time slot for "${machinesList.find(m => m._id === mId)?.name || 'the machine'}" is already booked.`);
+      }
+    } catch (err: any) {
+      console.error("Failed to check slot availability:", err);
+    }
+  };
   const [expandedStudents, setExpandedStudents] = useState<Record<number, boolean>>({ 0: true });
   const [machinesList, setMachinesList] = useState<Machine[]>([]);
   const [materialsList, setMaterialsList] = useState<Material[]>([]);
@@ -305,9 +337,10 @@ const MachineryRequestForm = () => {
       const targetMachineId = searchParams.get("machineId");
       if (targetMachineId) {
         setSelectedMachines([targetMachineId]);
+        const defaultDate = new Date().toISOString().split("T")[0];
         setMachineDetails({
           [targetMachineId]: {
-            usageDate: new Date().toISOString().split("T")[0],
+            usageDate: defaultDate,
             startTime: "10:00",
             endTime: "12:00",
             usageHours: 2,
@@ -315,6 +348,7 @@ const MachineryRequestForm = () => {
             specialRequirements: ""
           }
         });
+        checkSlotAvailability(targetMachineId, defaultDate, "10:00", "12:00");
       }
 
       // If editing existing request (non-'new')
@@ -341,14 +375,18 @@ const MachineryRequestForm = () => {
           const md: Record<string, any> = {};
           rData.requestedMachines.forEach((m: any) => {
             const mId = m.machineId?._id || m.machineId;
+            const usageDateStr = m.usageDate ? new Date(m.usageDate).toISOString().split("T")[0] : "";
             md[mId] = {
-              usageDate: m.usageDate ? new Date(m.usageDate).toISOString().split("T")[0] : "",
+              usageDate: usageDateStr,
               startTime: m.startTime || "",
               endTime: m.endTime || "",
               usageHours: m.usageHours || 0,
               purposeOfUsage: m.purposeOfUsage || "",
               specialRequirements: m.specialRequirements || ""
             };
+            if (usageDateStr && m.startTime && m.endTime) {
+              checkSlotAvailability(mId, usageDateStr, m.startTime, m.endTime);
+            }
           });
           setMachineDetails(md);
         }
@@ -446,18 +484,25 @@ const MachineryRequestForm = () => {
   };
 
   const handleMachineDetailsChange = (mId: string, field: string, value: any) => {
+    const details = {
+      ...(machineDetails[mId] || {}),
+      [field]: value
+    };
     const updated = {
       ...machineDetails,
-      [mId]: {
-        ...(machineDetails[mId] || {}),
-        [field]: value
-      }
+      [mId]: details
     };
     setMachineDetails(updated);
 
     if (field === 'startTime' || field === 'endTime') {
-      const details = updated[mId];
       calculateHours(mId, details.startTime, details.endTime);
+    }
+
+    // Trigger availability check when date, startTime, and endTime are all present
+    if (details.usageDate && details.startTime && details.endTime) {
+      if (field === 'usageDate' || field === 'startTime' || field === 'endTime') {
+        checkSlotAvailability(mId, details.usageDate, details.startTime, details.endTime);
+      }
     }
   };
 
@@ -480,6 +525,15 @@ const MachineryRequestForm = () => {
         return;
       }
       
+      // Machine slot availability checks
+      for (const mId of selectedMachines) {
+        const check = availabilityCheck[mId];
+        if (check && !check.available) {
+          toast.error(`Submission failed: The slot for "${machinesList.find(m => m._id === mId)?.name || 'the machine'}" is already booked.`);
+          return;
+        }
+      }
+
       // Stock checks
       for (const mId of selectedMaterials) {
         const matItem = materialsList.find(m => m._id === mId);
@@ -568,8 +622,27 @@ const MachineryRequestForm = () => {
   };
 
   const nextStep = () => {
-    // Step 1 validation
+    // Step 1: Machine Booking Validation
     if (step === 1) {
+      if (selectedMachines.length === 0) {
+        toast.error("Please select at least one machine.");
+        return;
+      }
+      for (const mId of selectedMachines) {
+        const details = machineDetails[mId];
+        if (!details || !details.usageDate || !details.startTime || !details.endTime || !details.purposeOfUsage) {
+          toast.error(`Please fill in booking parameters for "${machinesList.find(m => m._id === mId)?.name || 'the machine'}".`);
+          return;
+        }
+        const check = availabilityCheck[mId];
+        if (check && !check.available) {
+          toast.error(`The selected time slot for "${machinesList.find(m => m._id === mId)?.name || 'the machine'}" is already booked.`);
+          return;
+        }
+      }
+    }
+    // Step 2: Project & Team Validation
+    if (step === 2) {
       if (!projectName || !projectDescription || !projectObjectives || !expectedOutcome) {
         toast.error("Please fill in all project details.");
         return;
@@ -602,22 +675,9 @@ const MachineryRequestForm = () => {
         }
       }
     }
-    // Step 2 validation
-    if (step === 2) {
-      if (selectedMachines.length === 0) {
-        toast.error("Please select at least one machine.");
-        return;
-      }
-    }
-    // Step 3 validation
+    // Step 3: Faculty Guide & Document Validation
     if (step === 3) {
-      for (const mId of selectedMachines) {
-        const details = machineDetails[mId];
-        if (!details || !details.usageDate || !details.startTime || !details.endTime || !details.purposeOfUsage) {
-          toast.error("Please fill in booking parameters for all selected machines.");
-          return;
-        }
-      }
+      // Guide/Upload details are optional or have their own handles
     }
     setStep(step + 1);
   };
@@ -625,9 +685,9 @@ const MachineryRequestForm = () => {
   const prevStep = () => setStep(step - 1);
 
   const STEP_LABELS = [
+    "Booking & Slots",
     "Project & Team",
-    "Faculty & Resources",
-    "Booking & Files",
+    "Faculty & Files",
     "Review & Submit"
   ];
 
@@ -748,8 +808,161 @@ const MachineryRequestForm = () => {
       <Card className="shadow-lg border-border/80">
         <CardContent className="p-8">
           
-          {/* STEP 1: PROJECT & TEAM INFORMATION */}
+          {/* STEP 1: MACHINE BOOKING & SLOTS */}
           {step === 1 && (
+            <div className="space-y-8">
+              {/* Machine Selection Checklist */}
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-lg font-bold text-primary flex items-center gap-2"><Server className="w-5 h-5 text-primary" /> Machine Bookings</h2>
+                  <p className="text-[11px] text-muted-foreground font-semibold">Select machines you need to book</p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    {machinesList.map((mach) => (
+                      <div 
+                        key={mach._id} 
+                        className={`flex items-center space-x-2 border p-3 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors ${selectedMachines.includes(mach._id) ? 'border-primary/50 bg-primary/5' : 'border-border/60'}`}
+                        onClick={() => {
+                          if (selectedMachines.includes(mach._id)) {
+                            setSelectedMachines(prev => prev.filter(id => id !== mach._id));
+                          } else {
+                            setSelectedMachines(prev => [...prev, mach._id]);
+                            setMachineDetails(prev => ({
+                              ...prev,
+                              [mach._id]: {
+                                usageDate: new Date().toISOString().split("T")[0],
+                                startTime: "10:00",
+                                endTime: "12:00",
+                                usageHours: 2,
+                                purposeOfUsage: "",
+                                specialRequirements: ""
+                              }
+                            }));
+                          }
+                        }}
+                      >
+                        <Checkbox checked={selectedMachines.includes(mach._id)} />
+                        <Label className="cursor-pointer font-semibold text-xs leading-none">{mach.name}</Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Machine Details & Slots */}
+              {selectedMachines.length > 0 && (
+                <div className="space-y-6 pt-6 border-t border-slate-200">
+                  <h3 className="font-bold text-slate-800 border-b pb-1 text-xs">Machine Booking Parameters</h3>
+                  {selectedMachines.map((mId) => {
+                    const machine = machinesList.find(m => m._id === mId);
+                    const details = machineDetails[mId] || {};
+                    
+                    return (
+                      <div key={mId} className="p-4 border rounded-xl bg-slate-50/50 space-y-4">
+                        <h4 className="font-bold text-primary text-xs">{machine?.name} Details</h4>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                          <div>
+                            <Label className="text-2xs">Requested Date</Label>
+                            <Input 
+                              type="date" 
+                              value={details.usageDate} 
+                              min={new Date().toISOString().split("T")[0]}
+                              onChange={(e) => handleMachineDetailsChange(mId, 'usageDate', e.target.value)} 
+                              className="h-9 mt-1"
+                              required 
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-2xs">Start Time</Label>
+                            <TimeSelectGroup 
+                              value={details.startTime} 
+                              onChange={(val) => handleMachineDetailsChange(mId, 'startTime', val)} 
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-2xs">End Time</Label>
+                            <TimeSelectGroup 
+                              value={details.endTime} 
+                              onChange={(val) => handleMachineDetailsChange(mId, 'endTime', val)} 
+                            />
+                          </div>
+                          <div className="bg-slate-100 p-2 rounded flex flex-col justify-center text-center border">
+                            <span className="text-[10px] text-muted-foreground font-semibold uppercase leading-none">Duration</span>
+                            <span className="font-extrabold text-sm text-primary mt-1">{details.usageHours || 0} Hrs</span>
+                          </div>
+                        </div>
+
+                        {/* Inline Slot Availability Feedback */}
+                        {availabilityCheck[mId] && (
+                          <div className={`p-3.5 rounded-lg border text-2xs mt-3 ${availabilityCheck[mId].available ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+                            <p className="font-bold flex items-center gap-1">
+                              {availabilityCheck[mId].available ? (
+                                <Check className="w-3.5 h-3.5 text-green-600" />
+                              ) : (
+                                <ShieldAlert className="w-3.5 h-3.5 text-red-600" />
+                              )}
+                              {availabilityCheck[mId].status}
+                            </p>
+                            <p className="mt-0.5 text-slate-600">{availabilityCheck[mId].message}</p>
+                            {availabilityCheck[mId].suggestions && availabilityCheck[mId].suggestions.length > 0 && (
+                              <div className="mt-2">
+                                <p className="font-bold text-slate-700">Alternative Available Slots:</p>
+                                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                  {availabilityCheck[mId].suggestions.map((s: any, idx: number) => (
+                                    <button
+                                      key={idx}
+                                      type="button"
+                                      onClick={() => {
+                                        handleMachineDetailsChange(mId, 'startTime', s.startTime);
+                                        handleMachineDetailsChange(mId, 'endTime', s.endTime);
+                                      }}
+                                      className="px-2 py-1 bg-white border border-red-200 rounded text-[10px] text-red-700 font-bold hover:bg-red-100 hover:text-red-800 transition-colors cursor-pointer"
+                                    >
+                                      {s.startTime} - {s.endTime}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-2xs">Purpose of Usage</Label>
+                            <Textarea 
+                              value={details.purposeOfUsage} 
+                              onChange={(e) => handleMachineDetailsChange(mId, 'purposeOfUsage', e.target.value)} 
+                              placeholder="Fabricate chassis for rover..." 
+                              rows={2}
+                              className="mt-1"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-2xs">Special Requirements / Setups</Label>
+                            <Textarea 
+                              value={details.specialRequirements} 
+                              onChange={(e) => handleMachineDetailsChange(mId, 'specialRequirements', e.target.value)} 
+                              placeholder="Requires dual extruder setup..." 
+                              rows={2}
+                              className="mt-1"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* STEP 2: PROJECT & TEAM INFORMATION */}
+          {step === 2 && (
             <div className="space-y-8">
               {/* Project Details Group */}
               <div className="space-y-6">
@@ -1169,8 +1382,8 @@ const MachineryRequestForm = () => {
             </div>
           )}
 
-          {/* STEP 2: FACULTY & RESOURCES */}
-          {step === 2 && (
+          {/* STEP 3: FACULTY GUIDE & DOCUMENT UPLOADS */}
+          {step === 3 && (
             <div className="space-y-8">
               {/* Faculty Info */}
               <div className="space-y-6">
@@ -1218,134 +1431,8 @@ const MachineryRequestForm = () => {
                 </div>
               </div>
 
-              {/* Resource Selection */}
-              <div className="space-y-6 pt-6 border-t border-slate-200">
-                <div>
-                  <h2 className="text-lg font-bold text-primary flex items-center gap-2"><Server className="w-5 h-5 text-primary" /> Machine Bookings</h2>
-                  <p className="text-[11px] text-muted-foreground font-semibold">Select machine scheduling slots</p>
-                </div>
-
-                {/* Machines checklist */}
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                    {machinesList.map((mach) => (
-                      <div 
-                        key={mach._id} 
-                        className={`flex items-center space-x-2 border p-3 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors ${selectedMachines.includes(mach._id) ? 'border-primary/50 bg-primary/5' : 'border-border/60'}`}
-                        onClick={() => {
-                          if (selectedMachines.includes(mach._id)) {
-                            setSelectedMachines(prev => prev.filter(id => id !== mach._id));
-                          } else {
-                            setSelectedMachines(prev => [...prev, mach._id]);
-                            setMachineDetails(prev => ({
-                              ...prev,
-                              [mach._id]: {
-                                usageDate: new Date().toISOString().split("T")[0],
-                                startTime: "10:00",
-                                endTime: "12:00",
-                                usageHours: 2,
-                                purposeOfUsage: "",
-                                specialRequirements: ""
-                              }
-                            }));
-                          }
-                        }}
-                      >
-                        <Checkbox checked={selectedMachines.includes(mach._id)} />
-                        <Label className="cursor-pointer font-semibold text-xs leading-none">{mach.name}</Label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 3: BOOKING & FILES */}
-          {step === 3 && (
-            <div className="space-y-8">
-              <div>
-                <h2 className="text-lg font-bold text-primary flex items-center gap-2"><Calendar className="w-5 h-5 text-primary" /> Booking details & Document Uploads</h2>
-                <p className="text-[11px] text-muted-foreground font-semibold">Define exact booking times, material quantities, and upload project files</p>
-              </div>
-
-              {/* Machine Details Inputs */}
-              {selectedMachines.length > 0 && (
-                <div className="space-y-6">
-                  <h3 className="font-bold text-slate-800 border-b pb-1 text-xs">Machine Booking Parameters</h3>
-                  {selectedMachines.map((mId) => {
-                    const machine = machinesList.find(m => m._id === mId);
-                    const details = machineDetails[mId] || {};
-                    
-                    return (
-                      <div key={mId} className="p-4 border rounded-xl bg-slate-50/50 space-y-4">
-                        <h4 className="font-bold text-primary text-xs">{machine?.name} Details</h4>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                          <div>
-                            <Label className="text-2xs">Requested Date</Label>
-                            <Input 
-                              type="date" 
-                              value={details.usageDate} 
-                              min={new Date().toISOString().split("T")[0]}
-                              onChange={(e) => handleMachineDetailsChange(mId, 'usageDate', e.target.value)} 
-                              className="h-9 mt-1"
-                              required 
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-2xs">Start Time</Label>
-                            <TimeSelectGroup 
-                              value={details.startTime} 
-                              onChange={(val) => handleMachineDetailsChange(mId, 'startTime', val)} 
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-2xs">End Time</Label>
-                            <TimeSelectGroup 
-                              value={details.endTime} 
-                              onChange={(val) => handleMachineDetailsChange(mId, 'endTime', val)} 
-                            />
-                          </div>
-                          <div className="bg-slate-100 p-2 rounded flex flex-col justify-center text-center border">
-                            <span className="text-[10px] text-muted-foreground font-semibold uppercase leading-none">Duration</span>
-                            <span className="font-extrabold text-sm text-primary mt-1">{details.usageHours || 0} Hrs</span>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <Label className="text-2xs">Purpose of Usage</Label>
-                            <Textarea 
-                              value={details.purposeOfUsage} 
-                              onChange={(e) => handleMachineDetailsChange(mId, 'purposeOfUsage', e.target.value)} 
-                              placeholder="Fabricate chassis for rover..." 
-                              rows={2}
-                              className="mt-1"
-                              required
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-2xs">Special Requirements / Setups</Label>
-                            <Textarea 
-                              value={details.specialRequirements} 
-                              onChange={(e) => handleMachineDetailsChange(mId, 'specialRequirements', e.target.value)} 
-                              placeholder="Requires dual extruder setup..." 
-                              rows={2}
-                              className="mt-1"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-
-
               {/* File Uploads */}
-              <div className="space-y-4 pt-4 border-t border-slate-200">
+              <div className="space-y-4 pt-6 border-t border-slate-200">
                 <h3 className="font-bold text-slate-800 border-b pb-1 text-xs">Project Document Uploads</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {[
@@ -1413,7 +1500,7 @@ const MachineryRequestForm = () => {
                   <Card className="border border-border/80 shadow-2xs">
                     <CardHeader className="py-2.5 px-4 bg-slate-50 border-b flex flex-row justify-between items-center">
                       <h4 className="font-bold text-xs text-primary flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> Project Info</h4>
-                      <Button variant="ghost" size="sm" onClick={() => setStep(1)} className="h-6 text-[10px] font-bold text-primary hover:bg-primary/10">Edit</Button>
+                      <Button variant="ghost" size="sm" onClick={() => setStep(2)} className="h-6 text-[10px] font-bold text-primary hover:bg-primary/10">Edit</Button>
                     </CardHeader>
                     <CardContent className="p-4 space-y-1.5 text-2xs">
                       <p><strong>Name:</strong> {projectName}</p>
@@ -1429,7 +1516,7 @@ const MachineryRequestForm = () => {
                     <Card className="border border-border/80 shadow-2xs md:col-span-2">
                       <CardHeader className="py-2.5 px-4 bg-slate-50 border-b flex flex-row justify-between items-center">
                         <h4 className="font-bold text-xs text-primary flex items-center gap-1.5"><User className="w-3.5 h-3.5" /> External Applicant Profile</h4>
-                        <Button variant="ghost" size="sm" onClick={() => setStep(1)} className="h-6 text-[10px] font-bold text-primary hover:bg-primary/10">Edit</Button>
+                        <Button variant="ghost" size="sm" onClick={() => setStep(2)} className="h-6 text-[10px] font-bold text-primary hover:bg-primary/10">Edit</Button>
                       </CardHeader>
                       <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 text-2xs">
                         <div className="space-y-1">
@@ -1467,7 +1554,7 @@ const MachineryRequestForm = () => {
                       <Card className="border border-border/80 shadow-2xs">
                         <CardHeader className="py-2.5 px-4 bg-slate-50 border-b flex flex-row justify-between items-center">
                           <h4 className="font-bold text-xs text-primary flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> Team Details ({teamName || "N/A"})</h4>
-                          <Button variant="ghost" size="sm" onClick={() => setStep(1)} className="h-6 text-[10px] font-bold text-primary hover:bg-primary/10">Edit</Button>
+                          <Button variant="ghost" size="sm" onClick={() => setStep(2)} className="h-6 text-[10px] font-bold text-primary hover:bg-primary/10">Edit</Button>
                         </CardHeader>
                         <CardContent className="p-4 space-y-3 text-2xs max-h-[180px] overflow-y-auto">
                           {students.map((s, idx) => (
@@ -1483,7 +1570,7 @@ const MachineryRequestForm = () => {
                       <Card className="border border-border/80 shadow-2xs">
                         <CardHeader className="py-2.5 px-4 bg-slate-50 border-b flex flex-row justify-between items-center">
                           <h4 className="font-bold text-xs text-primary flex items-center gap-1.5"><Award className="w-3.5 h-3.5" /> Faculty Guide</h4>
-                          <Button variant="ghost" size="sm" onClick={() => setStep(2)} className="h-6 text-[10px] font-bold text-primary hover:bg-primary/10">Edit</Button>
+                          <Button variant="ghost" size="sm" onClick={() => setStep(3)} className="h-6 text-[10px] font-bold text-primary hover:bg-primary/10">Edit</Button>
                         </CardHeader>
                         <CardContent className="p-4 space-y-1.5 text-2xs">
                           <p><strong>Name:</strong> {facultyGuide.name || "N/A"}</p>
@@ -1500,7 +1587,7 @@ const MachineryRequestForm = () => {
                   <Card className="border border-border/80 shadow-2xs">
                     <CardHeader className="py-2.5 px-4 bg-slate-50 border-b flex flex-row justify-between items-center">
                       <h4 className="font-bold text-xs text-primary flex items-center gap-1.5"><Server className="w-3.5 h-3.5" /> Machine Bookings</h4>
-                      <Button variant="ghost" size="sm" onClick={() => setStep(3)} className="h-6 text-[10px] font-bold text-primary hover:bg-primary/10">Edit</Button>
+                      <Button variant="ghost" size="sm" onClick={() => setStep(1)} className="h-6 text-[10px] font-bold text-primary hover:bg-primary/10">Edit</Button>
                     </CardHeader>
                     <CardContent className="p-4 space-y-3 text-2xs max-h-[180px] overflow-y-auto">
                       {selectedMachines.length > 0 ? (
