@@ -1360,7 +1360,7 @@ export const sendManualReminder = async (req, res) => {
          <br/>
          <p>Please ensure you bring the official permission PDF and follow all IDEA Hub rules and guidelines during usage.</p>
          <p>Review your booking details here: <a href="${frontendUrl}/verify-room-permission/${request._id}">View Booking Details</a></p>
-         <br/><p>Regards,<br/>IDEA Hub Team</p>`
+         <br/><p>Regards,<br/>AICTE IDEA Lab Team</p>`
       );
     } catch (emailErr) {
       return res.status(500).json({ message: 'Failed to send reminder email', error: emailErr.message });

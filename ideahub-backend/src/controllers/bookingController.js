@@ -269,7 +269,7 @@ export async function decideBooking(req, res) {
                <p>Please present the QR code in your dashboard upon entry.</p>
                <p>View your approved slot and show your entry QR Code here: <a href="${frontendUrl}/my-bookings">View My Bookings</a></p>
                <br/>
-               <p>Regards,<br/>Idea Lab Team</p>`
+               <p>Regards,<br/>AICTE IDEA Lab Team</p>`
             );
             if (emailResult) {
                 console.log(`[Booking] Successfully sent to ${booking.team.email}. MessageID: ${emailResult.messageId}`);

@@ -65,6 +65,11 @@ const runTest = async () => {
         user: user,
         body: {
             machineryId: machinery._id,
+            projectName: 'Test Project',
+            projectCategory: 'Academic Project',
+            projectDescription: 'This is a test description.',
+            projectObjectives: 'This is a test objective.',
+            expectedOutcome: 'This is a test expected outcome.',
             teamMembers: [{ name: 'Test Member', branch: 'IT', year: 'BE' }],
             usageDate: new Date(),
             startTime: '10:00',
@@ -88,7 +93,7 @@ const runTest = async () => {
     console.log('Approving request...');
     const reqUpdate = {
         params: { id: requestId },
-        body: { status: 'approved' },
+        body: { status: 'Approved' },
         user: { _id: user._id } // Mocking admin user as same user for simplicity
     };
     const resUpdate = mockRes();

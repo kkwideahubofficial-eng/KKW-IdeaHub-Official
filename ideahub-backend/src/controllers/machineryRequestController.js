@@ -407,7 +407,7 @@ export const createRequest = async (req, res) => {
             `<h2>Dear ${admin.name},</h2>
              <p>A new machinery/material request <b>${requestId}</b> for project <b>${projectName}</b> has been submitted by <b>${isExternal ? (externalFullName || 'External User') : req.user.name}</b>.</p>
              <p>Process this request on your dashboard: <a href="${frontendUrl}${admin.role === 'head' ? '/head-dashboard' : '/coordinator-dashboard'}">Go to Dashboard</a></p>
-             <br/><p>Regards,<br/>IDEA Hub Team</p>`
+             <br/><p>Regards,<br/>AICTE IDEA Lab Team</p>`
           );
         } catch (err) {
           console.error('Failed to send admin email:', err);
@@ -514,7 +514,7 @@ export const updateRequest = async (req, res) => {
             `<h2>Dear ${admin.name},</h2>
              <p>The machinery/material request <b>${request.requestId}</b> has been resubmitted with updates by <b>${req.user.name}</b>.</p>
              <p>Review updated details on your dashboard: <a href="${frontendUrl}${admin.role === 'head' ? '/head-dashboard' : '/coordinator-dashboard'}">Go to Dashboard</a></p>
-             <br/><p>Regards,<br/>IDEA Hub Team</p>`
+             <br/><p>Regards,<br/>AICTE IDEA Lab Team</p>`
           );
         } catch (err) {
           console.error('Failed to send admin email:', err);
