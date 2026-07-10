@@ -43,13 +43,14 @@ export const getMachineryById = async (req, res) => {
 // Create machinery (Head or Coordinator)
 export const createMachinery = async (req, res) => {
   try {
-    const { name, description, imageUrl, capacity, timeSlots } = req.body;
+    const { name, description, imageUrl, capacity, studentCapacity, timeSlots } = req.body;
     
     const machinery = new Machinery({
       name,
       description,
       imageUrl,
       capacity,
+      studentCapacity: studentCapacity !== undefined ? studentCapacity : 1,
       timeSlots, // Expected array of { day, startTime, endTime }
       isAvailable: true, // Default active
       createdBy: req.user._id
@@ -65,13 +66,14 @@ export const createMachinery = async (req, res) => {
 // Update machinery (Head or Coordinator)
 export const updateMachinery = async (req, res) => {
   try {
-    const { name, description, imageUrl, capacity, isAvailable, timeSlots } = req.body;
+    const { name, description, imageUrl, capacity, studentCapacity, isAvailable, timeSlots } = req.body;
     
     const updateData = {
         name, 
         description, 
         imageUrl, 
         capacity, 
+        studentCapacity: studentCapacity !== undefined ? studentCapacity : 1,
         isAvailable, 
         timeSlots,
         lastUpdatedDate: new Date()
@@ -197,4 +199,30 @@ export const getMachineryRecords = async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: 'Error fetching records', error: error.message });
     }
+};
+
+// Update global settings for all machinery
+export const updateGlobalMachinerySettings = async (req, res) => {
+  try {
+    const { capacity, studentCapacity, timeSlots } = req.body;
+
+    const result = await Machinery.updateMany(
+      {},
+      { 
+        $set: { 
+          capacity: capacity !== undefined ? capacity : 1, 
+          studentCapacity: studentCapacity !== undefined ? studentCapacity : 1,
+          timeSlots: timeSlots || [] 
+        } 
+      }
+    );
+
+    res.status(200).json({ 
+      message: 'Global settings applied to all machinery successfully',
+      matchedCount: result.matchedCount,
+      modifiedCount: result.modifiedCount
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating global settings', error: error.message });
+  }
 };

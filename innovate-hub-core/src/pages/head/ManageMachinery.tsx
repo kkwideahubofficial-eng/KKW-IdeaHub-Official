@@ -23,9 +23,28 @@ interface Machinery {
   description: string;
   imageUrl?: string;
   capacity: number;
+  studentCapacity?: number;
   timeSlots: TimeSlot[];
   isAvailable: boolean;
 }
+
+const default247Slots = [
+  { day: "Monday", startTime: "00:00", endTime: "23:59" },
+  { day: "Tuesday", startTime: "00:00", endTime: "23:59" },
+  { day: "Wednesday", startTime: "00:00", endTime: "23:59" },
+  { day: "Thursday", startTime: "00:00", endTime: "23:59" },
+  { day: "Friday", startTime: "00:00", endTime: "23:59" },
+  { day: "Saturday", startTime: "00:00", endTime: "23:59" },
+  { day: "Sunday", startTime: "00:00", endTime: "23:59" }
+];
+
+const is24x7Slots = (slots: TimeSlot[]) => {
+  if (!slots || slots.length !== 7) return false;
+  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  return days.every(d => 
+    slots.some(s => s.day === d && s.startTime === "00:00" && (s.endTime === "23:59" || s.endTime === "24:00"))
+  );
+};
 
 const ManageMachinery = () => {
   const [machines, setMachines] = useState<Machinery[]>([]);
@@ -35,12 +54,20 @@ const ManageMachinery = () => {
   const [uploadType, setUploadType] = useState<"url" | "file">("file");
   const [uploading, setUploading] = useState(false);
 
+  const [globalOpen, setGlobalOpen] = useState(false);
+  const [globalFormData, setGlobalFormData] = useState({
+    capacity: 0,
+    studentCapacity: 1,
+    timeSlots: [...default247Slots]
+  });
+
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    capacity: 1,
+    capacity: 0,
+    studentCapacity: 1,
     imageUrl: "",
-    timeSlots: [{ day: "Monday", startTime: "10:00", endTime: "12:00" }] // Stored as 24h HH:mm
+    timeSlots: [...default247Slots] // Stored as 24h HH:mm
   });
 
   useEffect(() => {
@@ -114,8 +141,9 @@ const ManageMachinery = () => {
       name: machine.name,
       description: machine.description,
       capacity: machine.capacity,
+      studentCapacity: machine.studentCapacity || 1,
       imageUrl: machine.imageUrl || "",
-      timeSlots: machine.timeSlots.length > 0 ? machine.timeSlots : [{ day: "Monday", startTime: "09:00", endTime: "17:00" }]
+      timeSlots: machine.timeSlots.length > 0 ? machine.timeSlots : [...default247Slots]
     });
     setUploadType("url"); // Default to URL if exists, or user can switch
     setOpen(true);
@@ -126,9 +154,10 @@ const ManageMachinery = () => {
     setFormData({
       name: "",
       description: "",
-      capacity: 1,
+      capacity: 0,
+      studentCapacity: 1,
       imageUrl: "",
-      timeSlots: [{ day: "Monday", startTime: "10:00", endTime: "12:00" }]
+      timeSlots: [...default247Slots]
     });
     setUploadType("file");
   };
@@ -219,16 +248,149 @@ const ManageMachinery = () => {
 
   const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
+  const handleGlobalSlotChange = (index: number, field: keyof TimeSlot, value: string) => {
+    const newSlots = [...globalFormData.timeSlots];
+    newSlots[index] = { ...newSlots[index], [field]: value };
+    setGlobalFormData({ ...globalFormData, timeSlots: newSlots });
+  };
+
+  const addGlobalSlot = () => {
+    setGlobalFormData({
+      ...globalFormData,
+      timeSlots: [...globalFormData.timeSlots, { day: "Monday", startTime: "00:00", endTime: "23:59" }]
+    });
+  };
+
+  const removeGlobalSlot = (index: number) => {
+    const newSlots = globalFormData.timeSlots.filter((_, i) => i !== index);
+    setGlobalFormData({ ...globalFormData, timeSlots: newSlots });
+  };
+
+  const resetGlobalTo247 = () => {
+    setGlobalFormData({
+      ...globalFormData,
+      timeSlots: [...default247Slots]
+    });
+    toast.success("Global slots preset to 24/7 Available loaded.");
+  };
+
+  const handleGlobalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await api.put("/machinery/settings/global", globalFormData);
+      toast.success("Global machinery settings applied to all machinery!");
+      setGlobalOpen(false);
+      fetchMachines();
+    } catch {
+      toast.error("Failed to apply global machinery settings");
+    }
+  };
+
   if (loading) return <div>Loading...</div>;
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Manage Machinery</h1>
-        <Dialog open={open} onOpenChange={(val) => { if(!val) resetForm(); setOpen(val); }}>
-          <DialogTrigger asChild>
-            <Button><PlusCircle className="mr-2 h-4 w-4" /> Add Machine</Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-3">
+          <Dialog open={globalOpen} onOpenChange={setGlobalOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="border-primary text-primary hover:bg-primary/10">
+                Global Slot Configuration
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Global Machinery Slots & Capacity</DialogTitle>
+                <DialogDescription>
+                  Define slot capacity and time slots to be applied globally to all machinery in one go. By default, it is configured for 24/7 availability.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleGlobalSubmit} className="space-y-4">
+                <div className="flex justify-between items-center bg-secondary/15 p-3 rounded-lg border border-primary/20">
+                  <div>
+                    <h4 className="font-bold text-xs">Quick Setup: 24/7 Available</h4>
+                    <p className="text-[10px] text-muted-foreground">Reset slots to 24 hours daily, Monday to Sunday.</p>
+                  </div>
+                  <Button type="button" size="sm" variant="secondary" onClick={resetGlobalTo247}>
+                    Set 24/7 Preset
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="globalCapacity">Capacity (Quantity of Machines)</Label>
+                    <Input 
+                      id="globalCapacity" 
+                      type="number" 
+                      min="0" 
+                      placeholder="0"
+                      value={globalFormData.capacity === 0 ? "" : globalFormData.capacity} 
+                      onChange={(e) => setGlobalFormData({...globalFormData, capacity: isNaN(parseInt(e.target.value)) ? 0 : parseInt(e.target.value)})} 
+                      required 
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="globalStudentCapacity">Student Capacity (per machine slot)</Label>
+                    <Input 
+                      id="globalStudentCapacity" 
+                      type="number" 
+                      min="0" 
+                      placeholder="0"
+                      value={globalFormData.studentCapacity === 0 ? "" : globalFormData.studentCapacity} 
+                      onChange={(e) => setGlobalFormData({...globalFormData, studentCapacity: isNaN(parseInt(e.target.value)) ? 0 : parseInt(e.target.value)})} 
+                      required 
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Time Slots (Weekly)</Label>
+                  <div className="space-y-2 mt-2">
+                    {globalFormData.timeSlots.map((slot, index) => (
+                      <div key={index} className="flex flex-wrap gap-2 items-center p-2 bg-muted/20 rounded-md border">
+                        <select 
+                          className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-ring"
+                          value={slot.day}
+                          onChange={(e) => handleGlobalSlotChange(index, 'day', e.target.value)}
+                        >
+                          {daysOfWeek.map(d => (
+                            <option key={d} value={d}>{d}</option>
+                          ))}
+                        </select>
+                        
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">From:</span>
+                          <TimePicker value={slot.startTime} onChange={(v) => handleGlobalSlotChange(index, 'startTime', v)} />
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                           <span className="text-sm font-medium">To:</span>
+                           <TimePicker value={slot.endTime} onChange={(v) => handleGlobalSlotChange(index, 'endTime', v)} />
+                        </div>
+
+                        <Button type="button" variant="ghost" size="icon" className="text-red-500 hover:text-red-700 ml-auto" onClick={() => removeGlobalSlot(index)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button type="button" variant="outline" size="sm" onClick={addGlobalSlot} className="mt-2 text-primary border-primary hover:bg-primary/10">
+                      <PlusCircle className="h-4 w-4 mr-2" /> Add Time Slot
+                    </Button>
+                  </div>
+                </div>
+
+                <Button type="submit" className="w-full bg-primary hover:bg-primary/90 mt-4">
+                  Apply to All Machinery
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={open} onOpenChange={(val) => { if(!val) resetForm(); setOpen(val); }}>
+            <DialogTrigger asChild>
+              <Button><PlusCircle className="mr-2 h-4 w-4" /> Add Machine</Button>
+            </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingId ? "Edit Machine" : "Add New Machine"}</DialogTitle>
@@ -249,9 +411,31 @@ const ManageMachinery = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="capacity">Capacity (Students)</Label>
-                  <Input id="capacity" type="number" min="1" value={formData.capacity} onChange={(e) => setFormData({...formData, capacity: parseInt(e.target.value)})} required />
+                  <Label htmlFor="capacity">Capacity (Quantity of Machines)</Label>
+                  <Input 
+                    id="capacity" 
+                    type="number" 
+                    min="0" 
+                    placeholder="0"
+                    value={formData.capacity === 0 ? "" : formData.capacity} 
+                    onChange={(e) => setFormData({...formData, capacity: isNaN(parseInt(e.target.value)) ? 0 : parseInt(e.target.value)})} 
+                    required 
+                  />
                 </div>
+                
+                <div>
+                  <Label htmlFor="studentCapacity">Student Capacity (per machine slot)</Label>
+                  <Input 
+                    id="studentCapacity" 
+                    type="number" 
+                    min="0" 
+                    placeholder="0"
+                    value={formData.studentCapacity === 0 ? "" : formData.studentCapacity} 
+                    onChange={(e) => setFormData({...formData, studentCapacity: isNaN(parseInt(e.target.value)) ? 0 : parseInt(e.target.value)})} 
+                    required 
+                  />
+                </div>
+              </div>
                 
                 {/* Image Upload / URL Selection */}
                 <div className="space-y-2">
@@ -298,10 +482,14 @@ const ManageMachinery = () => {
                       </div>
                   )}
                 </div>
-              </div>
 
               <div>
-                <Label>Available Time Slots (Weekly)</Label>
+                <div className="flex justify-between items-center mb-1">
+                  <Label>Available Time Slots (Weekly)</Label>
+                  <Button type="button" size="sm" variant="secondary" onClick={() => setFormData({ ...formData, timeSlots: [...default247Slots] })} className="text-3xs h-6 px-2 py-0">
+                    Set 24/7 Preset
+                  </Button>
+                </div>
                 <div className="space-y-2 mt-2">
                   {formData.timeSlots.map((slot, index) => (
                     <div key={index} className="flex flex-wrap gap-2 items-center p-2 bg-muted/20 rounded-md border">
@@ -370,6 +558,7 @@ const ManageMachinery = () => {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -392,15 +581,25 @@ const ManageMachinery = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col">
-              <div className="text-sm text-muted-foreground mb-4 space-y-1">
-                <p><strong>Capacity:</strong> {machine.capacity} students</p>
-                <div className="flex flex-wrap gap-1">
-                   {machine.timeSlots.map((s, i) => (
-                      <span key={i} className="text-xs bg-secondary px-2 py-0.5 rounded-full">
-                        {s.day.slice(0,3)} ({getNextAvailableDate(s.day)})
-                      </span>
-                   ))}
+              <div className="text-sm text-muted-foreground mb-4 space-y-2">
+                <div className="grid grid-cols-2 gap-1 text-xs text-foreground mb-1">
+                  <p><b>Capacity:</b> {machine.capacity || 0} Units</p>
+                  <p><b>Student Limit:</b> {machine.studentCapacity || 1} / slot</p>
                 </div>
+                <p className="font-semibold text-foreground">Standard Hours:</p>
+                {is24x7Slots(machine.timeSlots) ? (
+                  <span className="inline-block text-[11px] bg-green-50 border border-green-200 text-green-700 font-bold px-2 py-0.5 rounded-md">
+                    24/7 Available
+                  </span>
+                ) : (
+                  <div className="flex flex-wrap gap-1">
+                     {machine.timeSlots.map((s, i) => (
+                        <span key={i} className="text-xs bg-secondary px-2 py-0.5 rounded-full">
+                          {s.day.slice(0,3)} ({getNextAvailableDate(s.day)})
+                        </span>
+                     ))}
+                  </div>
+                )}
               </div>
 
               {/* Status Controls */}

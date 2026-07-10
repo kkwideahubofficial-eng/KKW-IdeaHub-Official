@@ -84,6 +84,7 @@ const machineryRequestSchema = new Schema(
     requestedMachines: [{
       machineId: { type: Schema.Types.ObjectId, ref: 'Machinery' },
       machineName: { type: String },
+      machineUnitNumber: { type: Number },
       usageDate: { type: Date },
       startTime: { type: String }, // '10:00'
       endTime: { type: String },   // '14:00'

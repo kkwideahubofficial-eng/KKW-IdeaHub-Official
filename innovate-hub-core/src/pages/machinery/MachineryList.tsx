@@ -33,9 +33,18 @@ interface Machine {
   description: string;
   imageUrl?: string;
   capacity: number;
+  studentCapacity?: number;
   timeSlots: { day: string; startTime: string; endTime: string }[];
   isAvailable: boolean;
 }
+
+const is24x7Slots = (slots: { day: string; startTime: string; endTime: string }[]) => {
+  if (!slots || slots.length !== 7) return false;
+  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  return days.every(d => 
+    slots.some(s => s.day === d && s.startTime === "00:00" && (s.endTime === "23:59" || s.endTime === "24:00"))
+  );
+};
 
 interface Material {
   _id: string;
@@ -831,17 +840,24 @@ const MachineryList = () => {
                 </CardHeader>
                 
                 <CardContent className="pt-2 flex-grow flex flex-col gap-4 text-xs">
-                  <div className="bg-secondary/10 p-3 rounded border space-y-1">
-                    <p><strong>Limit Capacity:</strong> {machine.capacity} Students per slot</p>
-                    <div className="pt-1.5 mt-1 border-t border-border/40">
-                      <p className="font-semibold text-foreground mb-1">Weekly Standard Hours:</p>
+                  <div className="bg-secondary/10 p-3 rounded border space-y-2">
+                    <div className="grid grid-cols-2 gap-1 text-xs text-foreground mb-1">
+                      <p><b>Capacity:</b> {machine.capacity || 0} Units</p>
+                      <p><b>Student Limit:</b> {machine.studentCapacity || 1} / slot</p>
+                    </div>
+                    <p className="font-semibold text-foreground mb-0.5">Weekly Standard Hours:</p>
+                    {is24x7Slots(machine.timeSlots) ? (
+                      <span className="inline-block text-[11px] bg-green-50 border border-green-200 text-green-700 font-bold px-2 py-0.5 rounded-md">
+                        24/7 Available
+                      </span>
+                    ) : (
                       <ul className="text-muted-foreground space-y-0.5 list-disc pl-3 text-3xs font-medium">
                         {machine.timeSlots.slice(0, 3).map((slot, i) => (
                           <li key={i}>{slot.day}: {formatTime12Hour(slot.startTime)} - {formatTime12Hour(slot.endTime)}</li>
                         ))}
                         {machine.timeSlots.length > 3 && <li>+{machine.timeSlots.length - 3} more days</li>}
                       </ul>
-                    </div>
+                    )}
                   </div>
 
                   <Link to={`/machinery/request/new?machineId=${machine._id}&type=${currentUser?.userType === "EXTERNAL" ? "External" : "Internal"}`} className="mt-auto block">

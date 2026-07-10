@@ -21,6 +21,10 @@ const machinerySchema = new Schema(
       type: Number,
       default: 1,
     },
+    studentCapacity: {
+      type: Number,
+      default: 1,
+    },
     timeSlots: [{
       day: { type: String, required: true }, // e.g., 'Monday', 'Tuesday'
       startTime: { type: String, required: true }, // e.g., '10:00'

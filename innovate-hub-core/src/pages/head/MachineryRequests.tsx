@@ -28,7 +28,7 @@ interface Request {
   status: string;
   createdAt: string;
   students: { name: string; prn: string; branch: string; year: string; email: string; mobile: string }[];
-  requestedMachines: { machineId: any; machineName: string; usageDate: string; startTime: string; endTime: string; usageHours: number; purposeOfUsage: string; specialRequirements: string }[];
+  requestedMachines: { machineId: any; machineName: string; machineUnitNumber?: number; usageDate: string; startTime: string; endTime: string; usageHours: number; purposeOfUsage: string; specialRequirements: string }[];
   requestedMaterials: { materialId: any; materialName: string; quantityRequired: number }[];
   uploadedFiles?: { designFileUrl?: string; cadFileUrl?: string; circuitDiagramUrl?: string; supportingDocsUrl?: string };
   benefits?: { researchContribution?: string; innovationContribution?: string; patentPossibility?: string; startupPotential?: string };
@@ -585,7 +585,7 @@ const MachineryRequests = () => {
                         <div key={i} className="border-b pb-2 last:border-0 last:pb-0">
                           <p className="font-bold text-slate-800">• {m.machineName}</p>
                           <p className="text-3xs text-muted-foreground mt-0.5">
-                            <b>Date:</b> {m.usageDate ? new Date(m.usageDate).toLocaleDateString() : 'N/A'} | <b>Slot:</b> {m.startTime} - {m.endTime} ({m.usageHours} hrs)
+                            <b>Unit:</b> #{m.machineUnitNumber || 1} | <b>Date:</b> {m.usageDate ? new Date(m.usageDate).toLocaleDateString() : 'N/A'} | <b>Slot:</b> {m.startTime} - {m.endTime} ({m.usageHours} hrs)
                           </p>
                         </div>
                       ))

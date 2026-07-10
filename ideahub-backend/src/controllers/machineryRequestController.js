@@ -65,7 +65,7 @@ async function sendPushNotification(userId, title, body) {
 // Check Availability & Suggest nearest slots for a machine
 export const checkMachineAvailability = async (req, res) => {
   try {
-    const { machineId, date, startTime, endTime, excludeRequestId } = req.query;
+    const { machineId, date, startTime, endTime, excludeRequestId, machineUnitNumber } = req.query;
 
     if (!machineId || !date || !startTime || !endTime) {
       return res.status(400).json({ message: 'machineId, date, startTime, and endTime are required' });
@@ -95,6 +95,8 @@ export const checkMachineAvailability = async (req, res) => {
 
     const requests = await MachineryRequest.find(query);
 
+    // Identify which specific unit numbers are booked
+    const bookedUnits = new Set();
     let overlapsCount = 0;
     for (const reqObj of requests) {
       for (const mach of reqObj.requestedMachines) {
@@ -103,15 +105,27 @@ export const checkMachineAvailability = async (req, res) => {
           if (machDate.toDateString() === startOfDay.toDateString()) {
             if (timesOverlap(startTime, endTime, mach.startTime, mach.endTime)) {
               overlapsCount++;
+              if (mach.machineUnitNumber) {
+                bookedUnits.add(Number(mach.machineUnitNumber));
+              }
             }
           }
         }
       }
     }
 
-    const remainingCapacity = machine.capacity - overlapsCount;
+    const capacity = machine.capacity || 1;
+    const availableUnits = [];
+    for (let i = 1; i <= capacity; i++) {
+      if (!bookedUnits.has(i)) {
+        availableUnits.push(i);
+      }
+    }
 
-    if (remainingCapacity <= 0) {
+    const requestedUnit = Number(machineUnitNumber) || 1;
+    const isRequestedUnitAvailable = !bookedUnits.has(requestedUnit) && requestedUnit <= capacity;
+
+    if (!isRequestedUnitAvailable) {
       // Find alternative slots on that date (9 AM to 6 PM)
       const suggestions = [];
       const dayStart = 540; // 09:00 AM
@@ -121,21 +135,24 @@ export const checkMachineAvailability = async (req, res) => {
         const potentialStart = minutesToTimeStr(t);
         const potentialEnd = minutesToTimeStr(t + durationMins);
 
-        let conflicts = 0;
+        let unitIsBookedInAlternativeSlot = false;
         for (const reqObj of requests) {
           for (const mach of reqObj.requestedMachines) {
             if (mach.machineId.toString() === machineId.toString()) {
               const machDate = new Date(mach.usageDate);
               if (machDate.toDateString() === startOfDay.toDateString()) {
-                if (timesOverlap(potentialStart, potentialEnd, mach.startTime, mach.endTime)) {
-                  conflicts++;
+                const bmUnit = Number(mach.machineUnitNumber) || 1;
+                if (bmUnit === requestedUnit) {
+                  if (timesOverlap(potentialStart, potentialEnd, mach.startTime, mach.endTime)) {
+                    unitIsBookedInAlternativeSlot = true;
+                  }
                 }
               }
             }
           }
         }
 
-        if (machine.capacity - conflicts > 0) {
+        if (!unitIsBookedInAlternativeSlot) {
           suggestions.push({ startTime: potentialStart, endTime: potentialEnd });
         }
         if (suggestions.length >= 3) break;
@@ -144,7 +161,9 @@ export const checkMachineAvailability = async (req, res) => {
       return res.status(200).json({
         available: false,
         status: 'Unavailable',
-        message: 'No available capacity for this slot. All units are booked.',
+        message: `Unit #${requestedUnit} is already booked for this slot.`,
+        availableUnits,
+        bookedUnits: Array.from(bookedUnits),
         suggestions
       });
     }
@@ -152,8 +171,9 @@ export const checkMachineAvailability = async (req, res) => {
     return res.status(200).json({
       available: true,
       status: 'Available',
-      message: `${remainingCapacity} out of ${machine.capacity} units available.`,
-      remainingCapacity
+      message: `Unit #${requestedUnit} is available for booking.`,
+      availableUnits,
+      bookedUnits: Array.from(bookedUnits)
     });
   } catch (error) {
     res.status(500).json({ message: 'Error checking machine availability', error: error.message });
@@ -243,22 +263,28 @@ export const createRequest = async (req, res) => {
               'requestedMachines.usageDate': { $gte: startD, $lte: endD }
             });
 
-            let overlaps = 0;
+            const targetUnit = Number(mach.machineUnitNumber) || 1;
+            let isUnitBooked = false;
             for (const b of bookings) {
               for (const bm of b.requestedMachines) {
                 if (bm.machineId.toString() === mach.machineId.toString()) {
                   if (new Date(bm.usageDate).toDateString() === usageDate.toDateString()) {
-                    if (timesOverlap(mach.startTime, mach.endTime, bm.startTime, bm.endTime)) {
-                      overlaps++;
+                    const bmUnit = Number(bm.machineUnitNumber) || 1;
+                    if (bmUnit === targetUnit) {
+                      if (timesOverlap(mach.startTime, mach.endTime, bm.startTime, bm.endTime)) {
+                        isUnitBooked = true;
+                        break;
+                      }
                     }
                   }
                 }
               }
+              if (isUnitBooked) break;
             }
 
-            if (overlaps >= machine.capacity) {
+            if (isUnitBooked) {
               return res.status(400).json({
-                message: `Double Booking Alert: The machine "${machine.name}" is already fully booked from ${mach.startTime} to ${mach.endTime} on ${new Date(mach.usageDate).toLocaleDateString()}.`
+                message: `Double Booking Alert: Unit #${targetUnit} of machine "${machine.name}" is already booked from ${mach.startTime} to ${mach.endTime} on ${new Date(mach.usageDate).toLocaleDateString()}.`
               });
             }
           }
@@ -466,6 +492,50 @@ export const updateRequest = async (req, res) => {
             if (mat.quantityRequired > remaining) {
               return res.status(400).json({
                 message: `Auto Capacity Validation failed: Only ${remaining} ${material.unit} of "${material.name}" available. Requested: ${mat.quantityRequired}.`
+              });
+            }
+          }
+        }
+      }
+
+      // Check machine slot availability for specific unit
+      for (const mach of (requestedMachines || [])) {
+        if (mach.machineId && mach.usageDate && mach.startTime && mach.endTime) {
+          const machine = await Machinery.findById(mach.machineId);
+          if (machine) {
+            const usageDate = new Date(mach.usageDate);
+            const startD = new Date(usageDate.setHours(0,0,0,0));
+            const endD = new Date(usageDate.setHours(23,59,59,999));
+
+            const bookings = await MachineryRequest.find({
+              _id: { $ne: id },
+              'requestedMachines.machineId': mach.machineId,
+              status: { $in: ['Approved', 'Approved With Conditions', 'Material Allocated', 'Machine Scheduled', 'Active Booking'] },
+              'requestedMachines.usageDate': { $gte: startD, $lte: endD }
+            });
+
+            const targetUnit = Number(mach.machineUnitNumber) || 1;
+            let isUnitBooked = false;
+            for (const b of bookings) {
+              for (const bm of b.requestedMachines) {
+                if (bm.machineId.toString() === mach.machineId.toString()) {
+                  if (new Date(bm.usageDate).toDateString() === usageDate.toDateString()) {
+                    const bmUnit = Number(bm.machineUnitNumber) || 1;
+                    if (bmUnit === targetUnit) {
+                      if (timesOverlap(mach.startTime, mach.endTime, bm.startTime, bm.endTime)) {
+                        isUnitBooked = true;
+                        break;
+                      }
+                    }
+                  }
+                }
+              }
+              if (isUnitBooked) break;
+            }
+
+            if (isUnitBooked) {
+              return res.status(400).json({
+                message: `Double Booking Alert: Unit #${targetUnit} of machine "${machine.name}" is already booked from ${mach.startTime} to ${mach.endTime} on ${new Date(mach.usageDate).toLocaleDateString()}.`
               });
             }
           }

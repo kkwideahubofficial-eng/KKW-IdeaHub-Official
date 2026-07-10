@@ -114,7 +114,7 @@ const MachineryRequestForm = () => {
   const [step, setStep] = useState(1);
   const [availabilityCheck, setAvailabilityCheck] = useState<Record<string, { available: boolean; status: string; message: string; suggestions?: { startTime: string; endTime: string }[] }>>({});
 
-  const checkSlotAvailability = async (mId: string, date: string, start: string, end: string) => {
+  const checkSlotAvailability = async (mId: string, date: string, start: string, end: string, unitNum?: number) => {
     if (!mId || !date || !start || !end) return;
     try {
       const res = await api.get(`/machinery/check/availability`, {
@@ -123,6 +123,7 @@ const MachineryRequestForm = () => {
           date,
           startTime: start,
           endTime: end,
+          machineUnitNumber: unitNum || machineDetails[mId]?.machineUnitNumber || 1,
           excludeRequestId: id && id !== "new" ? id : undefined
         }
       });
@@ -378,6 +379,7 @@ const MachineryRequestForm = () => {
             const usageDateStr = m.usageDate ? new Date(m.usageDate).toISOString().split("T")[0] : "";
             md[mId] = {
               usageDate: usageDateStr,
+              machineUnitNumber: m.machineUnitNumber || 1,
               startTime: m.startTime || "",
               endTime: m.endTime || "",
               usageHours: m.usageHours || 0,
@@ -385,7 +387,7 @@ const MachineryRequestForm = () => {
               specialRequirements: m.specialRequirements || ""
             };
             if (usageDateStr && m.startTime && m.endTime) {
-              checkSlotAvailability(mId, usageDateStr, m.startTime, m.endTime);
+              checkSlotAvailability(mId, usageDateStr, m.startTime, m.endTime, m.machineUnitNumber || 1);
             }
           });
           setMachineDetails(md);
@@ -500,8 +502,8 @@ const MachineryRequestForm = () => {
 
     // Trigger availability check when date, startTime, and endTime are all present
     if (details.usageDate && details.startTime && details.endTime) {
-      if (field === 'usageDate' || field === 'startTime' || field === 'endTime') {
-        checkSlotAvailability(mId, details.usageDate, details.startTime, details.endTime);
+      if (field === 'usageDate' || field === 'startTime' || field === 'endTime' || field === 'machineUnitNumber') {
+        checkSlotAvailability(mId, details.usageDate, details.startTime, details.endTime, details.machineUnitNumber || 1);
       }
     }
   };
@@ -564,6 +566,7 @@ const MachineryRequestForm = () => {
       requestedMachines: selectedMachines.map(mId => ({
         machineId: mId,
         machineName: machinesList.find(m => m._id === mId)?.name || "",
+        machineUnitNumber: Number(machineDetails[mId]?.machineUnitNumber) || 1,
         usageDate: machineDetails[mId]?.usageDate || "",
         startTime: machineDetails[mId]?.startTime || "",
         endTime: machineDetails[mId]?.endTime || "",
@@ -829,17 +832,18 @@ const MachineryRequestForm = () => {
                             setSelectedMachines(prev => prev.filter(id => id !== mach._id));
                           } else {
                             setSelectedMachines(prev => [...prev, mach._id]);
-                            setMachineDetails(prev => ({
-                              ...prev,
-                              [mach._id]: {
-                                usageDate: new Date().toISOString().split("T")[0],
-                                startTime: "10:00",
-                                endTime: "12:00",
-                                usageHours: 2,
-                                purposeOfUsage: "",
-                                specialRequirements: ""
-                              }
-                            }));
+                             setMachineDetails(prev => ({
+                               ...prev,
+                               [mach._id]: {
+                                 usageDate: new Date().toISOString().split("T")[0],
+                                 machineUnitNumber: 1,
+                                 startTime: "10:00",
+                                 endTime: "12:00",
+                                 usageHours: 2,
+                                 purposeOfUsage: "",
+                                 specialRequirements: ""
+                               }
+                             }));
                           }
                         }}
                       >
@@ -863,37 +867,49 @@ const MachineryRequestForm = () => {
                       <div key={mId} className="p-4 border rounded-xl bg-slate-50/50 space-y-4">
                         <h4 className="font-bold text-primary text-xs">{machine?.name} Details</h4>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                          <div>
-                            <Label className="text-2xs">Requested Date</Label>
-                            <Input 
-                              type="date" 
-                              value={details.usageDate} 
-                              min={new Date().toISOString().split("T")[0]}
-                              onChange={(e) => handleMachineDetailsChange(mId, 'usageDate', e.target.value)} 
-                              className="h-9 mt-1"
-                              required 
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-2xs">Start Time</Label>
-                            <TimeSelectGroup 
-                              value={details.startTime} 
-                              onChange={(val) => handleMachineDetailsChange(mId, 'startTime', val)} 
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-2xs">End Time</Label>
-                            <TimeSelectGroup 
-                              value={details.endTime} 
-                              onChange={(val) => handleMachineDetailsChange(mId, 'endTime', val)} 
-                            />
-                          </div>
-                          <div className="bg-slate-100 p-2 rounded flex flex-col justify-center text-center border">
-                            <span className="text-[10px] text-muted-foreground font-semibold uppercase leading-none">Duration</span>
-                            <span className="font-extrabold text-sm text-primary mt-1">{details.usageHours || 0} Hrs</span>
-                          </div>
-                        </div>
+                         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                           <div>
+                             <Label className="text-2xs">Requested Date</Label>
+                             <Input 
+                               type="date" 
+                               value={details.usageDate} 
+                               min={new Date().toISOString().split("T")[0]}
+                               onChange={(e) => handleMachineDetailsChange(mId, 'usageDate', e.target.value)} 
+                               className="h-9 mt-1"
+                               required 
+                             />
+                           </div>
+                           <div>
+                             <Label className="text-2xs">Select Unit Number</Label>
+                             <select
+                               value={details.machineUnitNumber || 1}
+                               onChange={(e) => handleMachineDetailsChange(mId, 'machineUnitNumber', parseInt(e.target.value))}
+                               className="h-9 w-full mt-1 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+                             >
+                               {Array.from({ length: machine?.capacity || 1 }, (_, i) => i + 1).map(num => (
+                                 <option key={num} value={num}>Unit #{num}</option>
+                               ))}
+                             </select>
+                           </div>
+                           <div>
+                             <Label className="text-2xs">Start Time</Label>
+                             <TimeSelectGroup 
+                               value={details.startTime} 
+                               onChange={(val) => handleMachineDetailsChange(mId, 'startTime', val)} 
+                             />
+                           </div>
+                           <div>
+                             <Label className="text-2xs">End Time</Label>
+                             <TimeSelectGroup 
+                               value={details.endTime} 
+                               onChange={(val) => handleMachineDetailsChange(mId, 'endTime', val)} 
+                             />
+                           </div>
+                           <div className="bg-slate-100 p-2 rounded flex flex-col justify-center text-center border h-[52px] mt-1">
+                             <span className="text-[10px] text-muted-foreground font-semibold uppercase leading-none">Duration</span>
+                             <span className="font-extrabold text-sm text-primary mt-1">{details.usageHours || 0} Hrs</span>
+                           </div>
+                         </div>
 
                         {/* Inline Slot Availability Feedback */}
                         {availabilityCheck[mId] && (

@@ -142,6 +142,7 @@ const Navigation = () => {
         { name: "Manage Orders", path: "/manage-orders" },
         { name: "Manage Hero", path: "/manage-hero" },
         { name: "Manage Rooms", path: "/manage-rooms" },
+        { name: "Manage Machinery", path: "/manage-machinery" },
         { name: "Records", path: "/records" },
         { name: "Profile", path: "/profile" }
       );

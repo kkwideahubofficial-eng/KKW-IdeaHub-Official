@@ -35,6 +35,7 @@ interface MachineryRequest {
   requestedMachines?: {
     machineId: any;
     machineName: string;
+    machineUnitNumber?: number;
     usageDate: string;
     startTime: string;
     endTime: string;
@@ -253,10 +254,14 @@ const MyBookings = () => {
                                     <p className="text-sm text-muted-foreground">Machinery Request</p>
                                 </div>
 
-                                <div className="bg-muted/30 rounded-lg p-4 grid grid-cols-2 gap-4 mb-6">
+                                <div className="bg-muted/30 rounded-lg p-4 grid grid-cols-3 gap-2 mb-6">
                                     <div>
                                         <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Date</p>
                                         <p className="text-sm font-medium">{format(usageDate, 'dd/MM/yyyy')}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Unit</p>
+                                        <p className="text-sm font-medium">Unit #{machine?.machineUnitNumber || 1}</p>
                                     </div>
                                     <div>
                                         <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Time</p>

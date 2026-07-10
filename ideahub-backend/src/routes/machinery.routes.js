@@ -79,6 +79,9 @@ router.get('/records', requireAuth, requireCoordinator, machineryController.getM
 // Get single machinery details
 router.get('/:id', requireAuth, machineryController.getMachineryById);
 
+// Update global settings for all machinery (Head or Coordinator)
+router.put('/settings/global', requireAuth, requireCoordinator, machineryController.updateGlobalMachinerySettings);
+
 // Update machinery (Head or Coordinator)
 router.put('/:id', requireAuth, requireCoordinator, machineryController.updateMachinery);
 

@@ -217,7 +217,7 @@ const VerifyRequest = () => {
                           <span className="text-muted-foreground font-mono">{m.startTime} - {m.endTime}</span>
                         </div>
                         <div className="text-3xs text-muted-foreground flex justify-between">
-                          <span>Usage Date: {m.usageDate ? new Date(m.usageDate).toLocaleDateString() : 'N/A'}</span>
+                          <span>Unit: #{m.machineUnitNumber || 1} | Usage Date: {m.usageDate ? new Date(m.usageDate).toLocaleDateString() : 'N/A'}</span>
                           <span>Duration: {m.usageHours} hrs</span>
                         </div>
                       </div>
