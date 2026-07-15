@@ -45,11 +45,11 @@ const Login = () => {
       } else if (userRole === "head") {
         navigate("/head-dashboard");
       } else {
-        // If external user, redirect to /machinery, else /book-slots
+        // If external user, redirect to /machinery, else / (home page)
         if (userType === "EXTERNAL") {
           navigate("/machinery");
         } else {
-          navigate("/book-slots");
+          navigate("/");
         }
       }
     } catch (err: any) {

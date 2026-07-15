@@ -55,7 +55,7 @@ function LocationMarker({ position, setPosition }: { position: L.LatLng, setPosi
 export function LocationPicker({ onLocationSelect, currentLocation }: LocationPickerProps) {
     const [open, setOpen] = useState(false);
     const [position, setPosition] = useState<L.LatLng>(
-        currentLocation ? new L.LatLng(currentLocation.lat, currentLocation.lng) : new L.LatLng(19.0760, 72.8777) // Default Mumbai
+        currentLocation ? new L.LatLng(currentLocation.lat, currentLocation.lng) : new L.LatLng(19.9975, 73.7898) // Default Nashik
     );
     const [loadingLoc, setLoadingLoc] = useState(false);
 

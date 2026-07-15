@@ -335,7 +335,7 @@ const Achievements = () => {
 
   const getVenue = (level?: string) => {
     if (level === 'International') return 'Bangalore';
-    if (level === 'National') return 'Mumbai';
+    if (level === 'National') return 'New Delhi';
     if (level === 'State') return 'Pune';
     return 'KKWIEER';
   };
