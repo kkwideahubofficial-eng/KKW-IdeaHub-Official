@@ -99,9 +99,16 @@ const Signup = () => {
 
     // Type-specific validation checks
     if (isInternalEmail) {
-      if (!formData.prn || !formData.division || !formData.year || !formData.branch || !formData.mobile) {
-        toast.error("Please fill in all internal student fields (PRN, Division, Year, Branch, Mobile)");
-        return;
+      if (role === "team") {
+        if (!formData.prn || !formData.division || !formData.year || !formData.branch || !formData.mobile) {
+          toast.error("Please fill in all internal student fields (PRN, Division, Year, Branch, Mobile)");
+          return;
+        }
+      } else {
+        if (!formData.mobile) {
+          toast.error("Please provide your mobile number");
+          return;
+        }
       }
     } else {
       if (role !== "team") {
@@ -242,58 +249,62 @@ const Signup = () => {
             {/* --- INTERNAL STUDENT FIELDS --- */}
             {isInternalEmail && (
               <>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="prn">PRN</Label>
-                    <Input
-                      id="prn"
-                      type="text"
-                      placeholder="e.g. 71234567A"
-                      value={formData.prn}
-                      onChange={(e) => handleChange("prn", e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="division">Division</Label>
-                    <Input
-                      id="division"
-                      type="text"
-                      placeholder="e.g. A"
-                      value={formData.division}
-                      onChange={(e) => handleChange("division", e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
+                {role === "team" && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="prn">PRN</Label>
+                        <Input
+                          id="prn"
+                          type="text"
+                          placeholder="e.g. 71234567A"
+                          value={formData.prn}
+                          onChange={(e) => handleChange("prn", e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="division">Division</Label>
+                        <Input
+                          id="division"
+                          type="text"
+                          placeholder="e.g. A"
+                          value={formData.division}
+                          onChange={(e) => handleChange("division", e.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="year">Year</Label>
-                    <Select value={formData.year} onValueChange={(val) => handleChange("year", val)}>
-                      <SelectTrigger id="year">
-                        <SelectValue placeholder="Select Year" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="FE">First Year (FE)</SelectItem>
-                        <SelectItem value="SE">Second Year (SE)</SelectItem>
-                        <SelectItem value="TE">Third Year (TE)</SelectItem>
-                        <SelectItem value="BE">Fourth Year (BE)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="branch">Branch</Label>
-                    <Input
-                      id="branch"
-                      type="text"
-                      placeholder="e.g. Computer Science"
-                      value={formData.branch}
-                      onChange={(e) => handleChange("branch", e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="year">Year</Label>
+                        <Select value={formData.year} onValueChange={(val) => handleChange("year", val)}>
+                          <SelectTrigger id="year">
+                            <SelectValue placeholder="Select Year" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="FE">First Year (FE)</SelectItem>
+                            <SelectItem value="SE">Second Year (SE)</SelectItem>
+                            <SelectItem value="TE">Third Year (TE)</SelectItem>
+                            <SelectItem value="BE">Fourth Year (BE)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="branch">Branch</Label>
+                        <Input
+                          id="branch"
+                          type="text"
+                          placeholder="e.g. Computer Science"
+                          value={formData.branch}
+                          onChange={(e) => handleChange("branch", e.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="mobile">Mobile Number</Label>

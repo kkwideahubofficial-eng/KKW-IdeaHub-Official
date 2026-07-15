@@ -139,10 +139,10 @@ export const updateOrderStatus = async (req, res) => {
     }
 };
 
-// Helper to simulate geocoding (Random point in Mumbai for demo)
+// Helper to simulate geocoding (Random point in Nashik for demo)
 const getMockCoordinates = () => {
     return {
-        latitude: 19.0760 + (Math.random() * 0.01),
-        longitude: 72.8777 + (Math.random() * 0.01)
+        latitude: 19.9975 + (Math.random() * 0.01),
+        longitude: 73.7898 + (Math.random() * 0.01)
     };
 };
