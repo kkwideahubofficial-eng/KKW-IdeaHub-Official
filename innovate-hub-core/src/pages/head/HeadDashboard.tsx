@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { 
   Settings, ListTodo, CheckCircle, XCircle, AlertTriangle, TrendingUp, 
-  BarChart4, DollarSign, PieChart, Layers, Calendar, Activity 
+  BarChart4, DollarSign, PieChart, Layers, Calendar, Activity, Key, ClipboardList
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import api from "@/lib/axios";
@@ -90,100 +90,34 @@ const HeadDashboard = () => {
         ))}
       </div>
 
-      {/* Operational Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        
-        {/* Budget Tracker */}
-        <Card className="shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-bold flex items-center gap-1.5"><DollarSign className="w-4 h-4 text-emerald-600" /> Lab Budget Usage</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="text-3xl font-extrabold text-slate-800">₹{stats.budgetUsed}</div>
-            <div className="w-full bg-slate-150 h-2 rounded-full overflow-hidden">
-              <div className="bg-emerald-500 h-full w-[49%]" />
-            </div>
-            <p className="text-3xs text-muted-foreground">Allocation limit: ₹50,000 | Remaining: ₹{50000 - stats.budgetUsed}</p>
-          </CardContent>
-        </Card>
 
-        {/* Resource Consumption */}
-        <Card className="shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-bold flex items-center gap-1.5"><Layers className="w-4 h-4 text-indigo-600" /> Material Consumption</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="text-3xl font-extrabold text-slate-800">{stats.allocatedMaterials} <span className="text-xs font-semibold text-muted-foreground">Units</span></div>
-            <div className="w-full bg-slate-150 h-2 rounded-full overflow-hidden">
-              <div className="bg-indigo-500 h-full w-[65%]" />
-            </div>
-            <p className="text-3xs text-muted-foreground">Highest Category: Electronics Consumables</p>
-          </CardContent>
-        </Card>
 
-        {/* Machine Utilization */}
-        <Card className="shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-bold flex items-center gap-1.5"><Activity className="w-4 h-4 text-purple-600" /> Machine Utilization</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="text-3xl font-extrabold text-slate-800">{stats.machineUtilization}%</div>
-            <div className="w-full bg-slate-150 h-2 rounded-full overflow-hidden">
-              <div className="bg-purple-500 h-full w-[78%]" />
-            </div>
-            <p className="text-3xs text-muted-foreground">Highest utilization: 3D Printer (Ultimaker S5)</p>
-          </CardContent>
-        </Card>
-
-      </div>
-
-      {/* Quick Actions & Analytics Visual Blocks */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Quick Actions */}
-        <Card className="shadow-sm border-border/80 lg:col-span-1">
-          <CardHeader><CardTitle className="text-base font-bold">Quick Actions</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            <Link to="/head/requests" className="block">
-              <Button size="lg" className="w-full h-18 text-sm gap-2 font-semibold bg-primary hover:bg-primary/95 text-white shadow-sm">
-                <ListTodo className="h-5 w-5" /> Review Requests ({stats.pendingCount} pending)
-              </Button>
-            </Link>
-            <Link to="/manage-machinery" className="block">
-              <Button size="lg" className="w-full h-18 text-sm gap-2 font-semibold" variant="outline">
-                <Settings className="h-5 w-5" /> Manage Machinery Inventory
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        {/* Analytics Distribution Graphs mockup */}
-        <Card className="shadow-sm border-border/80 lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base font-bold">Project Category Distribution</CardTitle>
-            <CardDescription className="text-xs">Category metrics for ongoing student prototype applications</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 text-xs font-semibold text-slate-700">
-            {[
-              { label: "Academic Project", percentage: 45, count: 18, color: "bg-blue-500" },
-              { label: "Prototype Development", percentage: 25, count: 10, color: "bg-green-500" },
-              { label: "Startup / Innovation Project", percentage: 20, count: 8, color: "bg-purple-500" },
-              { label: "Research Project", percentage: 10, count: 4, color: "bg-amber-500" }
-            ].map((cat) => (
-              <div key={cat.label} className="space-y-1">
-                <div className="flex justify-between items-center text-3xs font-bold">
-                  <span>{cat.label} ({cat.count})</span>
-                  <span>{cat.percentage}%</span>
-                </div>
-                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                  <div className={`h-full ${cat.color}`} style={{ width: `${cat.percentage}%` }} />
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-      </div>
+      {/* Quick Actions */}
+      <Card className="shadow-sm border-border/80 w-full mb-8">
+        <CardHeader><CardTitle className="text-base font-bold">Quick Actions</CardTitle></CardHeader>
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Link to="/head/requests" className="block">
+            <Button size="lg" className="w-full h-16 text-sm gap-2 font-semibold bg-primary hover:bg-primary/95 text-white shadow-sm">
+              <ListTodo className="h-5 w-5" /> Review Requests ({stats.pendingCount})
+            </Button>
+          </Link>
+          <Link to="/head/room-permissions" className="block">
+            <Button size="lg" className="w-full h-16 text-sm gap-2 font-semibold bg-primary hover:bg-primary/95 text-white shadow-sm">
+              <Key className="h-5 w-5" /> Room Permissions
+            </Button>
+          </Link>
+          <Link to="/manage-machinery" className="block">
+            <Button size="lg" className="w-full h-16 text-sm gap-2 font-semibold" variant="outline">
+              <Settings className="h-5 w-5" /> Manage Machinery
+            </Button>
+          </Link>
+          <Link to="/head/records" className="block">
+            <Button size="lg" className="w-full h-16 text-sm gap-2 font-semibold" variant="outline">
+              <ClipboardList className="h-5 w-5" /> Records & Attendance
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
 
     </div>
   );
