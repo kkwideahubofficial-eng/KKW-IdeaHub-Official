@@ -200,7 +200,9 @@ const Profile = () => {
               ? 'bg-blue-100 text-blue-800 border border-blue-200'
               : 'bg-orange-100 text-orange-800 border border-orange-200'
           }`}>
-            {profile.userType === 'INTERNAL' ? '🟦 KK Wagh Student' : '🟧 External User'}
+            {profile.userType === 'INTERNAL' 
+              ? (profile.role === 'team' || !profile.role ? '🟦 KK Wagh Student' : `🟦 KK Wagh ${profile.role.charAt(0).toUpperCase() + profile.role.slice(1)}`)
+              : '🟧 External User'}
           </span>
         )}
       </div>
