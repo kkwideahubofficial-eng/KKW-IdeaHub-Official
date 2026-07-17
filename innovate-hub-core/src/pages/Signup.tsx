@@ -293,14 +293,23 @@ const Signup = () => {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="branch">Branch</Label>
-                        <Input
-                          id="branch"
-                          type="text"
-                          placeholder="e.g. Computer Science"
-                          value={formData.branch}
-                          onChange={(e) => handleChange("branch", e.target.value)}
-                          required
-                        />
+                        <Select value={formData.branch} onValueChange={(val) => handleChange("branch", val)}>
+                          <SelectTrigger id="branch">
+                            <SelectValue placeholder="Select Branch" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Computer Engineering">Computer Engineering</SelectItem>
+                            <SelectItem value="Information Technology">Information Technology</SelectItem>
+                            <SelectItem value="Artificial Intelligence & Data Science">Artificial Intelligence & Data Science</SelectItem>
+                            <SelectItem value="Electronics & Telecommunication">Electronics & Telecommunication</SelectItem>
+                            <SelectItem value="Mechanical Engineering">Mechanical Engineering</SelectItem>
+                            <SelectItem value="Civil Engineering">Civil Engineering</SelectItem>
+                            <SelectItem value="Electrical Engineering">Electrical Engineering</SelectItem>
+                            <SelectItem value="Chemical Engineering">Chemical Engineering</SelectItem>
+                            <SelectItem value="Robotics & Automation">Robotics & Automation</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                   </>
@@ -337,14 +346,23 @@ const Signup = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="externalDept">Department / Domain</Label>
-                  <Input
-                    id="externalDept"
-                    type="text"
-                    placeholder="e.g. Electronics / Robotics"
-                    value={formData.externalDept}
-                    onChange={(e) => handleChange("externalDept", e.target.value)}
-                    required
-                  />
+                  <Select value={formData.externalDept} onValueChange={(val) => handleChange("externalDept", val)}>
+                    <SelectTrigger id="externalDept">
+                      <SelectValue placeholder="Select Department / Domain" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Computer Science / Engineering">Computer Science / Engineering</SelectItem>
+                      <SelectItem value="Information Technology">Information Technology</SelectItem>
+                      <SelectItem value="Artificial Intelligence & Data Science">Artificial Intelligence & Data Science</SelectItem>
+                      <SelectItem value="Electronics & Telecommunication">Electronics & Telecommunication</SelectItem>
+                      <SelectItem value="Electronics / Robotics">Electronics / Robotics</SelectItem>
+                      <SelectItem value="Mechanical Engineering">Mechanical Engineering</SelectItem>
+                      <SelectItem value="Civil Engineering">Civil Engineering</SelectItem>
+                      <SelectItem value="Electrical Engineering">Electrical Engineering</SelectItem>
+                      <SelectItem value="Chemical Engineering">Chemical Engineering</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
