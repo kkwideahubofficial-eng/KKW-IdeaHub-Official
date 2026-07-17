@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
-import { PlusCircle, Edit, Trash2, Calendar, Users, MapPin, CheckCircle, XCircle, FileSpreadsheet, FileDown, TrendingUp, BarChart3, Clock, ClipboardList, ChevronDown, ChevronUp, UserCheck, Star, ChevronsUpDown, Check } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Calendar, Users, MapPin, CheckCircle, XCircle, FileSpreadsheet, FileDown, TrendingUp, BarChart3, Clock, ClipboardList, ChevronDown, ChevronUp, UserCheck, Star, ChevronsUpDown, Check, Loader2 } from 'lucide-react';
 import api from '@/lib/axios';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -218,6 +218,8 @@ const ManageEvents = () => {
   const [selectedRegIds, setSelectedRegIds] = useState<string[]>([]);
   const [expandedRegId, setExpandedRegId] = useState<string | null>(null);
   const [regFilter, setRegFilter] = useState<'pending' | 'approved' | 'rejected'>('pending');
+  const [isApproving, setIsApproving] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
 
   const filteredRegistrations = useMemo(() => {
     return registrations.filter(r => r.status === regFilter);
@@ -473,6 +475,8 @@ const ManageEvents = () => {
       toast.warning('Please select at least one team registration.');
       return;
     }
+    if (status === 'approved') setIsApproving(true);
+    else setIsRejecting(true);
     try {
       await api.patch('/events/registrations/status', {
         registrationIds: selectedRegIds,
@@ -482,6 +486,9 @@ const ManageEvents = () => {
       fetchRegistrations(selectedEventId);
     } catch (e) {
       toast.error('Failed to update registrations');
+    } finally {
+      if (status === 'approved') setIsApproving(false);
+      else setIsRejecting(false);
     }
   };
 
@@ -742,10 +749,12 @@ const ManageEvents = () => {
             </div>
 
             <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-start sm:justify-end">
-              <Button size="sm" className="rounded-xl text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold animate-all flex-1 sm:flex-initial" onClick={() => handleBulkDecision('approved')}>
+              <Button size="sm" className="rounded-xl text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold animate-all flex-1 sm:flex-initial" onClick={() => handleBulkDecision('approved')} disabled={isApproving || isRejecting}>
+                {isApproving && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
                 Approve Selected
               </Button>
-              <Button size="sm" className="rounded-xl text-xs bg-rose-600 hover:bg-rose-700 text-white font-semibold animate-all flex-1 sm:flex-initial" onClick={() => handleBulkDecision('rejected')}>
+              <Button size="sm" className="rounded-xl text-xs bg-rose-600 hover:bg-rose-700 text-white font-semibold animate-all flex-1 sm:flex-initial" onClick={() => handleBulkDecision('rejected')} disabled={isApproving || isRejecting}>
+                {isRejecting && <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />}
                 Reject Selected
               </Button>
               <Button size="sm" variant="outline" className="rounded-xl text-xs font-semibold gap-1.5 flex-1 sm:flex-initial" onClick={handleExportCSV}>
