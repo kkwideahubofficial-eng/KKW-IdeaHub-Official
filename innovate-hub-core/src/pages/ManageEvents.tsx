@@ -217,6 +217,11 @@ const ManageEvents = () => {
   // Registration Row Selection
   const [selectedRegIds, setSelectedRegIds] = useState<string[]>([]);
   const [expandedRegId, setExpandedRegId] = useState<string | null>(null);
+  const [regFilter, setRegFilter] = useState<'pending' | 'approved' | 'rejected'>('pending');
+
+  const filteredRegistrations = useMemo(() => {
+    return registrations.filter(r => r.status === regFilter);
+  }, [registrations, regFilter]);
 
   // Attendance Checkboxes (Format: registrationId_memberId)
   const [selectedAttKeys, setSelectedAttKeys] = useState<string[]>([]);
@@ -277,6 +282,11 @@ const ManageEvents = () => {
       toast.error('Failed to fetch registrations.');
     }
   };
+
+  useEffect(() => {
+    setSelectedRegIds([]);
+    setExpandedRegId(null);
+  }, [regFilter]);
 
   const fetchAnalytics = async () => {
     try {
@@ -500,10 +510,10 @@ const ManageEvents = () => {
   };
 
   const toggleSelectAllRegs = () => {
-    if (selectedRegIds.length === registrations.length) {
+    if (selectedRegIds.length === filteredRegistrations.length && filteredRegistrations.length > 0) {
       setSelectedRegIds([]);
     } else {
-      setSelectedRegIds(registrations.map(r => r._id));
+      setSelectedRegIds(filteredRegistrations.map(r => r._id));
     }
   };
 
@@ -747,13 +757,20 @@ const ManageEvents = () => {
             </div>
           </div>
 
+          <div className="flex gap-2 overflow-x-auto pb-2 w-full scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            <Button variant={regFilter === 'pending' ? 'default' : 'outline'} onClick={() => setRegFilter('pending')} size="sm" className="rounded-xl font-semibold whitespace-nowrap shrink-0">Pending Registrations</Button>
+            <Button variant={regFilter === 'approved' ? 'default' : 'outline'} onClick={() => setRegFilter('approved')} size="sm" className="rounded-xl font-semibold whitespace-nowrap shrink-0">Approved Registrations</Button>
+            <Button variant={regFilter === 'rejected' ? 'default' : 'outline'} onClick={() => setRegFilter('rejected')} size="sm" className="rounded-xl font-semibold whitespace-nowrap shrink-0">Rejected Registrations</Button>
+          </div>
+
           <Card className="rounded-2xl shadow-sm border overflow-hidden">
-            <Table>
+            <div className="overflow-x-auto w-full">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12 text-center">
                     <Checkbox 
-                      checked={registrations.length > 0 && selectedRegIds.length === registrations.length} 
+                      checked={filteredRegistrations.length > 0 && selectedRegIds.length === filteredRegistrations.length} 
                       onCheckedChange={toggleSelectAllRegs}
                     />
                   </TableHead>
@@ -767,12 +784,12 @@ const ManageEvents = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {registrations.length === 0 ? (
+                {filteredRegistrations.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">No registrations received for this event.</TableCell>
+                    <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">No {regFilter} registrations found.</TableCell>
                   </TableRow>
                 ) : (
-                  registrations.map((reg) => {
+                  filteredRegistrations.map((reg) => {
                     const isExpanded = expandedRegId === reg._id;
                     const leader = reg.teamMembers.find(m => m.isTeamLeader) || reg.teamMembers[0];
 
@@ -881,6 +898,7 @@ const ManageEvents = () => {
                 )}
               </TableBody>
             </Table>
+            </div>
           </Card>
         </TabsContent>
 
@@ -932,7 +950,8 @@ const ManageEvents = () => {
           </div>
 
           <Card className="rounded-2xl shadow-sm border overflow-hidden">
-            <Table>
+            <div className="overflow-x-auto w-full">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12 text-center">
@@ -991,6 +1010,7 @@ const ManageEvents = () => {
                 )}
               </TableBody>
             </Table>
+            </div>
           </Card>
         </TabsContent>
 

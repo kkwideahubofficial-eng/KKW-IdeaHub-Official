@@ -6,6 +6,7 @@ import { generateCertificatePdf } from '../utils/certificateGenerator.js';
 import { validationResult } from 'express-validator';
 import path from 'path';
 import fs from 'fs';
+import sendEmail from '../utils/sendEmail.js';
 
 // Helper function to send notification to database
 const createNotification = async (userId, title, body, type) => {
@@ -465,6 +466,10 @@ export const updateRegistrationStatus = async (req, res) => {
       reg.status = status;
       await reg.save();
 
+      // Find team leader email
+      const leader = reg.teamMembers.find(m => m.isTeamLeader) || reg.teamMembers[0];
+      const studentEmail = leader?.email;
+
       // Notify student leader
       const title = status === 'approved' ? 'Registration Approved' : 'Registration Rejected';
       const body = status === 'approved' 
@@ -472,6 +477,54 @@ export const updateRegistrationStatus = async (req, res) => {
         : `We regret to inform you that your registration for "${reg.event.title}" has been rejected.`;
       
       await createNotification(reg.student, title, body, `registration_${status}`);
+
+      // Send Email Notification
+      if (studentEmail) {
+        const subject = `AICTE IDEA Lab: ${title} - ${reg.event.title}`;
+        
+        let htmlContent = '';
+        if (status === 'approved') {
+          htmlContent = `
+            <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+              <h2 style="color: #10b981;">Registration Approved! 🎉</h2>
+              <p>Dear ${leader?.fullName || 'Student'},</p>
+              <p>Congratulations! Your registration for the event <strong>"${reg.event.title}"</strong> has been approved.</p>
+              
+              <h3 style="margin-top: 20px;">Event Details:</h3>
+              <ul style="line-height: 1.6; padding-left: 20px;">
+                <li><strong>Event:</strong> ${reg.event.title}</li>
+                <li><strong>Date:</strong> ${new Date(reg.event.date).toLocaleDateString()}</li>
+                <li><strong>Time:</strong> ${reg.event.startTime} - ${reg.event.endTime}</li>
+                <li><strong>Venue:</strong> ${reg.event.venue} ${reg.event.roomNumber ? `(Room: ${reg.event.roomNumber})` : ''}</li>
+              </ul>
+              
+              <p style="margin-top: 20px;">Please ensure you arrive on time. If you have any questions, you can contact the coordinator: ${reg.event.coordinatorName || 'the organizing team'} ${reg.event.coordinatorContact ? `(${reg.event.coordinatorContact})` : ''}.</p>
+              
+              <br/>
+              <p>Best regards,<br/><strong>AICTE IDEA Lab Team</strong></p>
+            </div>
+          `;
+        } else {
+          htmlContent = `
+            <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+              <h2 style="color: #ef4444;">Registration Status Update</h2>
+              <p>Dear ${leader?.fullName || 'Student'},</p>
+              <p>We regret to inform you that your registration for the event <strong>"${reg.event.title}"</strong> has been rejected.</p>
+              <p>This may be due to limited seating capacity or eligibility criteria not being met.</p>
+              <p>Thank you for your interest, and we hope to see you in future events.</p>
+              
+              <br/>
+              <p>Best regards,<br/><strong>AICTE IDEA Lab Team</strong></p>
+            </div>
+          `;
+        }
+        
+        try {
+          await sendEmail(studentEmail, subject, htmlContent);
+        } catch (e) {
+          console.error("Failed to send email to", studentEmail, e);
+        }
+      }
     });
 
     await Promise.all(promises);
