@@ -280,7 +280,7 @@ export const createRoomRequest = async (req, res) => {
 
       // Email to student
       try {
-        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
+        const frontendUrl = process.env.FRONTEND_ORIGIN || 'https://ideahub-app.onrender.com';
         await sendEmail(
           applicantDetails.email,
           `Room Permission Request Submitted - ${requestId}`,
@@ -297,7 +297,7 @@ export const createRoomRequest = async (req, res) => {
 
       // Email to Faculty
       try {
-        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
+        const frontendUrl = process.env.FRONTEND_ORIGIN || 'https://ideahub-app.onrender.com';
         const verifyLink = `${frontendUrl}/verify-faculty/${savedRequest._id}`; // Redirect to frontend port 8080
         await sendEmail(
           facultyRecommendation.facultyEmail,
@@ -320,7 +320,7 @@ export const createRoomRequest = async (req, res) => {
 
       // Notify Coordinator and Head
       try {
-        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
+        const frontendUrl = process.env.FRONTEND_ORIGIN || 'https://ideahub-app.onrender.com';
         const admins = await User.find({ role: { $in: ['coordinator', 'head'] } });
         for (const admin of admins) {
           const dashboardPath = admin.role === 'head' ? '/head-dashboard' : '/coordinator/room-permissions';
@@ -408,7 +408,7 @@ export const updateRoomRequest = async (req, res) => {
 
       // Email Faculty
       try {
-        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
+        const frontendUrl = process.env.FRONTEND_ORIGIN || 'https://ideahub-app.onrender.com';
         const verifyLink = `${frontendUrl}/verify-faculty/${request._id}`;
         await sendEmail(
           facultyRecommendation.facultyEmail,
@@ -427,7 +427,7 @@ export const updateRoomRequest = async (req, res) => {
 
       // Notify Coordinator and Head
       try {
-        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
+        const frontendUrl = process.env.FRONTEND_ORIGIN || 'https://ideahub-app.onrender.com';
         const admins = await User.find({ role: { $in: ['coordinator', 'head'] } });
         for (const admin of admins) {
           const dashboardPath = admin.role === 'head' ? '/head-dashboard' : '/coordinator/room-permissions';
@@ -491,7 +491,7 @@ export const facultyVerifyRequest = async (req, res) => {
 
       // Email Student
       try {
-        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
+        const frontendUrl = process.env.FRONTEND_ORIGIN || 'https://ideahub-app.onrender.com';
         await sendEmail(
           request.applicantDetails.email,
           `Faculty Recommended Request - ${request.requestId}`,
@@ -515,7 +515,7 @@ export const facultyVerifyRequest = async (req, res) => {
           `Room Permission Request ${request.requestId} is verified by faculty and awaits your review.`
         );
         try {
-          const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
+          const frontendUrl = process.env.FRONTEND_ORIGIN || 'https://ideahub-app.onrender.com';
           await sendEmail(
             coord.email,
             `Action Required: Room Permission Request - ${request.requestId}`,
@@ -552,7 +552,7 @@ export const facultyVerifyRequest = async (req, res) => {
 
       // Email Student
       try {
-        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
+        const frontendUrl = process.env.FRONTEND_ORIGIN || 'https://ideahub-app.onrender.com';
         await sendEmail(
           request.applicantDetails.email,
           `Request Declined by Faculty - ${request.requestId}`,
@@ -615,7 +615,7 @@ export const coordinatorDecision = async (req, res) => {
 
       // Email Student
       try {
-        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
+        const frontendUrl = process.env.FRONTEND_ORIGIN || 'https://ideahub-app.onrender.com';
         await sendEmail(
           request.applicantDetails.email,
           `Coordinator Approved Room Request - ${request.requestId}`,
@@ -638,7 +638,7 @@ export const coordinatorDecision = async (req, res) => {
           `Room request ${request.requestId} is forwarded by Coordinator and awaits your approval.`
         );
         try {
-          const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
+          const frontendUrl = process.env.FRONTEND_ORIGIN || 'https://ideahub-app.onrender.com';
           await sendEmail(
             head.email,
             `Action Required: Room Permission Request - ${request.requestId}`,
@@ -673,7 +673,7 @@ export const coordinatorDecision = async (req, res) => {
       );
 
       try {
-        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
+        const frontendUrl = process.env.FRONTEND_ORIGIN || 'https://ideahub-app.onrender.com';
         await sendEmail(
           request.applicantDetails.email,
           `Room Request Rejected - ${request.requestId}`,
@@ -708,7 +708,7 @@ export const coordinatorDecision = async (req, res) => {
 
       // Email Student
       try {
-        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
+        const frontendUrl = process.env.FRONTEND_ORIGIN || 'https://ideahub-app.onrender.com';
         await sendEmail(
           request.applicantDetails.email,
           `Changes Requested for Room Request - ${request.requestId}`,
@@ -772,7 +772,7 @@ export const headDecision = async (req, res) => {
 
       // Email Student
       try {
-        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
+        const frontendUrl = process.env.FRONTEND_ORIGIN || 'https://ideahub-app.onrender.com';
         await sendEmail(
           request.applicantDetails.email,
           `Room Request Approved - ${request.requestId}`,
@@ -808,7 +808,7 @@ export const headDecision = async (req, res) => {
 
       // Email Student
       try {
-        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
+        const frontendUrl = process.env.FRONTEND_ORIGIN || 'https://ideahub-app.onrender.com';
         await sendEmail(
           request.applicantDetails.email,
           `Conditional Approval - ${request.requestId}`,
@@ -844,7 +844,7 @@ export const headDecision = async (req, res) => {
 
       // Email Student
       try {
-        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
+        const frontendUrl = process.env.FRONTEND_ORIGIN || 'https://ideahub-app.onrender.com';
         await sendEmail(
           request.applicantDetails.email,
           `Request Rejected by Head - ${request.requestId}`,
@@ -908,7 +908,7 @@ export const headDecision = async (req, res) => {
 
       // Email Student
       try {
-        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
+        const frontendUrl = process.env.FRONTEND_ORIGIN || 'https://ideahub-app.onrender.com';
         await sendEmail(
           request.applicantDetails.email,
           `Changes Requested by IDEA Hub Head - ${request.requestId}`,
@@ -1271,7 +1271,7 @@ export const downloadRoomPermissionPdf = async (req, res) => {
       date: request.schedule.requestedDate,
       time: `${request.schedule.startTime} - ${request.schedule.endTime}`,
       status: request.status,
-      url: `${process.env.FRONTEND_ORIGIN || baseUrl.replace('5000', '8080')}/verify-room-permission/${request._id}` // Frontend verification page
+      url: `${process.env.FRONTEND_ORIGIN || 'https://ideahub-app.onrender.com'}/verify-room-permission/${request._id}` // Frontend verification page
     });
 
     const data = {

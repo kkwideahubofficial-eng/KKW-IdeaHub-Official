@@ -259,7 +259,7 @@ export async function decideBooking(req, res) {
       if (booking.team && booking.team.email) {
         console.log(`[Booking] Sending approval email to: ${booking.team.email} for room: ${room.name}`);
         try {
-            const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
+            const frontendUrl = process.env.FRONTEND_ORIGIN || 'https://ideahub-app.onrender.com';
             const emailResult = await sendEmail(
               booking.team.email,
               'Booking Approved - Idea Lab',

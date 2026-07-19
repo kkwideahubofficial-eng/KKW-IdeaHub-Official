@@ -3,6 +3,23 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// Create transporter once to reuse connections (connection pooling)
+// This is much faster and more reliable, especially on hosted environments
+const transporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com',
+  port: 465, // Use 465 for secure connection (often faster/less blocked than 587)
+  secure: true, 
+  pool: true, // Use pooled connections
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+  connectionTimeout: 10000, // 10 seconds timeout
+  tls: {
+    rejectUnauthorized: false
+  }
+});
+
 const sendEmail = async (to, subject, htmlContent) => {
   try {
     console.log('--- sendEmail called ---');
@@ -13,20 +30,6 @@ const sendEmail = async (to, subject, htmlContent) => {
       console.error('ERROR: Missing EMAIL_USER or EMAIL_PASS in environment variables');
       return null;
     }
-
-    const transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false, // true for 465, false for other ports
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-      connectionTimeout: 10000, // 10 seconds timeout
-      tls: {
-        rejectUnauthorized: false
-      }
-    });
 
     const info = await transporter.sendMail({
       from: `"Idea Lab" <${process.env.EMAIL_USER}>`,

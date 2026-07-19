@@ -396,7 +396,7 @@ export const createRequest = async (req, res) => {
         );
       } else if (externalEmail) {
         // Email external applicant with tracking details
-        const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
+        const frontendUrl = process.env.FRONTEND_ORIGIN || 'https://ideahub-app.onrender.com';
         const trackUrl = `${frontendUrl}/verify-request/${requestId}`;
         const subject = `IDEA Hub: Request Submitted Successfully - ${requestId}`;
         const bodyText = `<p>Dear ${externalFullName},</p>
@@ -426,7 +426,7 @@ export const createRequest = async (req, res) => {
           `${isExternal ? (externalFullName || 'External User') : req.user.name} submitted request ${requestId}`
         );
         try {
-          const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
+          const frontendUrl = process.env.FRONTEND_ORIGIN || 'https://ideahub-app.onrender.com';
           await sendEmail(
             admin.email,
             `New Machinery/Material Request - ${requestId}`,
@@ -577,7 +577,7 @@ export const updateRequest = async (req, res) => {
           `Request ${request.requestId} has been resubmitted with updates by ${req.user.name}.`
         );
         try {
-          const frontendUrl = process.env.FRONTEND_ORIGIN || `${req.protocol}://${req.get('host')}`.replace('5000', '8080');
+          const frontendUrl = process.env.FRONTEND_ORIGIN || 'https://ideahub-app.onrender.com';
           await sendEmail(
             admin.email,
             `Resubmitted Machinery/Material Request - ${request.requestId}`,
@@ -1120,7 +1120,7 @@ export const downloadMachineryPdf = async (req, res) => {
       project: request.projectName,
       team: request.teamName || request.students[0]?.name || '',
       status: request.status,
-      url: `${process.env.FRONTEND_ORIGIN || baseUrl.replace('5000', '8080')}/verify-request/${request.requestId}`,
+      url: `${process.env.FRONTEND_ORIGIN || 'https://ideahub-app.onrender.com'}/verify-request/${request.requestId}`,
     });
 
     // Compile data structure for PDF generator
