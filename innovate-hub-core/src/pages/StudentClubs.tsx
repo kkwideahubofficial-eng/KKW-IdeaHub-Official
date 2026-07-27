@@ -33,7 +33,10 @@ import {
   MessageCircle,
   Phone,
   Mail,
-  Share2
+  Share2,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeft
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -103,6 +106,7 @@ export interface Club {
     contactNo?: string;
     email?: string;
   };
+  order?: number;
 }
 
 const CLUBS_DATA: Club[] = [
@@ -507,12 +511,69 @@ const ACHIEVEMENTS_DATA = [
   }
 ];
 
+export interface UpcomingEventItem {
+  id: string;
+  date: string;
+  month: string;
+  title: string;
+  host: string;
+  location: string;
+  time: string;
+  bg?: string;
+}
+
+export interface CollectiveAchievementItem {
+  id: string;
+  number: string;
+  label: string;
+  iconType: 'trophy' | 'award' | 'users' | 'calendar';
+  color?: string;
+}
+
 const StudentClubs: React.FC = () => {
   const [clubsList, setClubsList] = useState<Club[]>(CLUBS_DATA);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("All Categories");
   const [sortBy, setSortBy] = useState<string>("default");
   const [bookmarkedClubs, setBookmarkedClubs] = useState<string[]>([]);
+  
+  // Editable Upcoming Events & Achievements State
+  const [upcomingEventsList, setUpcomingEventsList] = useState<UpcomingEventItem[]>(() => {
+    const saved = localStorage.getItem("idea_hub_upcoming_events");
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { console.error(e); }
+    }
+    return [
+      { id: "1", date: "24", month: "MAY", title: "CodeSprint 5.0", host: "By Debuggers Club", location: "IDEA Lab", time: "10:00 AM", bg: "bg-blue-50 text-blue-700 border-blue-200" },
+      { id: "2", date: "07", month: "JUN", title: "Design Thinking Workshop", host: "By Pixel Phantom", location: "Design Studio", time: "02:00 PM", bg: "bg-purple-50 text-purple-700 border-purple-200" },
+      { id: "3", date: "18", month: "JUN", title: "Robotics Bootcamp", host: "By Robotics Club", location: "Robotics Lab", time: "11:00 AM", bg: "bg-cyan-50 text-cyan-700 border-cyan-200" }
+    ];
+  });
+
+  const [collectiveAchievementsList, setCollectiveAchievementsList] = useState<CollectiveAchievementItem[]>(() => {
+    const saved = localStorage.getItem("idea_hub_collective_achievements");
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { console.error(e); }
+    }
+    return [
+      { id: "1", number: "12+", label: "National Awards", iconType: 'trophy', color: "text-amber-500 bg-amber-50 border-amber-100" },
+      { id: "2", number: "25+", label: "Hackathons Participated", iconType: 'award', color: "text-red-500 bg-red-50 border-red-100" },
+      { id: "3", number: "1,000+", label: "Active Members", iconType: 'users', color: "text-blue-500 bg-blue-50 border-blue-100" },
+      { id: "4", number: "100+", label: "Events Organized", iconType: 'calendar', color: "text-indigo-500 bg-indigo-50 border-indigo-100" }
+    ];
+  });
+
+  // Dialog States for Editing Upcoming Events & Achievements
+  const [editingUpcomingEvent, setEditingUpcomingEvent] = useState<UpcomingEventItem | null>(null);
+  const [editingAchievementStat, setEditingAchievementStat] = useState<CollectiveAchievementItem | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem("idea_hub_upcoming_events", JSON.stringify(upcomingEventsList));
+  }, [upcomingEventsList]);
+
+  useEffect(() => {
+    localStorage.setItem("idea_hub_collective_achievements", JSON.stringify(collectiveAchievementsList));
+  }, [collectiveAchievementsList]);
   const [selectedClub, setSelectedClub] = useState<Club | null>(null);
   const [joinModalOpen, setJoinModalOpen] = useState(false);
   const [selectedClubForJoin, setSelectedClubForJoin] = useState<string>("");
@@ -793,6 +854,57 @@ const StudentClubs: React.FC = () => {
     setEditingClub({ ...editingClub, gallery: editingClub.gallery.filter((_, i) => i !== idx) });
   };
 
+  const handleMoveClubOrder = async (club: Club, direction: 'up' | 'down') => {
+    const sorted = [...clubsList].sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
+    const index = sorted.findIndex(c => (c._id || c.id || c.clubId) === (club._id || club.id || club.clubId));
+    if (index === -1) return;
+
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= sorted.length) return;
+
+    const targetClub = sorted[targetIndex];
+
+    const currentOrder = club.order ?? (index + 1);
+    const targetOrder = targetClub.order ?? (targetIndex + 1);
+
+    const newClubOrder = targetOrder;
+    const newTargetOrder = currentOrder === targetOrder ? (direction === 'up' ? targetOrder + 1 : targetOrder - 1) : currentOrder;
+
+    const updatedClubs = clubsList.map(c => {
+      if ((c._id || c.id || c.clubId) === (club._id || club.id || club.clubId)) {
+        return { ...c, order: newClubOrder };
+      }
+      if ((c._id || c.id || c.clubId) === (targetClub._id || targetClub.id || targetClub.clubId)) {
+        return { ...c, order: newTargetOrder };
+      }
+      return c;
+    });
+
+    setClubsList(updatedClubs);
+
+    try {
+      const c1Id = club._id || club.id || club.clubId;
+      const c2Id = targetClub._id || targetClub.id || targetClub.clubId;
+
+      await Promise.all([
+        fetch(`/api/student-clubs/${c1Id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...club, order: newClubOrder })
+        }),
+        fetch(`/api/student-clubs/${c2Id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...targetClub, order: newTargetOrder })
+        })
+      ]);
+      toast.success(`Priority updated! ${club.shortName} moved ${direction === 'up' ? 'first' : 'down'}`);
+      fetchClubs();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   // Filtering logic
   const filteredClubs = clubsList.filter(club => {
     const matchesSearch = 
@@ -808,17 +920,25 @@ const StudentClubs: React.FC = () => {
   }).sort((a, b) => {
     if (sortBy === "members") return b.members - a.members;
     if (sortBy === "name") return a.name.localeCompare(b.name);
-    return 0;
+    return (a.order ?? 99) - (b.order ?? 99);
   });
 
   // Flattened conducted events for the showcase section
-  const allConductedEvents = clubsList.flatMap(club => 
-    (club.conductedEvents || []).map(evt => ({ ...evt, clubName: club.name, clubIcon: club.icon, accentColor: club.accentColor, clubId: club.id || club.clubId || club._id }))
-  );
+  const allConductedEvents = clubsList.flatMap(club => {
+    const cId = (club._id || club.id || club.clubId || club.shortName || club.name || '').toString();
+    return (club.conductedEvents || []).map(evt => ({ 
+      ...evt, 
+      clubName: club.name, 
+      clubShortName: club.shortName,
+      clubIcon: club.icon, 
+      accentColor: club.accentColor, 
+      clubId: cId 
+    }));
+  });
 
   const showcaseEvents = activeShowcaseClubTab === "all" 
     ? allConductedEvents 
-    : allConductedEvents.filter(evt => evt.clubId === activeShowcaseClubTab);
+    : allConductedEvents.filter(evt => evt.clubId === activeShowcaseClubTab.toString());
 
   return (
     <div className="min-h-screen bg-slate-50/60 font-sans text-slate-800 antialiased pb-20">
@@ -1064,6 +1184,32 @@ const StudentClubs: React.FC = () => {
                         <div className="flex items-center gap-1 shrink-0">
                           {isCoordinator && (
                             <>
+                              <div className="flex items-center gap-0.5 bg-slate-100 p-0.5 rounded-lg border border-slate-200" title="Display Priority Order (Click arrows to re-order)">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleMoveClubOrder(club, 'up');
+                                  }}
+                                  className="p-1 rounded bg-white hover:bg-slate-200 text-slate-700 transition-colors"
+                                  title="Move Higher Priority (Show Earlier)"
+                                >
+                                  <ArrowLeft className="w-3 h-3" />
+                                </button>
+                                <span className="text-[10px] font-black text-slate-700 px-1">
+                                  #{club.order ?? (filteredClubs.indexOf(club) + 1)}
+                                </span>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleMoveClubOrder(club, 'down');
+                                  }}
+                                  className="p-1 rounded bg-white hover:bg-slate-200 text-slate-700 transition-colors"
+                                  title="Move Lower Priority (Show Later)"
+                                >
+                                  <ArrowRight className="w-3 h-3" />
+                                </button>
+                              </div>
+
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -1164,19 +1310,25 @@ const StudentClubs: React.FC = () => {
                 All Clubs ({allConductedEvents.length})
               </button>
               {clubsList.map(c => {
-                const cId = c.id || c.clubId || c._id || '';
+                const cId = (c._id || c.id || c.clubId || c.shortName || c.name || '').toString();
+                const isActive = activeShowcaseClubTab.toString() === cId;
+
                 return (
                   <button
                     key={cId}
                     onClick={() => setActiveShowcaseClubTab(cId)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
-                      activeShowcaseClubTab === cId
-                        ? "bg-white text-slate-900 shadow-xs"
-                        : "text-slate-600 hover:text-slate-900"
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      isActive
+                        ? "bg-white text-slate-900 shadow-xs border border-slate-200/80"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
                     }`}
                   >
-                    <span>{c.icon}</span>
-                    <span>{c.shortName}</span>
+                    {c.logoUrl ? (
+                      <img src={c.logoUrl} alt={c.shortName} className="w-4 h-4 rounded-full object-contain shrink-0" />
+                    ) : (
+                      <span className="text-sm">{c.icon || '⚡'}</span>
+                    )}
+                    <span>{c.shortName || c.name}</span>
                   </button>
                 );
               })}
@@ -1275,6 +1427,8 @@ const StudentClubs: React.FC = () => {
 
         {/* 5. Upcoming Club Events & Collective Achievements */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-14">
+          
+          {/* UPCOMING CLUB EVENTS */}
           <div className="lg:col-span-6 bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
@@ -1285,23 +1439,45 @@ const StudentClubs: React.FC = () => {
                   </h3>
                 </div>
 
-                <Link 
-                  to="/events" 
-                  className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 hover:underline"
-                >
-                  <span>View All</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
+                <div className="flex items-center gap-2">
+                  {isCoordinator && (
+                    <button
+                      onClick={() => setEditingUpcomingEvent({
+                        id: Date.now().toString(),
+                        date: "25",
+                        month: "AUG",
+                        title: "New Upcoming Event",
+                        host: "By Student Club",
+                        location: "Main Auditorium",
+                        time: "10:00 AM",
+                        bg: "bg-blue-50 text-blue-700 border-blue-200"
+                      })}
+                      className="px-2.5 py-1 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-extrabold flex items-center gap-1 transition-colors"
+                      title="Add New Upcoming Event"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Event</span>
+                    </button>
+                  )}
+
+                  <Link 
+                    to="/events" 
+                    className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 hover:underline"
+                  >
+                    <span>View All</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
               </div>
 
               <div className="space-y-3.5">
-                {UPCOMING_EVENTS.map((evt, idx) => (
+                {upcomingEventsList.map((evt) => (
                   <div 
-                    key={idx} 
-                    className="p-3.5 rounded-xl border border-slate-100 hover:border-slate-200 bg-slate-50/40 hover:bg-slate-50 transition-all flex items-center justify-between gap-4"
+                    key={evt.id} 
+                    className="p-3.5 rounded-xl border border-slate-100 hover:border-slate-200 bg-slate-50/40 hover:bg-slate-50 transition-all flex items-center justify-between gap-4 group relative"
                   >
                     <div className="flex items-center gap-3.5">
-                      <div className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center border font-bold ${evt.bg} shrink-0`}>
+                      <div className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center border font-bold ${evt.bg || 'bg-blue-50 text-blue-700 border-blue-200'} shrink-0`}>
                         <span className="text-base leading-none">{evt.date}</span>
                         <span className="text-[10px] tracking-wider uppercase mt-0.5">{evt.month}</span>
                       </div>
@@ -1316,15 +1492,39 @@ const StudentClubs: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="hidden sm:flex flex-col items-end text-[11px] font-semibold text-slate-500 shrink-0">
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-3 h-3 text-slate-400" />
-                        {evt.location}
-                      </span>
-                      <span className="flex items-center gap-1 mt-0.5">
-                        <Clock className="w-3 h-3 text-slate-400" />
-                        {evt.time}
-                      </span>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="hidden sm:flex flex-col items-end text-[11px] font-semibold text-slate-500">
+                        <span className="flex items-center gap-1">
+                          <MapPin className="w-3 h-3 text-slate-400" />
+                          {evt.location}
+                        </span>
+                        <span className="flex items-center gap-1 mt-0.5">
+                          <Clock className="w-3 h-3 text-slate-400" />
+                          {evt.time}
+                        </span>
+                      </div>
+
+                      {isCoordinator && (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => setEditingUpcomingEvent(evt)}
+                            className="p-1.5 rounded-lg bg-white border border-slate-200 text-blue-600 hover:bg-blue-50 transition-colors shadow-2xs"
+                            title="Edit Event"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setUpcomingEventsList(prev => prev.filter(item => item.id !== evt.id));
+                              toast.success("Upcoming event deleted");
+                            }}
+                            className="p-1.5 rounded-lg bg-white border border-slate-200 text-red-500 hover:bg-red-50 transition-colors shadow-2xs"
+                            title="Delete Event"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1332,6 +1532,7 @@ const StudentClubs: React.FC = () => {
             </div>
           </div>
 
+          {/* OUR COLLECTIVE ACHIEVEMENTS */}
           <div className="lg:col-span-6 bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
@@ -1342,24 +1543,72 @@ const StudentClubs: React.FC = () => {
                   </h3>
                 </div>
 
-                <Link 
-                  to="/achievements" 
-                  className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 hover:underline"
-                >
-                  <span>View All</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
+                <div className="flex items-center gap-2">
+                  {isCoordinator && (
+                    <button
+                      onClick={() => setEditingAchievementStat({
+                        id: Date.now().toString(),
+                        number: "50+",
+                        label: "Innovations Built",
+                        iconType: 'trophy',
+                        color: "text-amber-500 bg-amber-50 border-amber-100"
+                      })}
+                      className="px-2.5 py-1 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-extrabold flex items-center gap-1 transition-colors"
+                      title="Add Achievement Stat"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Stat</span>
+                    </button>
+                  )}
+
+                  <Link 
+                    to="/achievements" 
+                    className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 hover:underline"
+                  >
+                    <span>View All</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                {ACHIEVEMENTS_DATA.map((item, idx) => {
-                  const IconComp = item.icon;
+                {collectiveAchievementsList.map((item) => {
+                  let IconComp = Trophy;
+                  if (item.iconType === 'award') IconComp = Award;
+                  if (item.iconType === 'users') IconComp = Users;
+                  if (item.iconType === 'calendar') IconComp = Calendar;
+
                   return (
                     <div 
-                      key={idx} 
-                      className={`p-4 rounded-xl border flex flex-col justify-between space-y-2 transition-transform hover:-translate-y-0.5 ${item.color}`}
+                      key={item.id} 
+                      className={`p-4 rounded-xl border flex flex-col justify-between space-y-2 transition-transform hover:-translate-y-0.5 relative group ${item.color || 'text-amber-500 bg-amber-50 border-amber-100'}`}
                     >
-                      <IconComp className="w-6 h-6 opacity-90" />
+                      <div className="flex items-center justify-between">
+                        <IconComp className="w-6 h-6 opacity-90" />
+                        
+                        {isCoordinator && (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => setEditingAchievementStat(item)}
+                              className="p-1 rounded-md bg-white/80 text-slate-700 hover:bg-white transition-colors"
+                              title="Edit Stat"
+                            >
+                              <Edit className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setCollectiveAchievementsList(prev => prev.filter(a => a.id !== item.id));
+                                toast.success("Achievement stat removed");
+                              }}
+                              className="p-1 rounded-md bg-white/80 text-red-600 hover:bg-white transition-colors"
+                              title="Remove Stat"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
                       <div>
                         <div className="text-2xl font-black tracking-tight leading-none text-slate-900">
                           {item.number}
@@ -1374,6 +1623,7 @@ const StudentClubs: React.FC = () => {
               </div>
             </div>
           </div>
+
         </div>
 
         {/* 6. Join Community CTA Banner */}
@@ -1983,6 +2233,16 @@ const StudentClubs: React.FC = () => {
                         className="h-10 text-xs rounded-xl"
                       />
                     </div>
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Display Priority Order (1 = Top / First)</label>
+                      <Input
+                        type="number"
+                        value={editingClub.order ?? 1}
+                        onChange={(e) => setEditingClub({ ...editingClub, order: Number(e.target.value) })}
+                        placeholder="1"
+                        className="h-10 text-xs rounded-xl font-extrabold text-blue-700 border-blue-200 bg-blue-50/30"
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -2525,6 +2785,208 @@ const StudentClubs: React.FC = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* 10. EDIT UPCOMING EVENT MODAL FOR COORDINATORS */}
+      {editingUpcomingEvent && (
+        <Dialog open={!!editingUpcomingEvent} onOpenChange={() => setEditingUpcomingEvent(null)}>
+          <DialogContent className="max-w-md bg-white p-6 rounded-3xl shadow-2xl border-0">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-blue-600" />
+                <span>{upcomingEventsList.some(e => e.id === editingUpcomingEvent.id) ? "Edit Upcoming Event" : "Add New Upcoming Event"}</span>
+              </DialogTitle>
+              <DialogDescription className="text-xs text-slate-500">
+                Update upcoming event title, date, location, host, and timing.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 pt-2 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Date Number *</label>
+                  <Input
+                    value={editingUpcomingEvent.date}
+                    onChange={(e) => setEditingUpcomingEvent({ ...editingUpcomingEvent, date: e.target.value })}
+                    placeholder="e.g. 24"
+                    className="h-10 text-xs rounded-xl"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Month Short Name *</label>
+                  <Input
+                    value={editingUpcomingEvent.month}
+                    onChange={(e) => setEditingUpcomingEvent({ ...editingUpcomingEvent, month: e.target.value.toUpperCase() })}
+                    placeholder="e.g. MAY / JUN"
+                    className="h-10 text-xs rounded-xl"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Event Title *</label>
+                <Input
+                  value={editingUpcomingEvent.title}
+                  onChange={(e) => setEditingUpcomingEvent({ ...editingUpcomingEvent, title: e.target.value })}
+                  placeholder="e.g. CodeSprint 5.0 Hackathon"
+                  className="h-10 text-xs rounded-xl"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Host / Organized By *</label>
+                <Input
+                  value={editingUpcomingEvent.host}
+                  onChange={(e) => setEditingUpcomingEvent({ ...editingUpcomingEvent, host: e.target.value })}
+                  placeholder="e.g. By Debuggers Club"
+                  className="h-10 text-xs rounded-xl"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Location *</label>
+                  <Input
+                    value={editingUpcomingEvent.location}
+                    onChange={(e) => setEditingUpcomingEvent({ ...editingUpcomingEvent, location: e.target.value })}
+                    placeholder="e.g. IDEA Lab"
+                    className="h-10 text-xs rounded-xl"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Timing *</label>
+                  <Input
+                    value={editingUpcomingEvent.time}
+                    onChange={(e) => setEditingUpcomingEvent({ ...editingUpcomingEvent, time: e.target.value })}
+                    placeholder="e.g. 10:00 AM"
+                    className="h-10 text-xs rounded-xl"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 flex justify-end gap-2">
+                <Button variant="ghost" onClick={() => setEditingUpcomingEvent(null)} className="rounded-xl text-xs">
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={() => {
+                    if (!editingUpcomingEvent.title || !editingUpcomingEvent.date) {
+                      toast.error("Title and date are required");
+                      return;
+                    }
+                    setUpcomingEventsList(prev => {
+                      const exists = prev.some(e => e.id === editingUpcomingEvent.id);
+                      if (exists) {
+                        return prev.map(e => e.id === editingUpcomingEvent.id ? editingUpcomingEvent : e);
+                      }
+                      return [...prev, editingUpcomingEvent];
+                    });
+                    toast.success("Upcoming event saved successfully!");
+                    setEditingUpcomingEvent(null);
+                  }} 
+                  className="rounded-xl text-xs bg-blue-600 hover:bg-blue-700 text-white font-bold px-5"
+                >
+                  Save Event
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* 11. EDIT COLLECTIVE ACHIEVEMENT STAT MODAL FOR COORDINATORS */}
+      {editingAchievementStat && (
+        <Dialog open={!!editingAchievementStat} onOpenChange={() => setEditingAchievementStat(null)}>
+          <DialogContent className="max-w-md bg-white p-6 rounded-3xl shadow-2xl border-0">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-amber-500" />
+                <span>{collectiveAchievementsList.some(a => a.id === editingAchievementStat.id) ? "Edit Achievement Stat" : "Add Achievement Stat"}</span>
+              </DialogTitle>
+              <DialogDescription className="text-xs text-slate-500">
+                Update statistical metric number, label, and card styling.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 pt-2 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Metric Number *</label>
+                  <Input
+                    value={editingAchievementStat.number}
+                    onChange={(e) => setEditingAchievementStat({ ...editingAchievementStat, number: e.target.value })}
+                    placeholder="e.g. 12+ or 1,000+"
+                    className="h-10 text-xs rounded-xl"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Icon Style</label>
+                  <select
+                    value={editingAchievementStat.iconType}
+                    onChange={(e) => setEditingAchievementStat({ ...editingAchievementStat, iconType: e.target.value as any })}
+                    className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold"
+                  >
+                    <option value="trophy">🏆 Trophy</option>
+                    <option value="award">🏅 Award Badge</option>
+                    <option value="users">👥 Active Members</option>
+                    <option value="calendar">📅 Calendar Events</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Label / Title *</label>
+                <Input
+                  value={editingAchievementStat.label}
+                  onChange={(e) => setEditingAchievementStat({ ...editingAchievementStat, label: e.target.value })}
+                  placeholder="e.g. National Awards"
+                  className="h-10 text-xs rounded-xl"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Card Theme Style</label>
+                <select
+                  value={editingAchievementStat.color}
+                  onChange={(e) => setEditingAchievementStat({ ...editingAchievementStat, color: e.target.value })}
+                  className="w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold"
+                >
+                  <option value="text-amber-500 bg-amber-50 border-amber-100">Gold / Amber</option>
+                  <option value="text-red-500 bg-red-50 border-red-100">Red / Crimson</option>
+                  <option value="text-blue-500 bg-blue-50 border-blue-100">Blue / Ocean</option>
+                  <option value="text-indigo-500 bg-indigo-50 border-indigo-100">Indigo / Purple</option>
+                  <option value="text-emerald-500 bg-emerald-50 border-emerald-100">Emerald / Green</option>
+                </select>
+              </div>
+
+              <div className="pt-3 flex justify-end gap-2">
+                <Button variant="ghost" onClick={() => setEditingAchievementStat(null)} className="rounded-xl text-xs">
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={() => {
+                    if (!editingAchievementStat.number || !editingAchievementStat.label) {
+                      toast.error("Number and label are required");
+                      return;
+                    }
+                    setCollectiveAchievementsList(prev => {
+                      const exists = prev.some(a => a.id === editingAchievementStat.id);
+                      if (exists) {
+                        return prev.map(a => a.id === editingAchievementStat.id ? editingAchievementStat : a);
+                      }
+                      return [...prev, editingAchievementStat];
+                    });
+                    toast.success("Achievement stat saved successfully!");
+                    setEditingAchievementStat(null);
+                  }} 
+                  className="rounded-xl text-xs bg-amber-600 hover:bg-amber-700 text-white font-bold px-5"
+                >
+                  Save Stat
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
     </div>
   );

@@ -700,6 +700,16 @@ const ManageClubs: React.FC = () => {
                         className="h-10 text-xs rounded-xl"
                       />
                     </div>
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">Display Priority Order (1 = Top / First)</label>
+                      <Input
+                        type="number"
+                        value={editingClub.order ?? 1}
+                        onChange={(e) => setEditingClub({ ...editingClub, order: Number(e.target.value) })}
+                        placeholder="1"
+                        className="h-10 text-xs rounded-xl font-extrabold text-blue-700 border-blue-200 bg-blue-50/30"
+                      />
+                    </div>
                   </div>
 
                   <div>
