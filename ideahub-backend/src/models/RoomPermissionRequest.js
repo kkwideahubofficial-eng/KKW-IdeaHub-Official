@@ -8,7 +8,6 @@ const roomPermissionRequestSchema = new Schema(
       type: String,
       required: true,
       unique: true,
-      index: true,
     },
     applicationDate: {
       type: Date,

@@ -86,7 +86,11 @@ app.use('/api/orders', orderRouter);
 app.use('/api/delivery', deliveryRouter);
 app.use('/api/room-permissions', roomPermissionRouter);
 import notificationRouter from './routes/notification.routes.js';
+import statsRouter from './routes/stats.routes.js';
+import studentClubRouter from './routes/studentClub.routes.js';
 app.use('/api/notifications', notificationRouter);
+app.use('/api/stats', statsRouter);
+app.use('/api/student-clubs', studentClubRouter);
 // Static uploads
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 

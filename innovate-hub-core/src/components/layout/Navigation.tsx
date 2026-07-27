@@ -128,6 +128,7 @@ const Navigation = () => {
           { name: "KKWIEER", path: "/kkwieer" },
           { name: "Official College Website", path: "https://www.kkwagh.edu.in/engineering", isExternal: true },
           { name: "AICTE – IDEA Lab", path: "/aicte-idea-lab" },
+          { name: "Student Clubs", path: "/student-clubs" },
           { name: "Leadership Team", path: "/leadership-team" },
           { name: "Contact Details", path: "/contact-details" }
         ]
@@ -138,6 +139,7 @@ const Navigation = () => {
       links.push(
         { name: "Dashboard", path: "/coordinator-dashboard" },
         { name: "Room Permissions", path: "/coordinator/room-permissions" },
+        { name: "Manage Clubs", path: "/manage-clubs" },
         { name: "Manage Events", path: "/manage-events" },
         { name: "Manage Orders", path: "/manage-orders" },
         { name: "Manage Hero", path: "/manage-hero" },

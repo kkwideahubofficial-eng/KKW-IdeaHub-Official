@@ -387,10 +387,17 @@ export const updateRoomRequest = async (req, res) => {
     request.facilityRequired = facilityRequired;
     request.purpose = purpose;
     request.category = category;
-    request.applicantDetails = applicantDetails;
+    request.applicantDetails = {
+      ...applicantDetails,
+      requestedBy: request.applicantDetails.requestedBy || req.user._id
+    };
     request.teamDetails = teamDetails;
     request.schedule = { ...schedule, duration: durationHours };
-    request.facultyRecommendation = facultyRecommendation;
+    request.facultyRecommendation = {
+      ...facultyRecommendation,
+      verified: request.facultyRecommendation.verified,
+      verifiedAt: request.facultyRecommendation.verifiedAt
+    };
     request.resourceRequirements = resourceRequirements;
     request.specialRequirements = specialRequirements;
     request.additionalNotes = additionalNotes;
@@ -452,6 +459,118 @@ export const updateRoomRequest = async (req, res) => {
     res.status(500).json({ message: 'Error updating request', error: error.message });
   }
 };
+
+// 3.5 Submit Draft Request
+export const submitDraftRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const request = await RoomPermissionRequest.findById(id);
+    if (!request) return res.status(404).json({ message: 'Request not found' });
+    if (request.status !== 'Draft') {
+      return res.status(400).json({ message: 'Only Draft requests can be submitted this way.' });
+    }
+
+    // Validate required fields
+    if (!request.facilityRequired) return res.status(400).json({ message: 'Facility is required.' });
+    if (!request.schedule?.requestedDate || !request.schedule?.startTime || !request.schedule?.endTime) {
+      return res.status(400).json({ message: 'Complete schedule is required to submit the request.' });
+    }
+    if (!request.applicantDetails?.applicantName || !request.applicantDetails?.email || !request.applicantDetails?.mobile) {
+      return res.status(400).json({ message: 'Applicant details are incomplete.' });
+    }
+    if (!request.facultyRecommendation?.facultyName || !request.facultyRecommendation?.facultyEmail) {
+      return res.status(400).json({ message: 'Faculty recommendation details are incomplete.' });
+    }
+
+    // Fix for older drafts that might have lost their requestedBy field
+    if (!request.applicantDetails.requestedBy) {
+      request.applicantDetails.requestedBy = req.user._id;
+    }
+
+    // Capacity check
+    const roomDoc = await Room.findOne({ name: request.facilityRequired, isSpecial: true });
+    const capacity = roomDoc ? roomDoc.capacity : (ROOM_CAPACITIES[request.facilityRequired] || 0);
+    if (request.teamDetails?.participantsCount > capacity) {
+      return res.status(400).json({
+        message: `Participant count (${request.teamDetails.participantsCount}) exceeds room capacity of ${capacity} for ${request.facilityRequired}.`
+      });
+    }
+
+    // Check availability
+    const activeQueries = {
+      'schedule.requestedDate': request.schedule.requestedDate,
+      facilityRequired: request.facilityRequired,
+      status: { $in: ['Approved', 'Conditional Approval'] }
+    };
+    const conflicts = await RoomPermissionRequest.find(activeQueries);
+    const isBooked = conflicts.some(c => timesOverlap(request.schedule.startTime, request.schedule.endTime, c.schedule.startTime, c.schedule.endTime));
+    if (isBooked) {
+      return res.status(409).json({ message: `${request.facilityRequired} is already booked for the selected date and time range.` });
+    }
+
+    request.status = 'Submitted';
+    request.approvalHistory.push({
+      role: 'Student',
+      action: 'Submitted',
+      remarks: 'Request submitted from draft, awaiting faculty recommendation.',
+      byName: request.applicantDetails?.applicantName || 'Student',
+      date: new Date()
+    });
+
+    // Notify Student
+    await createInAppNotification(
+      request.applicantDetails.requestedBy,
+      'Room Request Submitted',
+      `Your request ${request.requestId} for ${request.facilityRequired} has been submitted.`
+    );
+
+    // Email Faculty
+    try {
+      const frontendUrl = process.env.FRONTEND_ORIGIN || 'https://ideahub-app.onrender.com';
+      const verifyLink = `${frontendUrl}/verify-faculty/${request._id}`;
+      await sendEmail(
+        request.facultyRecommendation.facultyEmail,
+        `IDEA Hub Room Permission Recommendation Required - ${request.requestId}`,
+        `<h2>Dear Prof. ${request.facultyRecommendation.facultyName},</h2>
+         <p>Your student <b>${request.applicantDetails.applicantName}</b> has requested permission to book the <b>${request.facilityRequired}</b> for <b>${request.teamDetails.projectName}</b>.</p>
+         <p><b>Date:</b> ${request.schedule.requestedDate}</p>
+         <p><b>Time Slot:</b> ${request.schedule.startTime} - ${request.schedule.endTime}</p>
+         <br/>
+         <p><a href="${verifyLink}" style="display:inline-block;padding:10px 20px;background-color:#1a237e;color:#ffffff;text-decoration:none;border-radius:4px;font-weight:bold;">Review & Verify Request</a></p>
+         <br/><p>Regards,<br/>IDEA Hub System</p>`
+      );
+    } catch (err) {
+      console.error('Failed to send faculty email:', err);
+    }
+
+    // Notify Coordinator and Head
+    try {
+      const frontendUrl = process.env.FRONTEND_ORIGIN || 'https://ideahub-app.onrender.com';
+      const admins = await User.find({ role: { $in: ['coordinator', 'head'] } });
+      for (const admin of admins) {
+        const dashboardPath = admin.role === 'head' ? '/head-dashboard' : '/coordinator/room-permissions';
+        await sendEmail(
+          admin.email,
+          `New Room Permission Request - ${request.requestId}`,
+          `<h2>Dear ${admin.name},</h2>
+           <p>A new room permission request <b>${request.requestId}</b> for <b>${request.facilityRequired}</b> has been submitted by <b>${request.applicantDetails.applicantName}</b>.</p>
+           <p>It is currently awaiting Faculty Verification.</p>
+           <p>Review and process this request directly: <a href="${frontendUrl}${dashboardPath}">Go to Dashboard Review</a></p>
+           <br/><p>Regards,<br/>IDEA Hub System</p>`
+        );
+      }
+    } catch (err) {
+      console.error('Failed to send admin email:', err);
+    }
+
+    await request.save();
+    res.status(200).json(request);
+  } catch (error) {
+    res.status(500).json({ message: 'Error submitting draft request', error: error.message });
+  }
+};
+
 
 // 4. Faculty Verification Workflow (Public endpoint)
 export const facultyVerifyRequest = async (req, res) => {

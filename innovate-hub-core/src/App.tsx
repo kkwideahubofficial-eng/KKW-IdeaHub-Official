@@ -18,6 +18,7 @@ import Events from "./pages/Events";
 import EventDetail from "./pages/EventDetail";
 import Kkwieer from "./pages/Kkwieer";
 import AicteIdeaLab from "./pages/AicteIdeaLab";
+import StudentClubs from "./pages/StudentClubs";
 import LeadershipTeam from "./pages/LeadershipTeam";
 import ContactDetails from "./pages/ContactDetails";
 import Ecommerce from "./pages/Ecommerce";
@@ -27,6 +28,7 @@ import ManageEvents from "./pages/ManageEvents";
 import ManageAchievements from "./pages/ManageAchievements";
 import ManageRooms from "./pages/ManageRooms";
 import ManageHero from "./pages/coordinator/ManageHero";
+import ManageClubs from "./pages/coordinator/ManageClubs";
 import ManageSpecialRooms from "./pages/coordinator/ManageSpecialRooms";
 import Records from "./pages/Records";
 import Checkout from "./pages/Checkout";
@@ -166,6 +168,14 @@ const App = () => (
                   <RequireAuth>
                     <MyOrders />
                   </RequireAuth>
+                }
+              />
+              <Route
+                path="/manage-clubs"
+                element={
+                  <RequireCoordinator>
+                    <ManageClubs />
+                  </RequireCoordinator>
                 }
               />
               <Route
@@ -323,6 +333,7 @@ const App = () => (
               <Route path="/events/:id" element={<EventDetail />} />
               <Route path="/kkwieer" element={<Kkwieer />} />
               <Route path="/aicte-idea-lab" element={<AicteIdeaLab />} />
+              <Route path="/student-clubs" element={<StudentClubs />} />
               <Route path="/lab-info" element={<Navigate to="/aicte-idea-lab" replace />} />
               <Route path="/leadership-team" element={<LeadershipTeam />} />
               <Route path="/contact-details" element={<ContactDetails />} />

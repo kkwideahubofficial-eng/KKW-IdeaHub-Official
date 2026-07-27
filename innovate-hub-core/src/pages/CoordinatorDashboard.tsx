@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import api from "../lib/axios";
 import { formatTime12Hour } from "../lib/dateUtils";
 import NotificationCenter from "../components/NotificationCenter";
+import ManageStats from "./coordinator/ManageStats";
 const axios = api;
 
 // Room booking types
@@ -661,6 +662,7 @@ const CoordinatorDashboard = () => {
             >
               <TabsTrigger value="room_bookings" className="rounded-md text-xs font-semibold">Room Bookings</TabsTrigger>
               <TabsTrigger value="materials_machinery" className="rounded-md text-xs font-semibold">Materials & Machinery</TabsTrigger>
+              <TabsTrigger value="home_stats" className="rounded-md text-xs font-semibold">Home Stats Counter</TabsTrigger>
             </TabsList>
             <NotificationCenter />
           </div>
@@ -1332,6 +1334,11 @@ const CoordinatorDashboard = () => {
           </Card>
         </div>
       )}
+
+      {/* TABS CONTENT: HOME STATS COUNTER */}
+      <TabsContent value="home_stats" className="space-y-6">
+        <ManageStats />
+      </TabsContent>
 
       {/* DIALOG: Coordinator Review Checks Checklist */}
       {selectedResRequest && showResReviewDialog && (

@@ -9,7 +9,6 @@ const machineryRequestSchema = new Schema(
       type: String,
       required: true,
       unique: true,
-      index: true,
     },
     applicationDate: {
       type: Date,
@@ -152,7 +151,6 @@ const machineryRequestSchema = new Schema(
         'Cancelled'
       ],
       default: 'Submitted',
-      index: true,
     },
 
     // Issue & Return management

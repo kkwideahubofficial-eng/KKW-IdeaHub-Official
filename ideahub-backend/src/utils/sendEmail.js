@@ -6,16 +6,18 @@ dotenv.config();
 // Create transporter once to reuse connections (connection pooling)
 // This is much faster and more reliable, especially on hosted environments
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465, // Use 465 for secure connection (often faster/less blocked than 587)
+  host: '142.250.115.108', // Hardcoded IP for smtp.gmail.com to completely bypass Windows/c-ares DNS timeout issues
+  port: 465, // Use 465 for secure connection
   secure: true, 
   pool: true, // Use pooled connections
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
-  connectionTimeout: 10000, // 10 seconds timeout
+  connectionTimeout: 15000, 
+  socketTimeout: 15000, 
   tls: {
+    servername: 'smtp.gmail.com', // Necessary for SSL handshake when using direct IP
     rejectUnauthorized: false
   }
 });

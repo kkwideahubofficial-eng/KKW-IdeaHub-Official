@@ -246,6 +246,7 @@ const SpecialRoomPermission = () => {
   const [rooms, setRooms] = useState<RoomDetails[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -494,11 +495,17 @@ const SpecialRoomPermission = () => {
         status
       };
 
-      await api.post("/room-permissions/submit", payload);
-      toast.success(status === "Submitted" ? "Request submitted successfully!" : "Draft request saved!");
+      if (editingDraftId) {
+        await api.put(`/room-permissions/${editingDraftId}/update`, payload);
+      } else {
+        await api.post("/room-permissions/submit", payload);
+      }
+      
+      toast.success(status === "Submitted" ? "Request submitted successfully!" : "Draft saved!");
       setActiveTab("history");
       setSelectedRoom(null);
       setFormStep(1);
+      setEditingDraftId(null);
       // Reset form
       setFormData(prev => ({
         ...prev,
@@ -536,6 +543,71 @@ const SpecialRoomPermission = () => {
     }
   };
 
+  const submitDraft = async (reqObj: any) => {
+    try {
+      await api.put(`/room-permissions/${reqObj._id}/submit-draft`);
+      toast.success("Draft submitted successfully!");
+      fetchMyRequests();
+      fetchStats();
+      if (selectedRequestDetails?._id === reqObj._id) {
+        setSelectedRequestDetails(prev => prev ? { ...prev, status: "Submitted" } : null);
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to submit draft.");
+    }
+  };
+
+  const editDraft = (req: any) => {
+    setEditingDraftId(req._id);
+    
+    // Find the selected room
+    const room = rooms.find(r => r.name === req.facilityRequired);
+    if (room) setSelectedRoom(room);
+
+    setFormData({
+      purpose: req.purpose || "",
+      category: req.category || "Project Discussion",
+      applicantDetails: {
+        applicantName: req.applicantDetails?.applicantName || "",
+        prn: req.applicantDetails?.prn || "",
+        rollNo: req.applicantDetails?.rollNo || "",
+        department: req.applicantDetails?.department || "",
+        year: req.applicantDetails?.year || "",
+        division: req.applicantDetails?.division || "",
+        mobile: req.applicantDetails?.mobile || "",
+        email: req.applicantDetails?.email || ""
+      },
+      teamDetails: {
+        teamName: req.teamDetails?.teamName || "",
+        projectName: req.teamDetails?.projectName || "",
+        participantsCount: req.teamDetails?.participantsCount || 1
+      },
+      schedule: {
+        requestedDate: req.schedule?.requestedDate || "",
+        startTime: req.schedule?.startTime || "",
+        endTime: req.schedule?.endTime || ""
+      },
+      facultyRecommendation: {
+        facultyName: req.facultyRecommendation?.facultyName || "",
+        facultyDepartment: req.facultyRecommendation?.facultyDepartment || "",
+        facultyMobile: req.facultyRecommendation?.facultyMobile || "",
+        facultyEmail: req.facultyRecommendation?.facultyEmail || "",
+        facultyDesignation: req.facultyRecommendation?.facultyDesignation || "Assistant Professor",
+        facultyRemarks: req.facultyRecommendation?.facultyRemarks || ""
+      },
+      resourceRequirements: {
+        requiredEquipment: req.resourceRequirements?.requiredEquipment || [],
+        otherEquipment: req.resourceRequirements?.otherEquipment || ""
+      },
+      specialRequirements: req.specialRequirements || "",
+      additionalNotes: req.additionalNotes || "",
+      guidelinesChecked: req.declaresAgreed ? { cleanliness: true, noDamage: true, timings: true, returnEquipment: true, policies: true } : { cleanliness: false, noDamage: false, timings: false, returnEquipment: false, policies: false }
+    });
+    setTeamMembers(req.teamDetails?.teamMembers || []);
+    setActiveTab("book");
+    setFormStep(1);
+  };
+
   const downloadPdf = (id: string) => {
     const token = localStorage.getItem('idea_hub_token');
     window.open(`${api.defaults.baseURL}/room-permissions/${id}/pdf${token ? `?token=${token}` : ''}`, "_blank");
@@ -561,7 +633,10 @@ const SpecialRoomPermission = () => {
           </style>
         </head>
         <body>
-          <h2>IDEA HUB SPECIAL ROOM PERMISSION</h2>
+          <div class="header-container">
+            <img src="/uploaded-logo.png" alt="Logo" class="logo" onerror="this.src='/logo.svg'; this.onerror=null;" />
+            <h2>AICTE IDEA HUB SPECIAL ROOM PERMISSION</h2>
+          </div>
           <p style="text-align:right"><b>Request ID:</b> ${req.requestId} | <b>Date:</b> ${new Date(req.createdAt).toLocaleDateString()}</p>
           
           <div class="section">
@@ -641,7 +716,7 @@ const SpecialRoomPermission = () => {
           <div className="grid grid-cols-2 gap-2 flex-1 w-full bg-slate-100/60 p-1.5 rounded-xl sm:flex sm:flex-none sm:w-auto sm:gap-2 sm:bg-muted sm:p-1 sm:rounded-lg">
             <Button
               variant={activeTab === "book" ? "default" : "ghost"}
-              onClick={() => { setActiveTab("book"); setFormStep(1); }}
+              onClick={() => { setActiveTab("book"); setFormStep(1); setEditingDraftId(null); setSelectedRoom(null); }}
               className={`flex items-center justify-center gap-2 h-11 sm:h-9 w-full sm:w-auto text-sm ${activeTab === 'book' ? 'bg-white text-slate-900 shadow-sm sm:bg-primary sm:text-primary-foreground font-semibold' : 'text-slate-600 sm:text-slate-600 font-semibold'}`}
             >
               <Users className="w-4 h-4" /> Book Room
@@ -1326,6 +1401,16 @@ const SpecialRoomPermission = () => {
                                     <Button variant="destructive" onClick={() => cancelRequest(req._id)} className="h-10 px-3.5 text-xs sm:h-8 sm:px-2.5 sm:text-2xs flex items-center justify-center font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 min-h-[40px] sm:min-h-0">
                                       Cancel
                                     </Button>
+                                  )}
+                                  {req.status === 'Draft' && (
+                                    <>
+                                      <Button variant="outline" onClick={() => editDraft(req)} className="h-10 px-3.5 text-xs sm:h-8 sm:px-2.5 sm:text-2xs flex items-center justify-center font-bold text-slate-600 hover:bg-slate-100 rounded-lg border min-h-[40px] sm:min-h-0">
+                                        Edit
+                                      </Button>
+                                      <Button variant="default" onClick={() => submitDraft(req)} className="h-10 px-3.5 text-xs sm:h-8 sm:px-2.5 sm:text-2xs flex items-center justify-center font-bold bg-primary hover:bg-primary/90 text-white rounded-lg border border-primary/20 min-h-[40px] sm:min-h-0">
+                                        Send
+                                      </Button>
+                                    </>
                                   )}
                                 </div>
                               </td>

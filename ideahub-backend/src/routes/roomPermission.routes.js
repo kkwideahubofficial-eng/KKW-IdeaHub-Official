@@ -4,6 +4,7 @@ import {
   checkRoomAvailability,
   createRoomRequest,
   updateRoomRequest,
+  submitDraftRequest,
   facultyVerifyRequest,
   coordinatorDecision,
   headDecision,
@@ -33,6 +34,7 @@ router.get('/inventory', requireAuth, requireInternalUser, getRoomInventory);
 router.get('/report', requireAuth, requireInternalUser, requireCoordinator, downloadRoomUsageReport);
 router.post('/submit', requireAuth, requireInternalUser, createRoomRequest);
 router.put('/:id/update', requireAuth, requireInternalUser, updateRoomRequest);
+router.put('/:id/submit-draft', requireAuth, requireInternalUser, submitDraftRequest);
 router.put('/:id/cancel', requireAuth, requireInternalUser, cancelRequest);
 router.get('/student-stats', requireAuth, requireInternalUser, getStudentStats);
 router.get('/coordinator-stats', requireAuth, requireInternalUser, requireCoordinator, getCoordinatorStats);
