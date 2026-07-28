@@ -20,6 +20,7 @@ import Kkwieer from "./pages/Kkwieer";
 import AicteIdeaLab from "./pages/AicteIdeaLab";
 import StudentClubs from "./pages/StudentClubs";
 import LeadershipTeam from "./pages/LeadershipTeam";
+import DevelopmentTeam from "./pages/DevelopmentTeam";
 import ContactDetails from "./pages/ContactDetails";
 import Ecommerce from "./pages/Ecommerce";
 import NotFound from "./pages/NotFound";
@@ -336,6 +337,8 @@ const App = () => (
               <Route path="/student-clubs" element={<StudentClubs />} />
               <Route path="/lab-info" element={<Navigate to="/aicte-idea-lab" replace />} />
               <Route path="/leadership-team" element={<LeadershipTeam />} />
+              <Route path="/development-team" element={<DevelopmentTeam />} />
+              <Route path="/about-us" element={<DevelopmentTeam />} />
               <Route path="/contact-details" element={<ContactDetails />} />
               <Route path="/ecommerce" element={<Ecommerce />} />
               <Route

@@ -130,6 +130,7 @@ const Navigation = () => {
           { name: "AICTE – IDEA Lab", path: "/aicte-idea-lab" },
           { name: "Student Clubs", path: "/student-clubs" },
           { name: "Leadership Team", path: "/leadership-team" },
+          { name: "Development Team", path: "/development-team" },
           { name: "Contact Details", path: "/contact-details" }
         ]
       }

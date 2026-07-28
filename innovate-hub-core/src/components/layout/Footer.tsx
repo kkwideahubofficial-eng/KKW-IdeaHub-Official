@@ -63,6 +63,7 @@ const Footer = () => {
                 { label: "Official College Website", path: "https://www.kkwagh.edu.in/engineering", isExternal: true },
                 { label: "AICTE IDEA Lab", path: "/aicte-idea-lab" },
                 { label: "Leadership Team", path: "/leadership-team" },
+                { label: "Development Team", path: "/development-team" },
                 { label: "Contact Details", path: "/contact-details" }
               ].map((link, idx) => (
                 <li key={idx}>
