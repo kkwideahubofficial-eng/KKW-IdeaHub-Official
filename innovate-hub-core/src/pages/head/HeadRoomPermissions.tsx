@@ -371,6 +371,65 @@ const HeadRoomPermissions = () => {
         </Card>
       </div>
 
+      {/* Requests table list for Head review */}
+      <Card className="mb-8">
+        <CardHeader className="border-b py-4">
+          <CardTitle className="text-md flex items-center gap-2">
+            <Sliders className="w-4 h-4 text-primary" /> Approvals Action Queue
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {requests.length > 0 ? (
+            <div className="overflow-x-auto text-xs">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b bg-muted/50 font-bold uppercase text-muted-foreground">
+                    <th className="p-4">Request ID</th>
+                    <th className="p-4">Student</th>
+                    <th className="p-4">Room Type</th>
+                    <th className="p-4">Requested Date</th>
+                    <th className="p-4">Time Slot</th>
+                    <th className="p-4 text-center">Status</th>
+                    <th className="p-4 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {requests.map(req => (
+                    <tr key={req._id} className="border-b hover:bg-secondary/5">
+                      <td className="p-4 font-mono font-bold text-primary">{req.requestId}</td>
+                      <td className="p-4">
+                        <div className="font-medium">{req.applicantDetails.applicantName}</div>
+                        <div className="text-3xs text-muted-foreground">{req.applicantDetails.department}</div>
+                      </td>
+                      <td className="p-4 font-semibold">{req.facilityRequired}</td>
+                      <td className="p-4">{req.schedule.requestedDate}</td>
+                      <td className="p-4 font-medium">{req.schedule.startTime} - {req.schedule.endTime}</td>
+                      <td className="p-4 text-center">
+                        <span className={`px-2 py-0.5 rounded text-3xs font-extrabold uppercase ${
+                          req.status === 'Approved' ? 'bg-green-100 text-green-700' :
+                          req.status === 'Rejected' ? 'bg-red-100 text-red-700' :
+                          req.status === 'Conditional Approval' ? 'bg-amber-100 text-amber-700' :
+                          'bg-blue-100 text-blue-700'
+                        }`}>
+                          {req.status}
+                        </span>
+                      </td>
+                      <td className="p-4 text-right">
+                        <Button variant="outline" size="sm" onClick={() => { setSelectedRequest(req); setConfirmAction(null); }}>
+                          Review Request
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="p-8 text-center text-muted-foreground text-xs">No pending approvals queue.</div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Analytics & Calendar Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
         
@@ -515,65 +574,6 @@ const HeadRoomPermissions = () => {
           </CardContent>
         </Card>
       )}
-
-      {/* Requests table list for Head review */}
-      <Card>
-        <CardHeader className="border-b py-4">
-          <CardTitle className="text-md flex items-center gap-2">
-            <Sliders className="w-4 h-4 text-primary" /> Approvals Action Queue
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {requests.length > 0 ? (
-            <div className="overflow-x-auto text-xs">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b bg-muted/50 font-bold uppercase text-muted-foreground">
-                    <th className="p-4">Request ID</th>
-                    <th className="p-4">Student</th>
-                    <th className="p-4">Room Type</th>
-                    <th className="p-4">Requested Date</th>
-                    <th className="p-4">Time Slot</th>
-                    <th className="p-4 text-center">Status</th>
-                    <th className="p-4 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {requests.map(req => (
-                    <tr key={req._id} className="border-b hover:bg-secondary/5">
-                      <td className="p-4 font-mono font-bold text-primary">{req.requestId}</td>
-                      <td className="p-4">
-                        <div className="font-medium">{req.applicantDetails.applicantName}</div>
-                        <div className="text-3xs text-muted-foreground">{req.applicantDetails.department}</div>
-                      </td>
-                      <td className="p-4 font-semibold">{req.facilityRequired}</td>
-                      <td className="p-4">{req.schedule.requestedDate}</td>
-                      <td className="p-4 font-medium">{req.schedule.startTime} - {req.schedule.endTime}</td>
-                      <td className="p-4 text-center">
-                        <span className={`px-2 py-0.5 rounded text-3xs font-extrabold uppercase ${
-                          req.status === 'Approved' ? 'bg-green-100 text-green-700' :
-                          req.status === 'Rejected' ? 'bg-red-100 text-red-700' :
-                          req.status === 'Conditional Approval' ? 'bg-amber-100 text-amber-700' :
-                          'bg-blue-100 text-blue-700'
-                        }`}>
-                          {req.status}
-                        </span>
-                      </td>
-                      <td className="p-4 text-right">
-                        <Button variant="outline" size="sm" onClick={() => { setSelectedRequest(req); setConfirmAction(null); }}>
-                          Review Request
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="p-8 text-center text-muted-foreground text-xs">No pending approvals queue.</div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Head Review Modal */}
       {selectedRequest && (

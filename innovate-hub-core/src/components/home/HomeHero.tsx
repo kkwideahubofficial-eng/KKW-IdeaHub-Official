@@ -9,21 +9,8 @@ interface HeroImage {
   secure_url: string;
 }
 
-const defaultSlides = [
-  "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&q=80&w=1200",
-  "https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&q=80&w=1200",
-  "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&q=80&w=1200",
-];
-
-const stats = [
-  { value: "1500+", label: "Students Trained" },
-  { value: "500+", label: "Projects Built" },
-  { value: "100+", label: "Technical Events" },
-  { value: "50+", label: "Patents Filed" },
-];
-
 const HomeHero = () => {
-  const [images, setImages] = useState<string[]>(defaultSlides);
+  const [images, setImages] = useState<string[]>([]);
   const [current, setCurrent] = useState(0);
 
   useEffect(() => {
@@ -35,28 +22,38 @@ const HomeHero = () => {
           setImages(urls);
         }
       } catch (err) {
-        console.warn("Unable to fetch backend hero images, using default slides.");
+        console.warn("Unable to fetch backend hero images.");
       }
     };
     fetchHeroImages();
   }, []);
 
   const nextSlide = useCallback(() => {
+    if (images.length === 0) return;
     setCurrent((val) => (val === images.length - 1 ? 0 : val + 1));
   }, [images.length]);
 
   const prevSlide = useCallback(() => {
+    if (images.length === 0) return;
     setCurrent((val) => (val === 0 ? images.length - 1 : val - 1));
   }, [images.length]);
 
   useEffect(() => {
+    if (images.length <= 1) return;
     const interval = setInterval(nextSlide, 6000);
     return () => clearInterval(interval);
-  }, [nextSlide]);
+  }, [nextSlide, images.length]);
 
   return (
     <section className="relative h-[650px] w-full bg-slate-950 overflow-hidden flex items-end">
-      {/* Background Slider */}
+      {/* Background Gradient (shown when no uploaded hero images exist) */}
+      {images.length === 0 && (
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.15)_0,transparent_70%)]" />
+        </div>
+      )}
+
+      {/* Background Slider (shown when uploaded hero images exist) */}
       {images.map((src, idx) => (
         <div
           key={idx}
@@ -91,21 +88,25 @@ const HomeHero = () => {
         </div>
       </div>
 
-      {/* Manual Slider Navigation Arrows */}
-      <button
-        onClick={prevSlide}
-        className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-2.5 rounded-full bg-slate-900/40 text-white/70 hover:text-white hover:bg-slate-900/80 transition-all focus:outline-none"
-        aria-label="Previous image"
-      >
-        <ChevronLeft className="w-5 h-5" />
-      </button>
-      <button
-        onClick={nextSlide}
-        className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-2.5 rounded-full bg-slate-900/40 text-white/70 hover:text-white hover:bg-slate-900/80 transition-all focus:outline-none"
-        aria-label="Next image"
-      >
-        <ChevronRight className="w-5 h-5" />
-      </button>
+      {/* Manual Slider Navigation Arrows (only displayed when multiple photos exist) */}
+      {images.length > 1 && (
+        <>
+          <button
+            onClick={prevSlide}
+            className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-2.5 rounded-full bg-slate-900/40 text-white/70 hover:text-white hover:bg-slate-900/80 transition-all focus:outline-none"
+            aria-label="Previous image"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <button
+            onClick={nextSlide}
+            className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-2.5 rounded-full bg-slate-900/40 text-white/70 hover:text-white hover:bg-slate-900/80 transition-all focus:outline-none"
+            aria-label="Next image"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </>
+      )}
     </section>
   );
 };

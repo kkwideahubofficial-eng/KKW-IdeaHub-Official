@@ -1627,20 +1627,20 @@ const StudentClubs: React.FC = () => {
         </div>
 
         {/* 6. Join Community CTA Banner */}
-        <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-800 rounded-3xl p-8 sm:p-10 text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8">
-          <div className="absolute -right-10 -bottom-10 w-64 h-64 rounded-full bg-white/10 blur-2xl pointer-events-none" />
-          <div className="absolute -left-10 -top-10 w-48 h-48 rounded-full bg-blue-400/20 blur-xl pointer-events-none" />
+        <div className="bg-zinc-950 border border-zinc-800/80 rounded-3xl p-8 sm:p-10 text-white shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8">
+          <div className="absolute -right-10 -bottom-10 w-64 h-64 rounded-full bg-white/5 blur-3xl pointer-events-none" />
+          <div className="absolute -left-10 -top-10 w-48 h-48 rounded-full bg-zinc-700/15 blur-2xl pointer-events-none" />
 
           <div className="flex items-center gap-6 relative z-10">
-            <div className="hidden sm:flex w-24 h-24 rounded-2xl bg-white/10 backdrop-blur-md items-center justify-center border border-white/20 shrink-0 text-4xl shadow-inner">
+            <div className="hidden sm:flex w-24 h-24 rounded-2xl bg-zinc-900/90 backdrop-blur-md items-center justify-center border border-zinc-800 shrink-0 text-4xl shadow-inner">
               🧑‍💻
             </div>
 
             <div className="space-y-2 text-center sm:text-left">
-              <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+              <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
                 Be a Part of Something Great!
               </h3>
-              <p className="text-blue-100 text-xs sm:text-sm max-w-xl leading-relaxed">
+              <p className="text-zinc-400 text-xs sm:text-sm max-w-xl leading-relaxed">
                 Join our clubs and start your journey of learning, innovation and leadership. Connect with like-minded creators and build projects that matter.
               </p>
             </div>
@@ -1649,10 +1649,10 @@ const StudentClubs: React.FC = () => {
           <div className="relative z-10 shrink-0">
             <Button
               onClick={() => handleOpenJoinModal("Student Club")}
-              className="h-12 px-8 rounded-full bg-white text-blue-900 font-extrabold text-sm hover:bg-blue-50 hover:scale-105 transition-all shadow-lg flex items-center gap-2 group"
+              className="h-12 px-8 rounded-full bg-white text-zinc-950 font-extrabold text-sm hover:bg-zinc-100 hover:scale-105 transition-all shadow-lg flex items-center gap-2 group border border-white/20"
             >
               <span>Join a Club Now</span>
-              <ArrowRight className="w-4 h-4 text-blue-700 transition-transform group-hover:translate-x-1" />
+              <ArrowRight className="w-4 h-4 text-zinc-950 transition-transform group-hover:translate-x-1" />
             </Button>
           </div>
         </div>

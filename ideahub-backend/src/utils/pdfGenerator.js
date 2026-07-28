@@ -23,6 +23,36 @@ const PAGE_HEIGHT = 841.89;
 const CONTENT_WIDTH = PAGE_WIDTH - 2 * MARGIN;
 const BOTTOM_MARGIN = 50;
 
+const getLogoBufferOrPath = () => {
+  const possiblePaths = [
+    path.resolve('uploads/logo.png'),
+    path.resolve('uploads/uploaded-logo.png'),
+    path.resolve('uploads/logo.svg'),
+    path.resolve('../innovate-hub-core/public/uploaded-logo.png'),
+    path.resolve('../innovate-hub-core/public/logo.png'),
+    path.resolve('../innovate-hub-core/public/logo.svg'),
+  ];
+
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      if (p.endsWith('.svg')) {
+        try {
+          const content = fs.readFileSync(p, 'utf-8');
+          const match = content.match(/data:image\/png;base64,([A-Za-z0-9+/=]+)/);
+          if (match && match[1]) {
+            return Buffer.from(match[1], 'base64');
+          }
+        } catch (e) {
+          console.error('Error parsing SVG logo:', e);
+        }
+      } else {
+        return p;
+      }
+    }
+  }
+  return null;
+};
+
 const remaining = (cy) => PAGE_HEIGHT - BOTTOM_MARGIN - cy;
 
 const ensurePage = (doc, cy, needed) => {
@@ -146,40 +176,45 @@ const drawHeader = (doc, title, status, cy) => {
   doc.rect(MARGIN, cy, CONTENT_WIDTH, 2).fill(COLORS.primary);
   cy += 8;
 
-  const logoSize = 35;
+  const logoWidth = 75;
+  const logoHeight = 52;
   const logoX = MARGIN + 2;
-  const logoY = cy + 4;
+  const logoY = cy + 2;
 
-  const logoPath = path.resolve('uploads/logo.png');
-  if (fs.existsSync(logoPath)) {
-    doc.image(logoPath, logoX, logoY, { width: logoSize, height: logoSize });
+  const logo = getLogoBufferOrPath();
+  if (logo) {
+    try {
+      doc.image(logo, logoX, logoY, { fit: [logoWidth, logoHeight], align: 'left', valign: 'center' });
+    } catch (e) {
+      console.error('Error rendering logo in header:', e);
+    }
   } else {
-    doc.roundedRect(logoX, logoY, logoSize, logoSize, 4).stroke(COLORS.border);
+    doc.roundedRect(logoX, logoY, logoWidth, logoHeight, 4).stroke(COLORS.border);
     doc.fillColor(COLORS.textLight).font('Helvetica').fontSize(6)
-       .text('Logo', logoX, logoY + 13, { width: logoSize, align: 'center' });
+       .text('Logo', logoX, logoY + 18, { width: logoWidth, align: 'center' });
   }
 
   const badge = badgeLabel(status);
-  const badgeW = 90;
+  const badgeW = 95;
   const badgeH = 20;
   const badgeX = PAGE_WIDTH - MARGIN - badgeW - 2;
-  const badgeY = cy + 10;
+  const badgeY = cy + 12;
 
   doc.roundedRect(badgeX, badgeY, badgeW, badgeH, 10).fill(badge.color);
-  doc.fillColor(COLORS.white).font('Helvetica-Bold').fontSize(9)
+  doc.fillColor(COLORS.white).font('Helvetica-Bold').fontSize(8.5)
      .text(badge.text, badgeX, badgeY + 5, { width: badgeW, align: 'center' });
 
-  const textX = MARGIN + logoSize + 12;
+  const textX = MARGIN + logoWidth + 8;
   const textW = badgeX - textX - 8;
 
-  doc.fillColor(COLORS.primary).font('Helvetica-Bold').fontSize(11)
-     .text('K. K. Wagh Institute of Engineering Education', textX, cy + 2, { width: textW, align: 'center' });
-  doc.fontSize(11)
-     .text('and Research, Nashik', textX, cy + 15, { width: textW, align: 'center' });
+  doc.fillColor(COLORS.primary).font('Helvetica-Bold').fontSize(12.5)
+     .text('AICTE IDEA Lab and Innovation Centre', textX, cy + 3, { width: textW, align: 'center' });
+  doc.fillColor(COLORS.text).font('Helvetica-Bold').fontSize(8.5)
+     .text('K. K. Wagh Institute of Engineering Education and Research, Nashik', textX, cy + 21, { width: textW, align: 'center' });
 
-  cy += 34;
+  cy += 44;
 
-  doc.fillColor(COLORS.secondary).font('Helvetica-Bold').fontSize(16)
+  doc.fillColor(COLORS.secondary).font('Helvetica-Bold').fontSize(15)
      .text(title, MARGIN, cy, { width: CONTENT_WIDTH, align: 'center' });
   cy += 24;
 
@@ -403,15 +438,19 @@ const generateSpecialRoomPdf = async (doc, data) => {
   const headerHeight = 75;
   doc.rect(margin, currentY, contentWidth, headerHeight).lineWidth(1).stroke();
 
-  // College logo inside the header box on top-right
-  const logoWidth = 45;
-  const logoHeight = 55;
-  const logoX = 595.28 - margin - logoWidth - 10;
-  const logoY = currentY + 10;
+  // College logo inside the header box on top-left
+  const logoWidth = 65;
+  const logoHeight = 63;
+  const logoX = margin + 8;
+  const logoY = currentY + 6;
 
-  const logoPath = path.resolve('uploads/logo.png');
-  if (fs.existsSync(logoPath)) {
-    doc.image(logoPath, logoX, logoY, { width: logoWidth, height: logoHeight });
+  const logo = getLogoBufferOrPath();
+  if (logo) {
+    try {
+      doc.image(logo, logoX, logoY, { fit: [logoWidth, logoHeight], align: 'left', valign: 'center' });
+    } catch (e) {
+      console.error('Error rendering logo in SpecialRoomPdf:', e);
+    }
   } else {
     // Draw oval border and "LOGO" text inside
     doc.lineWidth(1);
@@ -631,7 +670,8 @@ const generateSpecialRoomPdf = async (doc, data) => {
   const qrX = 595.28 - margin - qrSize;
   const qrY = blockY + 5;
 
-  const qrText = `Request ID: ${data.header.requestId || 'N/A'}\nStudent Name: ${data.student.name || 'N/A'}\nFacility Name: ${data.room.facilityRequired || 'N/A'}\nBooking Date: ${data.schedule.requestedDate || 'N/A'}\nApproval Status: ${data.status || 'N/A'}`;
+  const frontendUrl = process.env.FRONTEND_ORIGIN || process.env.FRONTEND_URL || 'https://ideahub-app.onrender.com';
+  const qrText = data.qrData || `${frontendUrl}/verify-room-permission/${data.header.requestId || 'N/A'}`;
 
   try {
     const qrBuffer = await QRCode.toBuffer(qrText, { width: qrSize, margin: 1 });
@@ -662,15 +702,36 @@ const generateRoomUsageReportPdf = async (doc, data) => {
   let currentY = margin;
 
   // Header Box
-  doc.rect(margin, currentY, contentWidth, 50).lineWidth(1).stroke();
-  doc.fillColor('#000000').font('Times-Bold').fontSize(11);
-  doc.text('AICTE IDEA Lab and Innovation Centre', margin, currentY + 10, { width: contentWidth, align: 'center' });
-  doc.font('Times-Roman').fontSize(9);
-  doc.text('K. K. Wagh Institute of Engineering Education and Research, Nashik', margin, currentY + 23, { width: contentWidth, align: 'center' });
-  doc.font('Times-Bold').fontSize(10);
-  doc.text(`Room Usage Report (${data.dateRangeStr})`, margin, currentY + 36, { width: contentWidth, align: 'center' });
+  const topHeaderHeight = 70;
+  doc.rect(margin, currentY, contentWidth, topHeaderHeight).lineWidth(1.2).strokeColor('#1a237e').stroke();
 
-  currentY += 65;
+  // College / IDEA Lab Logo on Left
+  const logo = getLogoBufferOrPath();
+  const logoWidth = 65;
+  const logoHeight = 56;
+  const logoX = margin + 8;
+  const logoY = currentY + (topHeaderHeight - logoHeight) / 2;
+
+  if (logo) {
+    try {
+      doc.image(logo, logoX, logoY, { fit: [logoWidth, logoHeight], align: 'left', valign: 'center' });
+    } catch (e) {
+      console.error('Error drawing logo in RoomUsageReport:', e);
+    }
+  }
+
+  // Header Text
+  const textX = margin + logoWidth + 10;
+  const textWidth = contentWidth - (logoWidth + 10) * 2;
+
+  doc.fillColor('#1a237e').font('Times-Bold').fontSize(12);
+  doc.text('AICTE IDEA Lab and Innovation Centre', textX, currentY + 10, { width: textWidth, align: 'center' });
+  doc.fillColor('#212121').font('Times-Roman').fontSize(9.5);
+  doc.text('K. K. Wagh Institute of Engineering Education and Research, Nashik', textX, currentY + 26, { width: textWidth, align: 'center' });
+  doc.fillColor('#283593').font('Times-Bold').fontSize(10.5);
+  doc.text(`Room Usage Report (${data.dateRangeStr})`, textX, currentY + 42, { width: textWidth, align: 'center' });
+
+  currentY += topHeaderHeight + 15;
 
   // Table Columns
   // 1. Request ID (75)
@@ -784,15 +845,36 @@ const generateMachineryUsageReportPdf = async (doc, data) => {
   let currentY = margin;
 
   // Header Box
-  doc.rect(margin, currentY, contentWidth, 50).lineWidth(1).stroke();
-  doc.fillColor('#000000').font('Times-Bold').fontSize(11);
-  doc.text('AICTE IDEA Lab and Innovation Centre', margin, currentY + 10, { width: contentWidth, align: 'center' });
-  doc.font('Times-Roman').fontSize(9);
-  doc.text('K. K. Wagh Institute of Engineering Education and Research, Nashik', margin, currentY + 23, { width: contentWidth, align: 'center' });
-  doc.font('Times-Bold').fontSize(10);
-  doc.text(`Machinery Usage Report (${data.dateRangeStr})`, margin, currentY + 36, { width: contentWidth, align: 'center' });
+  const topHeaderHeight = 70;
+  doc.rect(margin, currentY, contentWidth, topHeaderHeight).lineWidth(1.2).strokeColor('#1a237e').stroke();
 
-  currentY += 65;
+  // College / IDEA Lab Logo on Left
+  const logo = getLogoBufferOrPath();
+  const logoWidth = 65;
+  const logoHeight = 56;
+  const logoX = margin + 8;
+  const logoY = currentY + (topHeaderHeight - logoHeight) / 2;
+
+  if (logo) {
+    try {
+      doc.image(logo, logoX, logoY, { fit: [logoWidth, logoHeight], align: 'left', valign: 'center' });
+    } catch (e) {
+      console.error('Error drawing logo in MachineryUsageReport:', e);
+    }
+  }
+
+  // Header Text
+  const textX = margin + logoWidth + 10;
+  const textWidth = contentWidth - (logoWidth + 10) * 2;
+
+  doc.fillColor('#1a237e').font('Times-Bold').fontSize(12);
+  doc.text('AICTE IDEA Lab and Innovation Centre', textX, currentY + 10, { width: textWidth, align: 'center' });
+  doc.fillColor('#212121').font('Times-Roman').fontSize(9.5);
+  doc.text('K. K. Wagh Institute of Engineering Education and Research, Nashik', textX, currentY + 26, { width: textWidth, align: 'center' });
+  doc.fillColor('#283593').font('Times-Bold').fontSize(10.5);
+  doc.text(`Machinery Usage Report (${data.dateRangeStr})`, textX, currentY + 42, { width: textWidth, align: 'center' });
+
+  currentY += topHeaderHeight + 15;
 
   // Table Columns
   // 1. Request ID (65)

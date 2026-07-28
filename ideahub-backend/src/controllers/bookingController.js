@@ -489,14 +489,9 @@ export async function downloadRoomBookingPdf(req, res) {
       return res.status(404).json({ message: 'Room booking not found' });
     }
 
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
     const leaderName = booking.team?.name || '';
-    const qrData = JSON.stringify({
-      id: booking._id,
-      name: leaderName,
-      status: booking.status,
-      url: `${baseUrl}/api/bookings/${booking._id}`,
-    });
+    const frontendUrl = process.env.FRONTEND_ORIGIN || process.env.FRONTEND_URL || 'https://ideahub-app.onrender.com';
+    const qrData = `${frontendUrl}/verify-room-permission/${booking._id}`;
 
     const data = {
       header: {

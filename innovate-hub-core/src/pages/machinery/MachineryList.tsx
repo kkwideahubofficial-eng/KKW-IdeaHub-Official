@@ -678,7 +678,6 @@ const MachineryList = () => {
         >
           <TabsTrigger value="machines" className="rounded-md gap-1.5 shrink-0"><Settings className="w-4 h-4" /> Available Machinery</TabsTrigger>
           <TabsTrigger value="dashboard" className="rounded-md gap-1.5 shrink-0"><History className="w-4 h-4" /> Student Dashboard</TabsTrigger>
-          <TabsTrigger value="materials" className="rounded-md gap-1.5 shrink-0"><Database className="w-4 h-4" /> Material Stock Check</TabsTrigger>
           <TabsTrigger value="history" className="rounded-md gap-1.5 shrink-0"><History className="w-4 h-4" /> Request History & PDF</TabsTrigger>
         </TabsList>
 
@@ -710,13 +709,6 @@ const MachineryList = () => {
                   className="w-full justify-start gap-3 text-sm py-5 font-semibold"
                 >
                   <Download className="w-4 h-4 text-slate-500" /> Download Approved PDF Letters
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setActiveTab("materials")} 
-                  className="w-full justify-start gap-3 text-sm py-5 font-semibold"
-                >
-                  <Database className="w-4 h-4 text-slate-500" /> Live Inventory Availability
                 </Button>
               </CardContent>
             </Card>
@@ -869,61 +861,6 @@ const MachineryList = () => {
               </Card>
             ))}
           </div>
-        </TabsContent>
-
-        {/* Tab 3: Material Inventory */}
-        <TabsContent value="materials" className="space-y-6">
-          <Card className="shadow-sm border-border/75">
-            <CardHeader>
-              <CardTitle className="text-base font-bold">AICTE IDEA Lab Material Inventory</CardTitle>
-              <CardDescription className="text-xs">Live stock tracking for prototype and project consumables</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {materials.map((mat) => {
-                  const isLow = mat.remainingQuantity <= mat.lowStockThreshold;
-                  
-                  return (
-                    <Card key={mat._id} className={`p-4 border shadow-2xs hover:shadow-sm flex flex-col ${isLow ? 'border-amber-200 bg-amber-50/10' : ''}`}>
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <Badge variant="secondary" className="text-[9px] uppercase tracking-wider font-semibold mb-1">
-                            {mat.category}
-                          </Badge>
-                          <h4 className="font-bold text-sm text-foreground">{mat.name}</h4>
-                        </div>
-                        {isLow && (
-                          <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-[8px] font-bold shrink-0">
-                            LOW STOCK
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-3xs text-muted-foreground mb-4 flex-grow font-medium leading-relaxed">
-                        {mat.description || "Consumable material resource for laboratory prototype assembly."}
-                      </p>
-                      
-                      <div className="grid grid-cols-3 gap-2 border-t pt-3 text-center">
-                        <div className="bg-slate-50 p-1.5 rounded border border-border/40">
-                          <p className="text-[8px] font-bold text-muted-foreground uppercase">Current</p>
-                          <p className="font-bold text-xs font-mono text-slate-800">{mat.currentStock}</p>
-                        </div>
-                        <div className="bg-slate-50 p-1.5 rounded border border-border/40">
-                          <p className="text-[8px] font-bold text-muted-foreground uppercase">Allocated</p>
-                          <p className="font-bold text-xs font-mono text-indigo-700">{mat.allocatedQuantity}</p>
-                        </div>
-                        <div className="bg-slate-50 p-1.5 rounded border border-border/40">
-                          <p className="text-[8px] font-bold text-muted-foreground uppercase">Avail Qty</p>
-                          <p className={`font-bold text-xs font-mono ${mat.remainingQuantity <= 0 ? 'text-red-600' : 'text-green-700'}`}>
-                            {mat.remainingQuantity}
-                          </p>
-                        </div>
-                      </div>
-                    </Card>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
 
 

@@ -1113,15 +1113,8 @@ export const downloadMachineryPdf = async (req, res) => {
       }
     }
 
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const qrData = JSON.stringify({
-      id: request._id,
-      requestId: request.requestId,
-      project: request.projectName,
-      team: request.teamName || request.students[0]?.name || '',
-      status: request.status,
-      url: `${process.env.FRONTEND_ORIGIN || 'https://ideahub-app.onrender.com'}/verify-request/${request.requestId}`,
-    });
+    const frontendUrl = process.env.FRONTEND_ORIGIN || process.env.FRONTEND_URL || 'https://ideahub-app.onrender.com';
+    const qrData = `${frontendUrl}/verify-request/${request.requestId}`;
 
     // Compile data structure for PDF generator
     const data = {

@@ -3,6 +3,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import { connectToDatabase } from './config/db.js';
+import { startEnterpriseEmailWorker } from './utils/enterpriseEmailWorker.js';
 import path from 'path';
 import healthRouter from './routes/health.route.js';
 import authRouter from './routes/auth.routes.js';
@@ -124,6 +125,7 @@ import { Server } from 'socket.io';
 
 async function start() {
   await connectToDatabase(MONGO_URI);
+  startEnterpriseEmailWorker();
   await seedSpecialRooms();
 
   const httpServer = createServer(app);

@@ -1381,17 +1381,8 @@ export const downloadRoomPermissionPdf = async (req, res) => {
       return res.status(404).json({ message: 'Request not found' });
     }
 
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const qrData = JSON.stringify({
-      id: request._id,
-      requestId: request.requestId,
-      student: request.applicantDetails.applicantName,
-      room: request.facilityRequired,
-      date: request.schedule.requestedDate,
-      time: `${request.schedule.startTime} - ${request.schedule.endTime}`,
-      status: request.status,
-      url: `${process.env.FRONTEND_ORIGIN || 'https://ideahub-app.onrender.com'}/verify-room-permission/${request._id}` // Frontend verification page
-    });
+    const frontendUrl = process.env.FRONTEND_ORIGIN || process.env.FRONTEND_URL || 'https://ideahub-app.onrender.com';
+    const qrData = `${frontendUrl}/verify-room-permission/${request.requestId || request._id}`;
 
     const data = {
       header: {

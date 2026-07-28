@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 import api from "@/lib/axios";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -65,54 +65,144 @@ const RecordStats = () => {
 
 
 
-  const handleDownload = () => {
+  const loadImage = (url: string): Promise<HTMLImageElement | null> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = "Anonymous";
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = url;
+    });
+  };
+
+  const handleDownload = async () => {
     if (records.length === 0) return toast.error("No records to export");
 
-    const doc = new jsPDF();
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const filterLabel = filters.find(f => f.value === filter)?.label || filter;
+    const generatedAt = new Date().toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
 
-    // Add Title
-    doc.setFontSize(18);
-    doc.text("Machinery Records & Attendance Report", 14, 22);
+    // Load Logo dynamically
+    let logoImg = await loadImage("/uploaded-logo.png");
+    if (!logoImg) logoImg = await loadImage("/uploaded-logo.jpg");
+    if (!logoImg) logoImg = await loadImage("/logo.png");
 
-    // Add Meta Info
-    doc.setFontSize(11);
-    doc.setTextColor(100);
-    doc.text(`Filter: ${filters.find(f => f.value === filter)?.label}`, 14, 30);
-    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 36);
+    // Top Institutional Header Bar (Slate 900)
+    doc.setFillColor(15, 23, 42);
+    doc.rect(0, 0, 210, 36, "F");
+
+    // Amber Accent Divider Line
+    doc.setFillColor(217, 119, 6);
+    doc.rect(0, 36, 210, 2, "F");
+
+    // Render Right-Side Logo Badge
+    if (logoImg) {
+      try {
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(172, 5, 24, 24, 3, 3, "F");
+        doc.addImage(logoImg, "PNG", 173, 6, 22, 22);
+      } catch (e) {
+        console.error("Failed to render right-side logo:", e);
+      }
+    }
+
+    // Header Titles & AICTE IDEA Lab Branding
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11.5);
+    doc.text("K. K. WAGH INSTITUTE OF ENGINEERING EDUCATION & RESEARCH", 14, 13);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9.5);
+    doc.setTextColor(251, 191, 36); // Amber-400
+    doc.text("AICTE IDEA LAB — MACHINERY USAGE & ATTENDANCE REPORT", 14, 21);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(203, 213, 225);
+    doc.text("Center for Prototyping, Innovation & Multi-Disciplinary Fabrication", 14, 27);
+
+    // Summary Info Card Box
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(14, 43, 182, 22, 2, 2, "FD");
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    doc.setTextColor(15, 23, 42);
+    doc.text(`REPORT FILTER: ${filterLabel.toUpperCase()}`, 18, 51);
+    doc.text(`TOTAL LOGGED RECORDS: ${records.length}`, 18, 59);
+
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(71, 85, 105);
+    doc.text(`GENERATED ON: ${generatedAt}`, 110, 51);
+    doc.text(`STATUS: OFFICIAL AUDIT RECORD`, 110, 59);
 
     // Define Columns
-    const tableColumn = ["Date", "Machine", "Student", "Team", "Slot Time", "Entry", "Exit", "Status"];
+    const tableColumn = ["Date", "Machine Name", "Student Name", "Team", "Slot Time", "Entry", "Exit", "Status"];
     
     // Define Rows
     const tableRows = records.map(record => [
-        format(new Date(record.usageDate), 'MMM d, yyyy'),
-        record.machineryId?.name || "Unknown",
-        record.studentId?.name || "Unknown",
-        record.studentId?.teamName || "-",
-        `${record.startTime} - ${record.endTime}`,
-        record.actualEntryTime ? new Date(record.actualEntryTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "-",
-        record.actualExitTime ? new Date(record.actualExitTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "-",
-        record.status
+      format(new Date(record.usageDate), 'dd/MM/yyyy'),
+      record.machineryId?.name || "N/A",
+      record.studentId?.name || "N/A",
+      record.studentId?.teamName || "-",
+      `${record.startTime} - ${record.endTime}`,
+      record.actualEntryTime ? new Date(record.actualEntryTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "-",
+      record.actualExitTime ? new Date(record.actualExitTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "-",
+      record.status
     ]);
 
     // Generate Table
-    // @ts-ignore
-    doc.autoTable({
-        startY: 44,
-        head: [tableColumn],
-        body: tableRows,
-        theme: 'grid',
-        headStyles: { fillColor: [41, 128, 185], textColor: 255 },
-        styles: { fontSize: 8, cellPadding: 2 },
-        columnStyles: {
-            0: { cellWidth: 25 },
-            1: { cellWidth: 30 },
-            4: { cellWidth: 25 },
-        }
+    autoTable(doc, {
+      startY: 71,
+      head: [tableColumn],
+      body: tableRows,
+      theme: 'striped',
+      headStyles: {
+        fillColor: [15, 23, 42],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 8,
+        halign: 'center'
+      },
+      bodyStyles: {
+        fontSize: 7.5,
+        textColor: [30, 41, 59],
+        cellPadding: 2.5
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252]
+      },
+      columnStyles: {
+        0: { cellWidth: 20, halign: 'center' },
+        1: { cellWidth: 35 },
+        2: { cellWidth: 32 },
+        3: { cellWidth: 22 },
+        4: { cellWidth: 24, halign: 'center' },
+        5: { cellWidth: 15, halign: 'center' },
+        6: { cellWidth: 15, halign: 'center' },
+        7: { cellWidth: 27, halign: 'center', fontStyle: 'bold' }
+      },
+      didDrawPage: (data) => {
+        const totalPages = (doc as any).internal.getNumberOfPages();
+        doc.setFontSize(7.5);
+        doc.setTextColor(148, 163, 184);
+        doc.text(
+          "Official Audit Document • AICTE IDEA Lab • KKWIEER Nashik",
+          14,
+          doc.internal.pageSize.height - 10
+        );
+        doc.text(
+          `Page ${data.pageNumber} of ${totalPages}`,
+          doc.internal.pageSize.width - 28,
+          doc.internal.pageSize.height - 10
+        );
+      }
     });
 
     // Save PDF
-    doc.save(`machinery_records_${filter}_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`AICTE_IDEALab_Machinery_Records_${filter}_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   return (
