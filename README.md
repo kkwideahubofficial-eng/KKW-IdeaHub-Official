@@ -16,6 +16,39 @@ The **AICTE IDEA Lab Platform** is an enterprise-grade digital innovation hub de
 
 ---
 
+## 📑 Table of Contents
+
+- [📌 Short Description](#-short-description)
+- [❓ Problem Statement](#-problem-statement)
+- [💡 Solution](#-solution)
+- [✨ Key Features](#-key-features)
+  - [🛠️ 1. Advanced Machinery & Material Management](#️-1-advanced-machinery--material-management)
+  - [🏫 2. Special Room & Slot Permissions](#-2-special-room--slot-permissions)
+  - [👥 3. Student Clubs, Events & Showcase](#-3-student-clubs-events--showcase)
+- [🔄 How It Works](#-how-it-works)
+- [🏗️ Project Architecture](#%EF%B8%8F-project-architecture)
+- [📁 Folder Structure](#-folder-structure)
+- [🛠️ Technology Stack](#%EF%B8%8F-technology-stack)
+- [🗄️ Database Design](#%EF%B8%8F-database-design)
+- [📡 API Documentation](#-api-documentation)
+- [🔐 Authentication & Authorization](#-authentication--authorization)
+- [🔒 Security Implementation](#-security-implementation)
+- [💻 Installation & Setup](#-installation--setup)
+- [🔑 Environment Variables Reference](#-environment-variables-reference)
+- [🖼️ Screenshots](#-screenshots)
+- [⚡ Usage Guidelines](#-usage-guidelines)
+- [🚨 Error Handling](#-error-handling)
+- [🚀 Performance Optimizations](#-performance-optimizations)
+- [📦 Deployment Architecture](#-deployment-architecture)
+- [🔮 Future Improvements](#-future-improvements)
+- [⚠️ Current Limitations](#%EF%B8%8F-current-limitations)
+- [🤝 Contributing](#-contributing)
+- [📜 License](#-license)
+- [👨‍💻 Author](#-author)
+- [🙏 Acknowledgements](#-acknowledgements)
+
+---
+
 ## ❓ Problem Statement
 
 Educational institutions and innovation centers face significant operational hurdles when managing hardware incubation labs and campus prototyping facilities:
