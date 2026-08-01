@@ -62,6 +62,38 @@ async function sendPushNotification(userId, title, body) {
   }
 }
 
+// Helper for sending email notification to Faculty Guide
+async function sendFacultyGuideNotification(facultyGuide, requestId, projectName, studentName, status = 'Submitted', remarks = '') {
+  if (!facultyGuide || !facultyGuide.email) return;
+
+  const facultyEmail = facultyGuide.email;
+  const facultyName = facultyGuide.name || 'Faculty Member';
+  const frontendUrl = process.env.FRONTEND_ORIGIN || 'https://ideahub-app.onrender.com';
+  const trackUrl = `${frontendUrl}/verify-request/${requestId}`;
+  
+  let subject = `IDEA Hub: Student Machinery & Material Request Notification - ${requestId}`;
+  let bodyText = `<h2>Dear Prof. ${facultyName},</h2>
+    <p>Your student <b>${studentName}</b> has submitted a Machinery & Material Usage Permission request to the AICTE IDEA Lab.</p>
+    <p><b>Request ID:</b> ${requestId}</p>
+    <p><b>Project Name:</b> ${projectName}</p>
+    <p><b>Status:</b> ${status}</p>`;
+
+  if (remarks) {
+    bodyText += `<p><b>Remarks:</b> ${remarks}</p>`;
+  }
+
+  bodyText += `<p>You can view the full request details and real-time status here: <a href="${trackUrl}">${trackUrl}</a></p>
+    <br/>
+    <p>Regards,<br/>AICTE IDEA Lab & Innovation Centre<br/>K. K. Wagh Institute of Engineering Education and Research, Nashik</p>`;
+
+  try {
+    await sendEmail(facultyEmail, subject, bodyText);
+    console.log(`[Notification] Faculty guide email sent to ${facultyEmail} for request ${requestId}`);
+  } catch (err) {
+    console.error(`Failed to send faculty guide email to ${facultyEmail}:`, err);
+  }
+}
+
 // Check Availability & Suggest nearest slots for a machine
 export const checkMachineAvailability = async (req, res) => {
   try {
@@ -412,7 +444,13 @@ export const createRequest = async (req, res) => {
           console.error('Failed to send email to external user:', err);
         }
       }
-      
+
+      // Notify Faculty Guide if specified
+      if (facultyGuide && facultyGuide.email) {
+        const studentName = isExternal ? (externalFullName || 'External User') : (req.user ? req.user.name : (students?.[0]?.name || 'Student'));
+        await sendFacultyGuideNotification(facultyGuide, requestId, projectName, studentName, status || 'Submitted');
+      }
+
       const admins = await User.find({ role: { $in: ['coordinator', 'head'] } });
       for (const admin of admins) {
         await createInAppNotification(
@@ -567,6 +605,11 @@ export const updateRequest = async (req, res) => {
         byName: req.user.name,
         date: new Date()
       });
+
+      // Notify Faculty Guide if specified
+      if (request.facultyGuide && request.facultyGuide.email) {
+        await sendFacultyGuideNotification(request.facultyGuide, request.requestId, request.projectName, req.user ? req.user.name : 'Student', status);
+      }
 
       // Notify Coordinator and Head
       const admins = await User.find({ role: { $in: ['coordinator', 'head'] } });
@@ -739,7 +782,7 @@ export const getRequestById = async (req, res) => {
 export const updateRequestStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, remarks, checks, conditions, identityVerification, machineCharges, materialCharges, paymentStatus } = req.body;
+    const { status, remarks, checks, conditions, identityVerification, machineCharges, materialCharges, paymentStatus, isUrgentPermission } = req.body;
     const { role, name } = req.user;
 
     const request = await MachineryRequest.findById(id)
@@ -810,11 +853,14 @@ export const updateRequestStatus = async (req, res) => {
     }
 
     // Record Audit trace
+    const actionText = isUrgentPermission ? 'Urgent Permission Granted (Direct Approval)' : (status || 'Remarks Added');
+    const actionRemarks = isUrgentPermission ? `URGENT PERMISSION GRANTED BY COORDINATOR. ${remarks || ''}` : (remarks || conditions || 'Status updated');
+
     request.approvalHistory.push({
       date: new Date(),
       role: role.toUpperCase(),
-      action: status || 'Remarks Added',
-      remarks: remarks || conditions || 'Status updated',
+      action: actionText,
+      remarks: actionRemarks,
       byName: name
     });
 
@@ -923,6 +969,12 @@ export const updateRequestStatus = async (req, res) => {
       } catch (err) {
         console.error('Failed to trigger email notification to external user:', err);
       }
+    }
+
+    // Notify Faculty Guide of status update if specified
+    if (request.facultyGuide && request.facultyGuide.email) {
+      const studentName = request.studentId ? request.studentId.name : (request.externalFullName || 'Student');
+      await sendFacultyGuideNotification(request.facultyGuide, request.requestId, request.projectName, studentName, status || request.status, remarks);
     }
 
     res.status(200).json(saved);

@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Check, X, Eye, FileDown, Loader2, Calendar, Clock, AlertTriangle, ShieldCheck, CheckCircle2, FileText, RefreshCw } from "lucide-react";
+import { Check, X, Eye, FileDown, Loader2, Calendar, Clock, AlertTriangle, ShieldCheck, CheckCircle2, FileText, RefreshCw, Zap } from "lucide-react";
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return "";
@@ -314,6 +314,11 @@ const MachineryRequests = () => {
                           <Badge className="bg-orange-500 hover:bg-orange-600 text-white text-[8px] font-bold">EXTERNAL</Badge>
                         ) : (
                           <Badge className="bg-blue-600 hover:bg-blue-700 text-white text-[8px] font-bold">INTERNAL</Badge>
+                        )}
+                        {req.approvalHistory?.some((h: any) => h.action?.includes('Urgent') || h.remarks?.includes('URGENT')) && (
+                          <Badge className="bg-indigo-600 text-white text-[8px] font-bold">
+                            URGENT PERMISSION
+                          </Badge>
                         )}
                       </div>
                       <CardTitle className="text-base font-extrabold mt-1">{req.projectName}</CardTitle>

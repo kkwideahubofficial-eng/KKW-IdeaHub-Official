@@ -516,11 +516,6 @@ const generateSpecialRoomPdf = async (doc, data) => {
       height: 35
     },
     {
-      label: 'Signature of the Requester',
-      value: '', // blank space for signature
-      height: 30
-    },
-    {
       label: 'Purpose',
       value: data.room.purpose || '',
       height: 60 // increased height
@@ -565,7 +560,7 @@ const generateSpecialRoomPdf = async (doc, data) => {
     // Value column (Right)
     doc.font('Times-Roman').fontSize(9);
 
-    if (i === 7) {
+    if (i === rows.length - 1) {
       // Coordinator Remark cell (Permitted / Not Permitted / Permitted with Condition)
       const status = (data.status || '').toLowerCase();
       let permitted = 'Permitted';
@@ -573,11 +568,17 @@ const generateSpecialRoomPdf = async (doc, data) => {
       let conditional = 'Permitted with Condition';
 
       if (status === 'approved' || status === 'completed') {
-        permitted = '✔ Permitted';
+        permitted = '[X] Permitted';
+        notPermitted = '[  ] Not Permitted';
+        conditional = '[  ] Permitted with Condition';
       } else if (status === 'rejected') {
-        notPermitted = '✔ Not Permitted';
+        permitted = '[  ] Permitted';
+        notPermitted = '[X] Not Permitted';
+        conditional = '[  ] Permitted with Condition';
       } else if (status === 'conditional approval') {
-        conditional = '✔ Permitted with Condition';
+        permitted = '[  ] Permitted';
+        notPermitted = '[  ] Not Permitted';
+        conditional = '[X] Permitted with Condition';
       }
 
       doc.text(`${permitted}   /   ${notPermitted}   /   ${conditional}`, margin + col1Width + 8, rowY + 12, { width: col2Width - 16 });
@@ -593,7 +594,7 @@ const generateSpecialRoomPdf = async (doc, data) => {
 
   // 6. Approval Workflow Section
   const blockY = currentY;
-  const blockHeight = 85;
+  const blockHeight = 50;
 
   // Resolve coordinator and head names/statuses from history
   const approvalHistory = data.approvalHistory || [];
@@ -645,7 +646,6 @@ const generateSpecialRoomPdf = async (doc, data) => {
   doc.font('Times-Roman').fontSize(8.5);
   doc.text(`Faculty Name: ${data.faculty.name || 'N/A'}`, colX, blockY + 14, { width: 130 });
   doc.text(`Status: ${facultyStatus}`, colX, blockY + 26, { width: 130 });
-  doc.text('Signature: ________________', colX, blockY + 55, { width: 130 });
 
   // Column 2: Coordinator Approval
   colX = margin + 140;
@@ -654,7 +654,6 @@ const generateSpecialRoomPdf = async (doc, data) => {
   doc.font('Times-Roman').fontSize(8.5);
   doc.text(`Coordinator Name: ${coordinatorName || 'N/A'}`, colX, blockY + 14, { width: 130 });
   doc.text(`Status: ${coordinatorStatus}`, colX, blockY + 26, { width: 130 });
-  doc.text('Signature: ________________', colX, blockY + 55, { width: 130 });
 
   // Column 3: Head Approval
   colX = margin + 280;
@@ -663,7 +662,6 @@ const generateSpecialRoomPdf = async (doc, data) => {
   doc.font('Times-Roman').fontSize(8.5);
   doc.text(`Head Name: ${headName || 'N/A'}`, colX, blockY + 14, { width: 130 });
   doc.text(`Status: ${headStatus}`, colX, blockY + 26, { width: 130 });
-  doc.text('Signature: ________________', colX, blockY + 55, { width: 130 });
 
   // QR Code on the bottom right
   const qrSize = 65;

@@ -13,7 +13,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { 
   Calendar, Check, X, Clock, Users, User, Loader2, Database, ShieldAlert, 
   Settings, FileDown, Eye, RefreshCw, Layers, Printer, Search, Download, SendHorizonal,
-  FileText, History
+  FileText, History, ChevronLeft, ChevronRight, Zap
 } from "lucide-react";
 import { toast } from "sonner";
 import api from "../lib/axios";
@@ -132,6 +132,122 @@ interface Material {
   unit: string;
 }
 
+// Generic Reusable Pagination Component
+interface TablePaginationProps {
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  itemsPerPage: number;
+  onPageChange: (page: number) => void;
+  onItemsPerPageChange?: (size: number) => void;
+}
+
+const TablePagination: React.FC<TablePaginationProps> = ({
+  currentPage,
+  totalPages,
+  totalItems,
+  itemsPerPage,
+  onPageChange,
+  onItemsPerPageChange,
+}) => {
+  if (totalItems === 0) return null;
+
+  const startItem = (currentPage - 1) * itemsPerPage + 1;
+  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    if (totalPages <= 5) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) pages.push("...");
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+      for (let i = start; i <= end; i++) {
+        if (!pages.includes(i)) pages.push(i);
+      }
+      if (currentPage < totalPages - 2) pages.push("...");
+      if (!pages.includes(totalPages)) pages.push(totalPages);
+    }
+    return pages;
+  };
+
+  return (
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-slate-50/50 border-t text-xs text-muted-foreground font-medium rounded-b-xl">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span>
+          Showing <span className="font-bold text-foreground">{startItem}</span> to{" "}
+          <span className="font-bold text-foreground">{endItem}</span> of{" "}
+          <span className="font-bold text-foreground">{totalItems}</span> entries
+        </span>
+        {onItemsPerPageChange && (
+          <div className="flex items-center gap-1.5 ml-2 sm:ml-4">
+            <span className="text-[11px]">Show:</span>
+            <Select
+              value={String(itemsPerPage)}
+              onValueChange={(val) => onItemsPerPageChange(Number(val))}
+            >
+              <SelectTrigger className="h-7 w-[65px] text-xs bg-white">
+                <SelectValue placeholder="10" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center space-x-1">
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 px-2 text-xs font-semibold"
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage <= 1}
+        >
+          <ChevronLeft className="h-3.5 w-3.5 mr-1" />
+          Previous
+        </Button>
+
+        {getPageNumbers().map((page, idx) => (
+          typeof page === "number" ? (
+            <Button
+              key={idx}
+              variant={currentPage === page ? "default" : "outline"}
+              size="sm"
+              className={`h-7 w-7 p-0 text-xs font-semibold ${
+                currentPage === page ? "bg-primary text-primary-foreground font-bold" : ""
+              }`}
+              onClick={() => onPageChange(page)}
+            >
+              {page}
+            </Button>
+          ) : (
+            <span key={idx} className="px-1 text-xs select-none">
+              {page}
+            </span>
+          )
+        ))}
+
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 px-2 text-xs font-semibold"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage >= totalPages}
+        >
+          Next
+          <ChevronRight className="h-3.5 w-3.5 ml-1" />
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 // BookingList component for room requests
 interface BookingListProps {
   bookings: BookingRequest[];
@@ -148,6 +264,13 @@ const BookingList: React.FC<BookingListProps> = ({
   onReject = () => {},
   processingId = null 
 }) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [bookings.length]);
+
   if (bookings.length === 0) {
     return (
       <div className="text-center py-8 text-xs">
@@ -158,68 +281,81 @@ const BookingList: React.FC<BookingListProps> = ({
     );
   }
 
+  const totalPages = Math.ceil(bookings.length / itemsPerPage) || 1;
+  const paginatedBookings = bookings.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {bookings.map((request) => {
-        const isActionProcessing = processingId === request._id;
-        
-        return (
-          <Card key={request._id} className="flex flex-col h-full border rounded-xl shadow-sm hover:shadow-md transition-shadow text-xs">
-            <CardHeader className="pb-3">
-              <div className="flex justify-between items-start mb-2">
-                <Badge variant={request.status === 'approved' ? 'default' : request.status === 'rejected' ? 'destructive' : 'secondary'} className="uppercase text-[9px] tracking-wide">
-                  {request.status}
-                </Badge>
-                <div className="text-[10px] text-muted-foreground font-medium flex items-center">
-                  <Clock className="w-3 h-3 mr-1" />
-                  {new Date(request.createdAt).toLocaleDateString()}
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {paginatedBookings.map((request) => {
+          const isActionProcessing = processingId === request._id;
+          
+          return (
+            <Card key={request._id} className="flex flex-col h-full border rounded-xl shadow-sm hover:shadow-md transition-shadow text-xs">
+              <CardHeader className="pb-3">
+                <div className="flex justify-between items-start mb-2">
+                  <Badge variant={request.status === 'approved' ? 'default' : request.status === 'rejected' ? 'destructive' : 'secondary'} className="uppercase text-[9px] tracking-wide">
+                    {request.status}
+                  </Badge>
+                  <div className="text-[10px] text-muted-foreground font-medium flex items-center">
+                    <Clock className="w-3 h-3 mr-1" />
+                    {new Date(request.createdAt).toLocaleDateString()}
+                  </div>
                 </div>
-              </div>
-              <CardTitle className="text-sm font-semibold truncate" title={request.team?.teamName || 'No Team'}>
-                {request.team?.teamName || 'No Team'}
-              </CardTitle>
-              <CardDescription className="text-3xs">
-                <span className="font-medium text-foreground">{request.team?.name || 'Applicant'}</span>
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex-grow space-y-4">
-              <div className="grid grid-cols-2 gap-2 text-3xs">
-                <div className="bg-muted/50 p-2 rounded">
-                  <p className="text-muted-foreground mb-1">Date</p>
-                  <p className="font-semibold">{new Date(request.slotDate).toLocaleDateString()}</p>
+                <CardTitle className="text-sm font-semibold truncate" title={request.team?.teamName || 'No Team'}>
+                  {request.team?.teamName || 'No Team'}
+                </CardTitle>
+                <CardDescription className="text-3xs">
+                  <span className="font-medium text-foreground">{request.team?.name || 'Applicant'}</span>
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex-grow space-y-4">
+                <div className="grid grid-cols-2 gap-2 text-3xs">
+                  <div className="bg-muted/50 p-2 rounded">
+                    <p className="text-muted-foreground mb-1">Date</p>
+                    <p className="font-semibold">{new Date(request.slotDate).toLocaleDateString()}</p>
+                  </div>
+                  <div className="bg-muted/50 p-2 rounded">
+                    <p className="text-muted-foreground mb-1">Time</p>
+                    <p className="font-semibold">{request.startTime} - {request.endTime}</p>
+                  </div>
                 </div>
-                <div className="bg-muted/50 p-2 rounded">
-                  <p className="text-muted-foreground mb-1">Time</p>
-                  <p className="font-semibold">{request.startTime} - {request.endTime}</p>
+                <div className="bg-muted/30 p-2.5 rounded border border-border/50">
+                  <p className="text-muted-foreground text-3xs font-semibold uppercase tracking-wider mb-1">Purpose</p>
+                  <p className="line-clamp-2 italic">"{request.purpose}"</p>
                 </div>
-              </div>
-              <div className="bg-muted/30 p-2.5 rounded border border-border/50">
-                <p className="text-muted-foreground text-3xs font-semibold uppercase tracking-wider mb-1">Purpose</p>
-                <p className="line-clamp-2 italic">"{request.purpose}"</p>
-              </div>
-            </CardContent>
-            {showActions && (
-              <div className="p-4 pt-0 mt-auto flex gap-2">
-                <Button
-                  variant="outline"
-                  className="flex-grow h-8 text-3xs border-destructive text-destructive hover:bg-destructive hover:text-white"
-                  onClick={() => onReject(request._id)}
-                  disabled={isActionProcessing}
-                >
-                  Reject
-                </Button>
-                <Button
-                  className="flex-grow h-8 text-3xs bg-primary hover:bg-primary/95 text-white"
-                  onClick={() => onApprove(request._id)}
-                  disabled={isActionProcessing}
-                >
-                  Approve
-                </Button>
-              </div>
-            )}
-          </Card>
-        );
-      })}
+              </CardContent>
+              {showActions && (
+                <div className="p-4 pt-0 mt-auto flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-grow h-8 text-3xs border-destructive text-destructive hover:bg-destructive hover:text-white"
+                    onClick={() => onReject(request._id)}
+                    disabled={isActionProcessing}
+                  >
+                    Reject
+                  </Button>
+                  <Button
+                    className="flex-grow h-8 text-3xs bg-primary hover:bg-primary/95 text-white"
+                    onClick={() => onApprove(request._id)}
+                    disabled={isActionProcessing}
+                  >
+                    Approve
+                  </Button>
+                </div>
+              )}
+            </Card>
+          );
+        })}
+      </div>
+      <TablePagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={bookings.length}
+        itemsPerPage={itemsPerPage}
+        onPageChange={(page) => setCurrentPage(page)}
+        onItemsPerPageChange={(size) => { setItemsPerPage(size); setCurrentPage(1); }}
+      />
     </div>
   );
 };
@@ -255,6 +391,19 @@ const CoordinatorDashboard = () => {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [resourceLoading, setResourceLoading] = useState(false);
   const [applicantTypeFilter, setApplicantTypeFilter] = useState<"All" | "Internal" | "External">("All");
+
+  // Pagination State (Default 10 per page)
+  const [machinePage, setMachinePage] = useState(1);
+  const [machinePerPage, setMachinePerPage] = useState(10);
+  const [pendingPage, setPendingPage] = useState(1);
+  const [pendingPerPage, setPendingPerPage] = useState(10);
+  const [approvedPage, setApprovedPage] = useState(1);
+  const [approvedPerPage, setApprovedPerPage] = useState(10);
+
+  useEffect(() => {
+    setPendingPage(1);
+    setApprovedPage(1);
+  }, [applicantTypeFilter]);
 
   // Detail Modal & Action remarks
   const [selectedResRequest, setSelectedResRequest] = useState<any | null>(null);
@@ -302,6 +451,7 @@ const CoordinatorDashboard = () => {
 
   // Decision submission loading state
   const [submittingDecision, setSubmittingDecision] = useState(false);
+  const [showUrgentConfirmDialog, setShowUrgentConfirmDialog] = useState(false);
 
   // Report states
   const [reportModalOpen, setReportModalOpen] = useState(false);
@@ -472,11 +622,11 @@ const CoordinatorDashboard = () => {
   };
 
   // Machinery Request Actions (Coordinator level)
-  const handleResourceRequestDecision = async (decision: "approve" | "reject" | "request_changes") => {
+  const handleResourceRequestDecision = async (decision: "approve" | "reject" | "request_changes" | "urgent_approve") => {
     if (!selectedResRequest) return;
 
-    // Checklist validations for approval/forwarding
-    if (decision === "approve") {
+    // Checklist validations for approval/forwarding/urgent approval
+    if (decision === "approve" || decision === "urgent_approve") {
       const allChecked = Object.values(checks).every(v => v === true);
       if (!allChecked) {
         toast.error("Please complete all Coordinator Review Checks before approving.");
@@ -490,13 +640,20 @@ const CoordinatorDashboard = () => {
     }
 
     let nextStatus = "Coordinator Approved";
+    let isUrgentPermission = false;
+
     if (decision === "reject") nextStatus = "Coordinator Rejected";
     if (decision === "request_changes") nextStatus = "Changes Requested";
+    if (decision === "urgent_approve") {
+      nextStatus = "Approved";
+      isUrgentPermission = true;
+    }
 
     setSubmittingDecision(true);
     try {
       await api.patch(`/machinery/requests/${selectedResRequest._id}/status`, {
         status: nextStatus,
+        isUrgentPermission,
         remarks: decisionRemarks,
         checks: checks,
         identityVerification: extIdVerification,
@@ -506,7 +663,11 @@ const CoordinatorDashboard = () => {
         paymentStatus: extPaymentStatus
       });
 
-      toast.success(`Request status updated to ${nextStatus}.`);
+      if (decision === "urgent_approve") {
+        toast.success("Urgent Permission Granted! Request approved directly without Head approval.");
+      } else {
+        toast.success(`Request status updated to ${nextStatus}.`);
+      }
       setShowResReviewDialog(false);
       resetReviewState();
       fetchResourcePortalData();
@@ -811,59 +972,69 @@ const CoordinatorDashboard = () => {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {resourceRequests
-                  .filter(r => ['Submitted', 'Coordinator Review', 'Student Resubmitted'].includes(r.status))
-                  .filter(r => {
-                    if (applicantTypeFilter === "All") return true;
-                    if (applicantTypeFilter === "Internal") return r.applicantType === "Internal" || !r.applicantType;
-                    if (applicantTypeFilter === "External") return r.applicantType === "External";
-                    return true;
-                  }).length === 0 ? (
-                  <p className="text-muted-foreground text-center py-6 text-xs font-semibold">No resource requests matching criteria pending review.</p>
-                ) : (
-                  resourceRequests
+                {(() => {
+                  const filteredPending = resourceRequests
                     .filter(r => ['Submitted', 'Coordinator Review', 'Student Resubmitted'].includes(r.status))
                     .filter(r => {
                       if (applicantTypeFilter === "All") return true;
                       if (applicantTypeFilter === "Internal") return r.applicantType === "Internal" || !r.applicantType;
                       if (applicantTypeFilter === "External") return r.applicantType === "External";
                       return true;
-                    })
-                    .map((req) => (
-                      <div key={req._id} className="p-4 border rounded-xl bg-card hover:shadow-xs transition-shadow flex flex-col md:flex-row justify-between gap-4 items-start md:items-center text-xs">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono font-bold text-primary">{req.requestId}</span>
-                            <Badge variant="outline" className="text-[9px] font-bold uppercase">{req.status}</Badge>
-                            {req.applicantType === 'External' ? (
-                              <Badge className="bg-orange-500 hover:bg-orange-600 text-white text-[9px] font-bold">EXTERNAL</Badge>
-                            ) : (
-                              <Badge className="bg-blue-600 hover:bg-blue-700 text-white text-[9px] font-bold">INTERNAL</Badge>
-                            )}
+                    });
+                  const pendingTotalPages = Math.ceil(filteredPending.length / pendingPerPage) || 1;
+                  const paginatedPending = filteredPending.slice((pendingPage - 1) * pendingPerPage, pendingPage * pendingPerPage);
+
+                  if (filteredPending.length === 0) {
+                    return <p className="text-muted-foreground text-center py-6 text-xs font-semibold">No resource requests matching criteria pending review.</p>;
+                  }
+
+                  return (
+                    <div className="space-y-4">
+                      {paginatedPending.map((req) => (
+                        <div key={req._id} className="p-4 border rounded-xl bg-card hover:shadow-xs transition-shadow flex flex-col md:flex-row justify-between gap-4 items-start md:items-center text-xs">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-bold text-primary">{req.requestId}</span>
+                              <Badge variant="outline" className="text-[9px] font-bold uppercase">{req.status}</Badge>
+                              {req.applicantType === 'External' ? (
+                                <Badge className="bg-orange-500 hover:bg-orange-600 text-white text-[9px] font-bold">EXTERNAL</Badge>
+                              ) : (
+                                <Badge className="bg-blue-600 hover:bg-blue-700 text-white text-[9px] font-bold">INTERNAL</Badge>
+                              )}
+                            </div>
+                            <h4 className="font-bold text-sm text-foreground mt-1">{req.projectName}</h4>
+                            <p className="text-3xs text-muted-foreground mt-0.5">
+                              Submitted by: {req.applicantType === 'External' ? (
+                                `${req.externalFullName || "External User"} (${req.externalCollegeOrg})`
+                              ) : (
+                                `${req.students?.[0]?.name || "Student"} (${req.students?.[0]?.branch})`
+                              )}
+                            </p>
                           </div>
-                          <h4 className="font-bold text-sm text-foreground mt-1">{req.projectName}</h4>
-                          <p className="text-3xs text-muted-foreground mt-0.5">
-                            Submitted by: {req.applicantType === 'External' ? (
-                              `${req.externalFullName || "External User"} (${req.externalCollegeOrg})`
-                            ) : (
-                              `${req.students?.[0]?.name || "Student"} (${req.students?.[0]?.branch})`
-                            )}
-                          </p>
+                          
+                          <div className="flex gap-2 self-end md:self-auto">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={() => { setSelectedResRequest(req); setShowResReviewDialog(true); }}
+                              className="text-xs gap-1 font-semibold"
+                            >
+                              <Eye className="w-3.5 h-3.5" /> Review request
+                            </Button>
+                          </div>
                         </div>
-                        
-                        <div className="flex gap-2 self-end md:self-auto">
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            onClick={() => { setSelectedResRequest(req); setShowResReviewDialog(true); }}
-                            className="text-xs gap-1 font-semibold"
-                          >
-                            <Eye className="w-3.5 h-3.5" /> Review request
-                          </Button>
-                        </div>
-                      </div>
-                    ))
-                )}
+                      ))}
+                      <TablePagination
+                        currentPage={pendingPage}
+                        totalPages={pendingTotalPages}
+                        totalItems={filteredPending.length}
+                        itemsPerPage={pendingPerPage}
+                        onPageChange={(page) => setPendingPage(page)}
+                        onItemsPerPageChange={(size) => { setPendingPerPage(size); setPendingPage(1); }}
+                      />
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
           </TabsContent>
@@ -894,139 +1065,149 @@ const CoordinatorDashboard = () => {
                 </div>
               </CardHeader>
               <CardContent className="overflow-x-auto text-xs font-medium">
-                <table className="w-full text-left border-collapse border rounded-xl">
-                  <thead className="bg-slate-50 uppercase text-[9px] tracking-wider text-slate-700 font-bold border-b">
-                    <tr>
-                      <th className="px-4 py-3">ID</th>
-                      <th className="px-4 py-3">Project & Team</th>
-                      <th className="px-4 py-3">Usage Time</th>
-                      <th className="px-4 py-3">Status</th>
-                      <th className="px-4 py-3">Tracking Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {resourceRequests
-                      .filter(r => !['Draft', 'Submitted', 'Coordinator Review', 'Student Resubmitted', 'Coordinator Rejected', 'Rejected'].includes(r.status))
-                      .filter(r => {
-                        if (applicantTypeFilter === "All") return true;
-                        if (applicantTypeFilter === "Internal") return r.applicantType === "Internal" || !r.applicantType;
-                        if (applicantTypeFilter === "External") return r.applicantType === "External";
-                        return true;
-                      }).length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="text-center py-6 text-muted-foreground font-semibold text-xs">No approved permissions matching filter found.</td>
-                      </tr>
-                    ) : (
-                      resourceRequests
-                        .filter(r => !['Draft', 'Submitted', 'Coordinator Review', 'Student Resubmitted', 'Coordinator Rejected', 'Rejected'].includes(r.status))
-                        .filter(r => {
-                          if (applicantTypeFilter === "All") return true;
-                          if (applicantTypeFilter === "Internal") return r.applicantType === "Internal" || !r.applicantType;
-                          if (applicantTypeFilter === "External") return r.applicantType === "External";
-                          return true;
-                        })
-                        .map((req) => (
-                          <tr key={req._id} className="hover:bg-slate-50/30">
-                            <td className="px-4 py-3 font-mono font-bold text-primary">
-                              <div>{req.requestId}</div>
-                              <div className="mt-1">
-                                {req.applicantType === 'External' ? (
-                                  <Badge className="bg-orange-500 hover:bg-orange-600 text-white text-[8px] font-bold scale-90 origin-left">EXTERNAL</Badge>
-                                ) : (
-                                  <Badge className="bg-blue-600 hover:bg-blue-700 text-white text-[8px] font-bold scale-90 origin-left">INTERNAL</Badge>
+                {(() => {
+                  const filteredApproved = resourceRequests
+                    .filter(r => !['Draft', 'Submitted', 'Coordinator Review', 'Student Resubmitted', 'Coordinator Rejected', 'Rejected'].includes(r.status))
+                    .filter(r => {
+                      if (applicantTypeFilter === "All") return true;
+                      if (applicantTypeFilter === "Internal") return r.applicantType === "Internal" || !r.applicantType;
+                      if (applicantTypeFilter === "External") return r.applicantType === "External";
+                      return true;
+                    });
+                  const approvedTotalPages = Math.ceil(filteredApproved.length / approvedPerPage) || 1;
+                  const paginatedApproved = filteredApproved.slice((approvedPage - 1) * approvedPerPage, approvedPage * approvedPerPage);
+
+                  return (
+                    <div>
+                      <table className="w-full text-left border-collapse border rounded-xl">
+                        <thead className="bg-slate-50 uppercase text-[9px] tracking-wider text-slate-700 font-bold border-b">
+                          <tr>
+                            <th className="px-4 py-3">ID</th>
+                            <th className="px-4 py-3">Project & Team</th>
+                            <th className="px-4 py-3">Usage Time</th>
+                            <th className="px-4 py-3">Status</th>
+                            <th className="px-4 py-3">Tracking Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {filteredApproved.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="text-center py-6 text-muted-foreground font-semibold text-xs">No approved permissions matching filter found.</td>
+                            </tr>
+                          ) : (
+                            paginatedApproved.map((req) => (
+                              <tr key={req._id} className="hover:bg-slate-50/30">
+                                <td className="px-4 py-3 font-mono font-bold text-primary">
+                                  <div>{req.requestId}</div>
+                                  <div className="mt-1">
+                                    {req.applicantType === 'External' ? (
+                                      <Badge className="bg-orange-500 hover:bg-orange-600 text-white text-[8px] font-bold scale-90 origin-left">EXTERNAL</Badge>
+                                    ) : (
+                                      <Badge className="bg-blue-600 hover:bg-blue-700 text-white text-[8px] font-bold scale-90 origin-left">INTERNAL</Badge>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="font-bold text-slate-800">{req.projectName}</div>
+                                  <div className="text-3xs text-muted-foreground">
+                                    {req.applicantType === 'External' ? (
+                                      `${req.externalFullName || "External User"} (${req.externalCollegeOrg})`
+                                    ) : (
+                                      req.teamName || req.students?.[0]?.name
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 font-mono text-3xs text-muted-foreground">
+                                  {req.requestedMachines?.[0]?.startTime} - {req.requestedMachines?.[0]?.endTime}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <Badge className="text-[8px] font-bold uppercase">{req.status}</Badge>
+                                </td>
+                                <td className="px-4 py-3 flex gap-2">
+                                {/* Materials Issue */}
+                                {req.status === 'Approved' && req.requestedMaterials && req.requestedMaterials.length > 0 && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => {
+                                      setSelectedResRequest(req);
+                                      const initialVals: Record<string, number> = {};
+                                      req.requestedMaterials.forEach(m => {
+                                        initialVals[m.materialId?._id || m.materialId] = m.quantityRequired;
+                                      });
+                                      setAllocateQuantities(initialVals);
+                                      setShowAllocateDialog(true);
+                                    }}
+                                    className="text-3xs h-7 font-bold border-primary text-primary hover:bg-primary/5"
+                                  >
+                                    Allocate Mat
+                                  </Button>
                                 )}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="font-bold text-slate-800">{req.projectName}</div>
-                              <div className="text-3xs text-muted-foreground">
-                                {req.applicantType === 'External' ? (
-                                  `${req.externalFullName || "External User"} (${req.externalCollegeOrg})`
-                                ) : (
-                                  req.teamName || req.students?.[0]?.name
+
+                                {/* Resource Returns */}
+                                {req.status === 'Material Allocated' && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => {
+                                      setSelectedResRequest(req);
+                                      const initialVals: Record<string, number> = {};
+                                      const conds: Record<string, string> = {};
+                                      const rems: Record<string, string> = {};
+                                      req.materialAllocations.forEach(m => {
+                                        const mId = m.materialId?._id || m.materialId;
+                                        initialVals[mId] = m.quantityIssued;
+                                        conds[mId] = 'Good';
+                                        rems[mId] = '';
+                                      });
+                                      setReturnQuantities(initialVals);
+                                      setReturnCondition(conds);
+                                      setReturnRemarks(rems);
+                                      setShowReturnDialog(true);
+                                    }}
+                                    className="text-3xs h-7 font-bold border-indigo-500 text-indigo-700 hover:bg-indigo-50"
+                                  >
+                                    Return tools
+                                  </Button>
                                 )}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 font-mono text-3xs text-muted-foreground">
-                              {req.requestedMachines?.[0]?.startTime} - {req.requestedMachines?.[0]?.endTime}
-                            </td>
-                            <td className="px-4 py-3">
-                              <Badge className="text-[8px] font-bold uppercase">{req.status}</Badge>
-                            </td>
-                            <td className="px-4 py-3 flex gap-2">
-                            {/* Materials Issue */}
-                            {req.status === 'Approved' && req.requestedMaterials && req.requestedMaterials.length > 0 && (
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => {
-                                  setSelectedResRequest(req);
-                                  const initialVals: Record<string, number> = {};
-                                  req.requestedMaterials.forEach(m => {
-                                    initialVals[m.materialId?._id || m.materialId] = m.quantityRequired;
-                                  });
-                                  setAllocateQuantities(initialVals);
-                                  setShowAllocateDialog(true);
-                                }}
-                                className="text-3xs h-7 font-bold border-primary text-primary hover:bg-primary/5"
-                              >
-                                Allocate Mat
-                              </Button>
-                            )}
 
-                            {/* Resource Returns */}
-                            {req.status === 'Material Allocated' && (
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => {
-                                  setSelectedResRequest(req);
-                                  const initialVals: Record<string, number> = {};
-                                  const conds: Record<string, string> = {};
-                                  const rems: Record<string, string> = {};
-                                  req.materialAllocations.forEach(m => {
-                                    const mId = m.materialId?._id || m.materialId;
-                                    initialVals[mId] = m.quantityIssued;
-                                    conds[mId] = 'Good';
-                                    rems[mId] = '';
-                                  });
-                                  setReturnQuantities(initialVals);
-                                  setReturnCondition(conds);
-                                  setReturnRemarks(rems);
-                                  setShowReturnDialog(true);
-                                }}
-                                className="text-3xs h-7 font-bold border-indigo-500 text-indigo-700 hover:bg-indigo-50"
-                              >
-                                Return tools
-                              </Button>
-                            )}
+                                {/* Check-in / Out */}
+                                {!req.actualEntryTime && req.status !== 'Completed' && (
+                                  <Button 
+                                    size="sm" 
+                                    onClick={() => handleCheckIn(req._id)}
+                                    className="text-3xs h-7 bg-green-600 text-white font-bold hover:bg-green-700"
+                                  >
+                                    Check In
+                                  </Button>
+                                )}
 
-                            {/* Check-in / Out */}
-                            {!req.actualEntryTime && req.status !== 'Completed' && (
-                              <Button 
-                                size="sm" 
-                                onClick={() => handleCheckIn(req._id)}
-                                className="text-3xs h-7 bg-green-600 text-white font-bold hover:bg-green-700"
-                              >
-                                Check In
-                              </Button>
-                            )}
-
-                            {req.actualEntryTime && !req.actualExitTime && (
-                              <Button 
-                                size="sm" 
-                                onClick={() => handleCheckOut(req._id)}
-                                className="text-3xs h-7 bg-amber-600 text-white font-bold hover:bg-amber-700"
-                              >
-                                Check Out
-                              </Button>
-                            )}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                                {req.actualEntryTime && !req.actualExitTime && (
+                                  <Button 
+                                    size="sm" 
+                                    onClick={() => handleCheckOut(req._id)}
+                                    className="text-3xs h-7 bg-amber-600 text-white font-bold hover:bg-amber-700"
+                                  >
+                                    Check Out
+                                  </Button>
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                    <TablePagination
+                      currentPage={approvedPage}
+                      totalPages={approvedTotalPages}
+                      totalItems={filteredApproved.length}
+                      itemsPerPage={approvedPerPage}
+                      onPageChange={(page) => setApprovedPage(page)}
+                      onItemsPerPageChange={(size) => { setApprovedPerPage(size); setApprovedPage(1); }}
+                    />
+                  </div>
+                );
+              })()}
               </CardContent>
             </Card>
           </TabsContent>
@@ -1193,72 +1374,90 @@ const CoordinatorDashboard = () => {
                 <CardDescription className="text-xs">Manage active and completed machine usage bookings</CardDescription>
               </CardHeader>
               <CardContent className="overflow-x-auto text-xs">
-                <table className="w-full text-left border-collapse border rounded-xl">
-                  <thead className="bg-slate-50 uppercase text-[9px] tracking-wider text-slate-700 font-bold border-b">
-                    <tr>
-                      <th className="px-4 py-3">Request ID</th>
-                      <th className="px-4 py-3">Machine Name</th>
-                      <th className="px-4 py-3">Team Name</th>
-                      <th className="px-4 py-3">Booking Date</th>
-                      <th className="px-4 py-3">Status</th>
-                      <th className="px-4 py-3">Completion Time</th>
-                      <th className="px-4 py-3 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y font-medium text-slate-700">
-                    {resourceRequests.filter(r => r.requestedMachines && r.requestedMachines.length > 0).length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="text-center py-6 text-muted-foreground font-semibold">No machine bookings found.</td>
-                      </tr>
-                    ) : (
-                      resourceRequests.filter(r => r.requestedMachines && r.requestedMachines.length > 0).map((req) => (
-                        <tr key={req._id} className="hover:bg-slate-50/20">
-                          <td className="px-4 py-3 font-mono font-bold text-primary">{req.requestId}</td>
-                          <td className="px-4 py-3 font-bold text-foreground">
-                            {req.requestedMachines?.[0]?.machineName || "N/A"}
-                          </td>
-                          <td className="px-4 py-3">{req.teamName || req.students?.[0]?.name || "N/A"}</td>
-                          <td className="px-4 py-3">
-                            {req.requestedMachines?.[0]?.usageDate ? new Date(req.requestedMachines[0].usageDate).toLocaleDateString() : 'N/A'}
-                          </td>
-                          <td className="px-4 py-3">
-                            <Badge className="text-[8px] font-bold uppercase" variant={req.status === 'Work Completed' ? 'default' : 'outline'}>
-                              {req.status}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-3 font-mono text-3xs text-muted-foreground">
-                            {req.completedAt ? new Date(req.completedAt).toLocaleString() : 'N/A'}
-                          </td>
-                          <td className="px-4 py-3 text-right flex justify-end gap-2">
-                            {/* View Action */}
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => { setSelectedResRequest(req); setShowResReviewDialog(true); }}
-                              className="text-3xs h-7 font-bold"
-                            >
-                              View
-                            </Button>
+                {(() => {
+                  const allMachineBookings = resourceRequests.filter(r => r.requestedMachines && r.requestedMachines.length > 0);
+                  const machineTotalPages = Math.ceil(allMachineBookings.length / machinePerPage) || 1;
+                  const paginatedMachineBookings = allMachineBookings.slice((machinePage - 1) * machinePerPage, machinePage * machinePerPage);
 
-                            {/* Work Completed Action */}
-                            {['Machine Scheduled', 'Active Booking'].includes(req.status) && (
-                              <Button 
-                                size="sm" 
-                                onClick={() => {
-                                  setCompletionRequest(req);
-                                  setShowCompletionDialog(true);
-                                }}
-                                className="text-3xs h-7 font-bold bg-green-600 text-white hover:bg-green-700"
-                              >
-                                Work Completed
-                              </Button>
-                            )}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                  return (
+                    <div>
+                      <table className="w-full text-left border-collapse border rounded-xl">
+                        <thead className="bg-slate-50 uppercase text-[9px] tracking-wider text-slate-700 font-bold border-b">
+                          <tr>
+                            <th className="px-4 py-3">Request ID</th>
+                            <th className="px-4 py-3">Machine Name</th>
+                            <th className="px-4 py-3">Team Name</th>
+                            <th className="px-4 py-3">Booking Date</th>
+                            <th className="px-4 py-3">Status</th>
+                            <th className="px-4 py-3">Completion Time</th>
+                            <th className="px-4 py-3 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y font-medium text-slate-700">
+                          {allMachineBookings.length === 0 ? (
+                            <tr>
+                              <td colSpan={7} className="text-center py-6 text-muted-foreground font-semibold">No machine bookings found.</td>
+                            </tr>
+                          ) : (
+                            paginatedMachineBookings.map((req) => (
+                              <tr key={req._id} className="hover:bg-slate-50/20">
+                                <td className="px-4 py-3 font-mono font-bold text-primary">{req.requestId}</td>
+                                <td className="px-4 py-3 font-bold text-foreground">
+                                  {req.requestedMachines?.[0]?.machineName || "N/A"}
+                                </td>
+                                <td className="px-4 py-3">{req.teamName || req.students?.[0]?.name || "N/A"}</td>
+                                <td className="px-4 py-3">
+                                  {req.requestedMachines?.[0]?.usageDate ? new Date(req.requestedMachines[0].usageDate).toLocaleDateString() : 'N/A'}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <Badge className="text-[8px] font-bold uppercase" variant={req.status === 'Work Completed' ? 'default' : 'outline'}>
+                                    {req.status}
+                                  </Badge>
+                                </td>
+                                <td className="px-4 py-3 font-mono text-3xs text-muted-foreground">
+                                  {req.completedAt ? new Date(req.completedAt).toLocaleString() : 'N/A'}
+                                </td>
+                                <td className="px-4 py-3 text-right flex justify-end gap-2">
+                                  {/* View Action */}
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => { setSelectedResRequest(req); setShowResReviewDialog(true); }}
+                                    className="text-3xs h-7 font-bold"
+                                  >
+                                    View
+                                  </Button>
+
+                                  {/* Work Completed Action */}
+                                  {['Machine Scheduled', 'Active Booking'].includes(req.status) && (
+                                    <Button 
+                                      size="sm" 
+                                      onClick={() => {
+                                        setCompletionRequest(req);
+                                        setShowCompletionDialog(true);
+                                      }}
+                                      className="text-3xs h-7 font-bold bg-green-600 text-white hover:bg-green-700"
+                                    >
+                                      Work Completed
+                                    </Button>
+                                  )}
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                      <TablePagination
+                        currentPage={machinePage}
+                        totalPages={machineTotalPages}
+                        totalItems={allMachineBookings.length}
+                        itemsPerPage={machinePerPage}
+                        onPageChange={(page) => setMachinePage(page)}
+                        onItemsPerPageChange={(size) => { setMachinePerPage(size); setMachinePage(1); }}
+                      />
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
           </TabsContent>
@@ -1669,11 +1868,20 @@ const CoordinatorDashboard = () => {
 
             </div>
             <DialogFooter className="pt-4 border-t flex flex-wrap gap-2 justify-end">
-              <Button variant="outline" className="font-bold" disabled={submittingDecision} onClick={() => handleResourceRequestDecision("request_changes")}>Request Changes</Button>
-              <Button variant="destructive" className="font-bold" disabled={submittingDecision} onClick={() => handleResourceRequestDecision("reject")}>Reject request</Button>
+              <Button variant="outline" className="font-bold text-xs h-9" disabled={submittingDecision} onClick={() => handleResourceRequestDecision("request_changes")}>Request Changes</Button>
+              <Button variant="destructive" className="font-bold text-xs h-9" disabled={submittingDecision} onClick={() => handleResourceRequestDecision("reject")}>Reject request</Button>
+              <Button
+                type="button"
+                className="font-bold text-xs h-9 bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 shadow-xs"
+                disabled={submittingDecision}
+                onClick={() => setShowUrgentConfirmDialog(true)}
+              >
+                <ShieldAlert className="w-4 h-4 text-white" />
+                Grant Urgent Permission
+              </Button>
               <Button
                 variant="default"
-                className="font-bold bg-primary hover:bg-primary/95 text-white min-w-[190px] gap-2"
+                className="font-bold text-xs h-9 bg-primary hover:bg-primary/95 text-white min-w-[180px] gap-1.5"
                 disabled={submittingDecision}
                 onClick={() => handleResourceRequestDecision("approve")}
               >
@@ -1688,6 +1896,49 @@ const CoordinatorDashboard = () => {
                     Approve & Forward to Head
                   </>
                 )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Confirmation Dialog for Urgent Permission */}
+      {showUrgentConfirmDialog && (
+        <Dialog open={showUrgentConfirmDialog} onOpenChange={setShowUrgentConfirmDialog}>
+          <DialogContent className="max-w-md text-xs text-slate-700">
+            <DialogHeader>
+              <DialogTitle className="text-base font-extrabold flex items-center gap-2 text-slate-900">
+                <ShieldAlert className="w-5 h-5 text-indigo-600" /> Confirm Urgent Permission
+              </DialogTitle>
+              <DialogDescription className="text-xs text-slate-600 pt-2 space-y-2">
+                <p>Are you sure you want to grant <b>Urgent Permission</b> for project <b>"{selectedResRequest?.projectName}"</b>?</p>
+                <div className="bg-primary/5 border border-primary/20 p-3 rounded-md text-slate-800 font-medium space-y-1">
+                  <p className="font-bold text-slate-900 flex items-center gap-1.5">
+                    <ShieldAlert className="w-4 h-4 text-indigo-600" /> Direct Approval (Head Bypassed):
+                  </p>
+                  <p className="text-[11px] text-slate-600">Head permission will <b>NOT</b> be required. The request will be directly approved for immediate machinery usage, and recorded in history logs.</p>
+                </div>
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="pt-3 gap-2">
+              <Button 
+                variant="outline" 
+                className="font-bold text-xs h-9 px-4" 
+                onClick={() => setShowUrgentConfirmDialog(false)}
+                disabled={submittingDecision}
+              >
+                Cancel
+              </Button>
+              <Button 
+                className="font-bold text-xs h-9 px-4 bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5"
+                disabled={submittingDecision}
+                onClick={() => {
+                  setShowUrgentConfirmDialog(false);
+                  handleResourceRequestDecision("urgent_approve");
+                }}
+              >
+                {submittingDecision ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldAlert className="w-4 h-4 text-white" />}
+                Confirm Urgent Approval
               </Button>
             </DialogFooter>
           </DialogContent>
