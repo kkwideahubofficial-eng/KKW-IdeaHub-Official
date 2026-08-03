@@ -157,6 +157,9 @@ const roomPermissionRequestSchema = new Schema(
   { timestamps: true }
 );
 
+roomPermissionRequestSchema.index({ status: 1, 'schedule.requestedDate': 1 });
+roomPermissionRequestSchema.index({ 'applicantDetails.requestedBy': 1, createdAt: -1 });
+
 export const RoomPermissionRequest =
   mongoose.models.RoomPermissionRequest ||
   mongoose.model('RoomPermissionRequest', roomPermissionRequestSchema);

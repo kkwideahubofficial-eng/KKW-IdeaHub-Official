@@ -8,6 +8,10 @@ export async function connectToDatabase(mongoUri) {
   const connectionOptions = {
     // Mongoose v7+ uses stable defaults; keep explicit for clarity
     autoIndex: true,
+    maxPoolSize: 100,
+    minPoolSize: 10,
+    socketTimeoutMS: 45000,
+    serverSelectionTimeoutMS: 10000,
   };
 
   try {

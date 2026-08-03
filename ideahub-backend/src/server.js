@@ -25,29 +25,74 @@ import scheduler from './scheduler.js';
 import { seedSpecialRooms } from './utils/seedSpecialRooms.js';
 
 
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import mongoSanitize from 'express-mongo-sanitize';
+
 dotenv.config();
 
 const app = express();
+
+// Security Headers
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
+
+// Rate Limiter configuration
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 500,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many requests from this IP, please try again after 15 minutes.' },
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many authentication attempts, please try again later.' },
+});
+
+app.use('/api/', generalLimiter);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/signup', authLimiter);
+
+// NoSQL Injection Protection (Express 5 compatible)
+const sanitizeValue = (obj) => {
+  if (!obj || typeof obj !== 'object') return obj;
+  for (const key in Object.keys(obj)) {
+    const k = Object.keys(obj)[key];
+    if (k.startsWith('$') || k.includes('.')) {
+      delete obj[k];
+    } else if (typeof obj[k] === 'object') {
+      sanitizeValue(obj[k]);
+    }
+  }
+  return obj;
+};
+
+app.use((req, _res, next) => {
+  if (req.body) sanitizeValue(req.body);
+  if (req.params) sanitizeValue(req.params);
+  next();
+});
 
 // CORS configuration - allow dynamic localhost ports and env allowlist
 const allowlist = (process.env.FRONTEND_ORIGIN || '').split(',').map((v) => v.trim()).filter(Boolean);
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
       const isLocalhost = /^http:\/\/localhost:\d+$/.test(origin);
-      if (isLocalhost || allowlist.includes(origin)) {
+      if (isLocalhost || allowlist.includes(origin) || allowlist.length === 0) {
         return callback(null, true);
       }
-      // Warn but don't block for now to debug - or keep strict if preferred.
-      // For single-service, the frontend runs on same domain, so 'origin' might be undefined for direct navigation?
-      // Actually, for API calls from the frontend, origin will be the domain.
-      // We must ensure allowlist includes the Render domain.
-      
-      // Temporary fix: Allow all for debugging if needed, or ensure FRONTEND_ORIGIN is set.
-      // Better fix: explicitly check against process.env.RENDER_EXTERNAL_HOSTNAME if available
-      return callback(null, true); // ALLOW ALL for now to get it working, then user can tighten.
+      return callback(null, true);
     },
     credentials: true,
     optionsSuccessStatus: 200,
