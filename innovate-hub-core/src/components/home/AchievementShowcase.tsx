@@ -87,7 +87,7 @@ const AchievementShowcase = () => {
                                         <img
                                             src={item.imageUrl || '/placeholder-achievement.png'}
                                             alt={item.title}
-                                            className="w-full h-full object-cover transform transition-transform duration-700 ease-out group-hover:scale-110"
+                                            className="w-full h-full object-cover object-top transform transition-transform duration-700 ease-out group-hover:scale-110"
                                         />
                                         {/* Glassmorphism Title Overlay */}
                                         <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex items-end opacity-100 transition-opacity duration-300">
