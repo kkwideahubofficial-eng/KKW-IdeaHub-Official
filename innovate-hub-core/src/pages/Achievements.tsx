@@ -224,6 +224,7 @@ const Achievements = () => {
 
   // Selected Achievement state for master-detail view
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isDescExpanded, setIsDescExpanded] = useState(false);
 
   // Drawer (slide-over sheet) filter state
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -1994,9 +1995,18 @@ const Achievements = () => {
                   {/* Project Description */}
                   <div className="space-y-2.5">
                     <h4 className="font-black text-slate-850 text-2xs uppercase tracking-wider text-slate-400">Project Description</h4>
-                    <p className="text-slate-600 text-2xs leading-relaxed font-medium line-clamp-6">
+                    <p className={`text-slate-600 text-2xs leading-relaxed font-medium ${isDescExpanded ? "" : "line-clamp-6"}`}>
                       {activeAchievement.description}
                     </p>
+                    {activeAchievement.description && activeAchievement.description.length > 120 && (
+                      <button
+                        type="button"
+                        onClick={() => setIsDescExpanded(!isDescExpanded)}
+                        className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1 mt-1 focus:outline-none"
+                      >
+                        {isDescExpanded ? "Read Less" : "Read More..."}
+                      </button>
+                    )}
                   </div>
 
                    {/* Gallery grid */}
