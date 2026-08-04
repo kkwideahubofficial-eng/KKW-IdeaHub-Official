@@ -967,36 +967,29 @@ const Achievements = () => {
     }
     if (activeAchievement.gallery && activeAchievement.gallery.length > 0) {
       activeAchievement.gallery.forEach(img => {
-        if (img && img !== activeAchievement.imageUrl) {
+        if (img && !images.includes(img)) {
           images.push(img);
         }
       });
     }
 
-    const placeholders = [
-      "/images/achievements/hackathon.png",
-      "/images/achievements/robotics.png",
-      "/images/achievements/group.png"
-    ];
-
-    while (images.length < 4 && placeholders.length > 0) {
-      const ph = placeholders.shift();
-      if (ph && !images.includes(ph)) {
-        images.push(ph);
-      }
+    if (images.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center p-6 border border-dashed border-slate-200 rounded-xl bg-slate-50/50 text-slate-400 text-xs">
+          <span>No gallery images uploaded</span>
+        </div>
+      );
     }
 
     return (
       <div className="grid grid-cols-2 gap-2">
         {images.slice(0, 4).map((imgUrl, index) => {
-          const isShowcase = imgUrl === activeAchievement.imageUrl;
-          const isPlaceholder = imgUrl.startsWith('/images/achievements/');
           const hasMore = index === 3 && images.length > 4;
 
           return (
             <div key={index} className="aspect-[4/3] rounded-lg overflow-hidden border relative bg-slate-50 shadow-3xs group">
-              <img src={imgUrl} alt={`gallery-${index}`} className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" />
-              {isCoordinator && !isPlaceholder && (
+              <img src={imgUrl} alt={`gallery-${index}`} className="object-cover object-top w-full h-full transition-transform duration-300 group-hover:scale-105" />
+              {isCoordinator && (
                 <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none group-hover:pointer-events-auto">
                   <Button
                     variant="secondary"
@@ -1832,7 +1825,7 @@ const Achievements = () => {
                 <div className="aspect-[16/9] w-full rounded-2xl overflow-hidden border shadow-inner relative bg-slate-50 group">
                   {activeAchievement.imageUrl ? (
                     <>
-                      <img src={activeAchievement.imageUrl} alt={activeAchievement.title} className="object-cover w-full h-full" />
+                      <img src={activeAchievement.imageUrl} alt={activeAchievement.title} className="object-cover object-top w-full h-full" />
                       {isCoordinator && (
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none group-hover:pointer-events-auto">
                           <Button 
@@ -1862,16 +1855,16 @@ const Achievements = () => {
                       )}
                     </div>
                   )}
-                  {/* Subtle glass overlay banner */}
-                  <div className="absolute bottom-4 left-4 right-4 bg-slate-900/60 backdrop-blur-md rounded-xl p-4 border border-white/10 flex items-center justify-between">
+                  {/* Compact floating glass badge overlay */}
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-slate-950/75 backdrop-blur-md rounded-2xl px-6 py-2.5 border border-white/15 shadow-xl flex items-center justify-center gap-6 max-w-[90%] text-center">
                     <div>
-                      <p className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Project Team</p>
-                      <p className="text-xs font-bold text-white mt-0.5">{activeAchievement.achievedBy}</p>
+                      <p className="text-[10px] text-slate-300 font-bold uppercase tracking-wider whitespace-nowrap">Project Team</p>
+                      <p className="text-xs sm:text-sm font-bold text-white mt-0.5 whitespace-nowrap">{activeAchievement.achievedBy}</p>
                     </div>
                     {activeAchievement.prizeAmount && activeAchievement.prizeAmount > 0 ? (
-                      <div className="text-right">
-                        <p className="text-[10px] text-amber-300 font-bold uppercase tracking-wider">Milestone Prize</p>
-                        <p className="text-sm font-black text-amber-400 mt-0.5">₹{activeAchievement.prizeAmount.toLocaleString('en-IN')}</p>
+                      <div className="border-l border-white/15 pl-6 text-center">
+                        <p className="text-[10px] text-amber-300 font-bold uppercase tracking-wider whitespace-nowrap">Milestone Prize</p>
+                        <p className="text-xs sm:text-sm font-black text-amber-400 mt-0.5 whitespace-nowrap">₹{activeAchievement.prizeAmount.toLocaleString('en-IN')}</p>
                       </div>
                     ) : null}
                   </div>

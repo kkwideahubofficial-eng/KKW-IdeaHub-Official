@@ -1519,7 +1519,7 @@ const SpecialRoomPermission = () => {
                                 <span>{new Date(hist.date).toLocaleDateString()}</span>
                               </div>
                               <div className="mt-1 font-medium">Action: <span className="font-bold text-slate-700">{hist.action}</span></div>
-                              {hist.remarks && <div className="mt-1 text-slate-500 italic">"{hist.remarks}"</div>}
+                              {hist.remarks && <div className="mt-1 text-slate-500 italic">"{hist.remarks.replace(/⚡\s*/g, '')}"</div>}
                             </div>
                           ))}
                         </div>

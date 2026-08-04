@@ -56,6 +56,44 @@ function hexToRgba(hex?: string, alpha: number = 0.12): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+const ExpandableText = ({ 
+  text, 
+  clampLines = 2, 
+  className = "text-xs text-slate-600 leading-relaxed" 
+}: { 
+  text: string; 
+  clampLines?: number; 
+  className?: string; 
+}) => {
+  const [expanded, setExpanded] = useState(false);
+  if (!text) return null;
+  const isLong = text.length > 55;
+
+  if (!isLong) {
+    return <p className={className}>{text}</p>;
+  }
+
+  const clampClass = clampLines === 2 ? 'line-clamp-2' : clampLines === 3 ? 'line-clamp-3' : 'line-clamp-1';
+
+  return (
+    <div>
+      <p className={`${className} ${!expanded ? clampClass : ''}`}>
+        {text}
+      </p>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setExpanded(!expanded);
+        }}
+        className="text-[11px] font-bold text-blue-600 hover:text-blue-800 hover:underline transition-colors mt-0.5 inline-flex items-center gap-0.5 cursor-pointer"
+      >
+        {expanded ? "Read less" : "Read more..."}
+      </button>
+    </div>
+  );
+};
+
 export interface ConductedEvent {
   _id?: string;
   title: string;
@@ -1242,9 +1280,11 @@ const StudentClubs: React.FC = () => {
 
                       </div>
 
-                      <p className="text-slate-500 text-xs sm:text-sm leading-relaxed mt-4 mb-5 line-clamp-3">
-                        {club.description}
-                      </p>
+                      <ExpandableText 
+                        text={club.description} 
+                        clampLines={3} 
+                        className="text-slate-500 text-xs sm:text-sm leading-relaxed mt-4 mb-3" 
+                      />
                     </div>
 
                     <div className="space-y-4 pt-2">
@@ -1283,379 +1323,11 @@ const StudentClubs: React.FC = () => {
           )}
         </div>
 
-        {/* 4. PAST / CONDUCTED EVENTS SHOWCASE SECTION WITH PHOTOS */}
-        <div className="mb-14 bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100">
-            <div>
-              <div className="flex items-center gap-2">
-                <Flame className="w-5 h-5 text-orange-500" />
-                <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-                  Past Events & Workshops Conducted
-                </h3>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                Explore real hackathons, technical masterclasses, and interactive events conducted by our student communities with event photos.
-              </p>
-            </div>
 
-            <div className="flex flex-wrap items-center gap-1.5 bg-slate-100/80 p-1.5 rounded-2xl">
-              <button
-                onClick={() => setActiveShowcaseClubTab("all")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                  activeShowcaseClubTab === "all"
-                    ? "bg-white text-slate-900 shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                All Clubs ({allConductedEvents.length})
-              </button>
-              {clubsList.map(c => {
-                const cId = (c._id || c.id || c.clubId || c.shortName || c.name || '').toString();
-                const isActive = activeShowcaseClubTab.toString() === cId;
 
-                return (
-                  <button
-                    key={cId}
-                    onClick={() => setActiveShowcaseClubTab(cId)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                      isActive
-                        ? "bg-white text-slate-900 shadow-xs border border-slate-200/80"
-                        : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
-                    }`}
-                  >
-                    {c.logoUrl ? (
-                      <img src={c.logoUrl} alt={c.shortName} className="w-4 h-4 rounded-full object-contain shrink-0" />
-                    ) : (
-                      <span className="text-sm">{c.icon || '⚡'}</span>
-                    )}
-                    <span>{c.shortName || c.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {showcaseEvents.slice(0, showcaseLimit).map((evt) => (
-              <div 
-                key={evt._id || evt.title}
-                className="bg-slate-50/60 rounded-2xl border border-slate-200/80 overflow-hidden hover:shadow-md transition-all duration-300 flex flex-col justify-between group"
-              >
-                <div className="relative aspect-[16/9] overflow-hidden bg-slate-200">
-                  <img 
-                    src={evt.image} 
-                    alt={evt.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
-                  
-                  <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-full text-[11px] font-extrabold text-slate-800 flex items-center gap-1.5 shadow-sm">
-                    <span>{evt.clubIcon}</span>
-                    <span>{evt.clubName}</span>
-                  </div>
 
-                  <div className="absolute top-3 right-3 bg-slate-900/80 backdrop-blur-md text-white px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase">
-                    {evt.category}
-                  </div>
 
-                  <div className="absolute bottom-3 left-3 right-3 text-white text-xs font-medium flex items-center justify-between">
-                    <span className="flex items-center gap-1 bg-black/40 px-2 py-0.5 rounded-md backdrop-blur-xs">
-                      <Calendar className="w-3.5 h-3.5 text-blue-300" />
-                      {evt.date}
-                    </span>
-                    <span className="flex items-center gap-1 bg-black/40 px-2 py-0.5 rounded-md backdrop-blur-xs">
-                      <Users className="w-3.5 h-3.5 text-emerald-300" />
-                      {evt.participants}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="p-5 space-y-2 flex-1 flex flex-col justify-between">
-                  <div className="space-y-1.5">
-                    <h4 className="text-base font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors leading-snug">
-                      {evt.title}
-                    </h4>
-                    <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">
-                      {evt.description}
-                    </p>
-                  </div>
-
-                  <div className="pt-3 border-t border-slate-200/60 flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                      Event Conducted
-                    </span>
-                    <button
-                      onClick={() => {
-                        const matchedClub = clubsList.find(c => (c.id || c.clubId || c._id) === evt.clubId);
-                        if (matchedClub) setSelectedClub(matchedClub);
-                      }}
-                      className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                    >
-                      <span>Club Details</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {showcaseEvents.length > 4 && (
-            <div className="pt-6 text-center border-t border-slate-100 mt-6">
-              {showcaseLimit < showcaseEvents.length ? (
-                <Button
-                  variant="outline"
-                  onClick={() => setShowcaseLimit(prev => prev + 4)}
-                  className="rounded-2xl px-6 h-11 border-blue-200 text-blue-700 bg-blue-50/50 hover:bg-blue-100/80 font-bold text-xs sm:text-sm inline-flex items-center gap-2 shadow-xs transition-all"
-                >
-                  <span>Load More Events ({showcaseEvents.length - showcaseLimit} Remaining)</span>
-                  <ChevronRight className="w-4 h-4 rotate-90" />
-                </Button>
-              ) : (
-                <Button
-                  variant="ghost"
-                  onClick={() => setShowcaseLimit(4)}
-                  className="rounded-2xl px-6 h-11 text-slate-500 hover:text-slate-800 font-bold text-xs sm:text-sm inline-flex items-center gap-2"
-                >
-                  <span>Show Less</span>
-                  <ChevronRight className="w-4 h-4 -rotate-90" />
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* 5. Upcoming Club Events & Collective Achievements */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-14">
-          
-          {/* UPCOMING CLUB EVENTS */}
-          <div className="lg:col-span-6 bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-blue-600" />
-                  <h3 className="text-lg font-extrabold text-slate-900">
-                    Upcoming Club Events
-                  </h3>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  {isCoordinator && (
-                    <button
-                      onClick={() => setEditingUpcomingEvent({
-                        id: Date.now().toString(),
-                        date: "25",
-                        month: "AUG",
-                        title: "New Upcoming Event",
-                        host: "By Student Club",
-                        location: "Main Auditorium",
-                        time: "10:00 AM",
-                        bg: "bg-blue-50 text-blue-700 border-blue-200"
-                      })}
-                      className="px-2.5 py-1 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-extrabold flex items-center gap-1 transition-colors"
-                      title="Add New Upcoming Event"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Add Event</span>
-                    </button>
-                  )}
-
-                  <Link 
-                    to="/events" 
-                    className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 hover:underline"
-                  >
-                    <span>View All</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
-              </div>
-
-              <div className="space-y-3.5">
-                {upcomingEventsList.map((evt) => (
-                  <div 
-                    key={evt.id} 
-                    className="p-3.5 rounded-xl border border-slate-100 hover:border-slate-200 bg-slate-50/40 hover:bg-slate-50 transition-all flex items-center justify-between gap-4 group relative"
-                  >
-                    <div className="flex items-center gap-3.5">
-                      <div className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center border font-bold ${evt.bg || 'bg-blue-50 text-blue-700 border-blue-200'} shrink-0`}>
-                        <span className="text-base leading-none">{evt.date}</span>
-                        <span className="text-[10px] tracking-wider uppercase mt-0.5">{evt.month}</span>
-                      </div>
-
-                      <div>
-                        <h4 className="text-sm font-bold text-slate-900 leading-tight hover:text-blue-600 transition-colors">
-                          {evt.title}
-                        </h4>
-                        <p className="text-xs font-medium text-slate-500 mt-0.5">
-                          {evt.host}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3 shrink-0">
-                      <div className="hidden sm:flex flex-col items-end text-[11px] font-semibold text-slate-500">
-                        <span className="flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-slate-400" />
-                          {evt.location}
-                        </span>
-                        <span className="flex items-center gap-1 mt-0.5">
-                          <Clock className="w-3 h-3 text-slate-400" />
-                          {evt.time}
-                        </span>
-                      </div>
-
-                      {isCoordinator && (
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => setEditingUpcomingEvent(evt)}
-                            className="p-1.5 rounded-lg bg-white border border-slate-200 text-blue-600 hover:bg-blue-50 transition-colors shadow-2xs"
-                            title="Edit Event"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setUpcomingEventsList(prev => prev.filter(item => item.id !== evt.id));
-                              toast.success("Upcoming event deleted");
-                            }}
-                            className="p-1.5 rounded-lg bg-white border border-slate-200 text-red-500 hover:bg-red-50 transition-colors shadow-2xs"
-                            title="Delete Event"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* OUR COLLECTIVE ACHIEVEMENTS */}
-          <div className="lg:col-span-6 bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
-                <div className="flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-amber-500" />
-                  <h3 className="text-lg font-extrabold text-slate-900">
-                    Our Collective Achievements
-                  </h3>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  {isCoordinator && (
-                    <button
-                      onClick={() => setEditingAchievementStat({
-                        id: Date.now().toString(),
-                        number: "50+",
-                        label: "Innovations Built",
-                        iconType: 'trophy',
-                        color: "text-amber-500 bg-amber-50 border-amber-100"
-                      })}
-                      className="px-2.5 py-1 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-extrabold flex items-center gap-1 transition-colors"
-                      title="Add Achievement Stat"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Add Stat</span>
-                    </button>
-                  )}
-
-                  <Link 
-                    to="/achievements" 
-                    className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 hover:underline"
-                  >
-                    <span>View All</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                {collectiveAchievementsList.map((item) => {
-                  let IconComp = Trophy;
-                  if (item.iconType === 'award') IconComp = Award;
-                  if (item.iconType === 'users') IconComp = Users;
-                  if (item.iconType === 'calendar') IconComp = Calendar;
-
-                  return (
-                    <div 
-                      key={item.id} 
-                      className={`p-4 rounded-xl border flex flex-col justify-between space-y-2 transition-transform hover:-translate-y-0.5 relative group ${item.color || 'text-amber-500 bg-amber-50 border-amber-100'}`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <IconComp className="w-6 h-6 opacity-90" />
-                        
-                        {isCoordinator && (
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => setEditingAchievementStat(item)}
-                              className="p-1 rounded-md bg-white/80 text-slate-700 hover:bg-white transition-colors"
-                              title="Edit Stat"
-                            >
-                              <Edit className="w-3 h-3" />
-                            </button>
-                            <button
-                              onClick={() => {
-                                setCollectiveAchievementsList(prev => prev.filter(a => a.id !== item.id));
-                                toast.success("Achievement stat removed");
-                              }}
-                              className="p-1 rounded-md bg-white/80 text-red-600 hover:bg-white transition-colors"
-                              title="Remove Stat"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-
-                      <div>
-                        <div className="text-2xl font-black tracking-tight leading-none text-slate-900">
-                          {item.number}
-                        </div>
-                        <div className="text-xs font-semibold text-slate-600 mt-1">
-                          {item.label}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-        {/* 6. Join Community CTA Banner */}
-        <div className="bg-zinc-950 border border-zinc-800/80 rounded-3xl p-8 sm:p-10 text-white shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8">
-          <div className="absolute -right-10 -bottom-10 w-64 h-64 rounded-full bg-white/5 blur-3xl pointer-events-none" />
-          <div className="absolute -left-10 -top-10 w-48 h-48 rounded-full bg-zinc-700/15 blur-2xl pointer-events-none" />
-
-          <div className="flex items-center gap-6 relative z-10">
-            <div className="hidden sm:flex w-24 h-24 rounded-2xl bg-zinc-900/90 backdrop-blur-md items-center justify-center border border-zinc-800 shrink-0 text-4xl shadow-inner">
-              🧑‍💻
-            </div>
-
-            <div className="space-y-2 text-center sm:text-left">
-              <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-                Be a Part of Something Great!
-              </h3>
-              <p className="text-zinc-400 text-xs sm:text-sm max-w-xl leading-relaxed">
-                Join our clubs and start your journey of learning, innovation and leadership. Connect with like-minded creators and build projects that matter.
-              </p>
-            </div>
-          </div>
-
-          <div className="relative z-10 shrink-0">
-            <Button
-              onClick={() => handleOpenJoinModal("Student Club")}
-              className="h-12 px-8 rounded-full bg-white text-zinc-950 font-extrabold text-sm hover:bg-zinc-100 hover:scale-105 transition-all shadow-lg flex items-center gap-2 group border border-white/20"
-            >
-              <span>Join a Club Now</span>
-              <ArrowRight className="w-4 h-4 text-zinc-950 transition-transform group-hover:translate-x-1" />
-            </Button>
-          </div>
-        </div>
 
       </div>
 
@@ -1823,9 +1495,11 @@ const StudentClubs: React.FC = () => {
                         <h5 className="text-sm font-extrabold text-slate-900 leading-snug">
                           {evt.title}
                         </h5>
-                        <p className="text-xs text-slate-600 line-clamp-2">
-                          {evt.description}
-                        </p>
+                        <ExpandableText 
+                          text={evt.description} 
+                          clampLines={2} 
+                          className="text-xs text-slate-600 leading-relaxed" 
+                        />
                         
                         <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] font-semibold text-slate-500">
                           <span className="flex items-center gap-1">
@@ -1996,21 +1670,10 @@ const StudentClubs: React.FC = () => {
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+              <div className="pt-4 border-t border-slate-100">
                 <div className="text-xs text-slate-500 font-medium">
                   👥 {selectedClub.members} Active Members • Established {selectedClub.established}
                 </div>
-                <Button 
-                  onClick={() => {
-                    const name = selectedClub.name;
-                    setSelectedClub(null);
-                    handleOpenJoinModal(name);
-                  }}
-                  style={{ backgroundColor: selectedClub.accentColor }}
-                  className="rounded-xl px-6 font-bold text-white shadow-md hover:opacity-90 transition-opacity"
-                >
-                  Join Club Now
-                </Button>
               </div>
 
             </div>

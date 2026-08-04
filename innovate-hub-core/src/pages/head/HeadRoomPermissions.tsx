@@ -643,7 +643,7 @@ const HeadRoomPermissions = () => {
                           <span>{hist.role} {hist.byName ? `- ${hist.byName}` : ''}</span>
                           <span>{new Date(hist.date).toLocaleDateString()}</span>
                         </div>
-                        <div className="mt-1">Action: <span className="font-bold">{hist.action}</span> | Remarks: <span className="italic text-muted-foreground">"{hist.remarks || 'None'}"</span></div>
+                        <div className="mt-1">Action: <span className="font-bold">{hist.action}</span> | Remarks: <span className="italic text-muted-foreground">"{hist.remarks ? hist.remarks.replace(/⚡\s*/g, '') : 'None'}"</span></div>
                       </div>
                     ))}
                   </div>

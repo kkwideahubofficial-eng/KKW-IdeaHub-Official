@@ -11,7 +11,6 @@ import {
   Rocket,
   ShieldCheck,
   Edit3,
-  Crown,
   FlaskConical,
   Plus,
   Trash2,
@@ -116,10 +115,10 @@ const DEFAULT_MEMBERS: TeamMember[] = [
   {
     _id: "default-student-2",
     name: "Roshan Gaikwad",
-    role: "UI/UX & Frontend Developer",
+    role: "Full Stack Developer",
     category: "student",
-    tagline: "UI/UX & Frontend Developer",
-    description: "Designed the UI/UX, implemented the frontend and ensured a seamless experience.",
+    tagline: "Full Stack Developer",
+    description: "Developed the backend, frontend, system architecture and core functionalities.",
     image: "/images/team/roshan.jpg",
     badgeColor: "blue",
     displayOrder: 7,
@@ -533,7 +532,6 @@ const DevelopmentTeam: React.FC = () => {
                       />
                     </div>
                     <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-[#2563EB] text-white px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase flex items-center gap-1 shadow-md whitespace-nowrap">
-                      <Crown className="w-3 h-3 text-amber-300" />
                       <span>{hod.tagline || "PROJECT GUIDE"}</span>
                     </div>
                   </div>
@@ -638,10 +636,6 @@ const DevelopmentTeam: React.FC = () => {
                         {guide.description}
                       </p>
                     )}
-                  </div>
-
-                  <div className={`w-9 h-9 rounded-full ${style.iconBg} flex items-center justify-center shadow-inner mt-auto`}>
-                    <Users className="w-4 h-4" />
                   </div>
                 </div>
               );
@@ -974,17 +968,6 @@ const DevelopmentTeam: React.FC = () => {
               <p className="text-[11px] sm:text-xs text-[#64748B] font-medium">
                 AICTE IDEA Lab – Innovation for a Better Tomorrow
               </p>
-            </div>
-
-            <div className="shrink-0 text-[#2563EB]">
-              <svg viewBox="0 0 100 80" className="w-16 h-16 sm:w-20 sm:h-20 fill-none stroke-[#2563EB] stroke-[2] stroke-linecap-round stroke-linejoin-round">
-                <path d="M 10 30 L 30 30 C 35 30 40 33 44 38 L 48 43 L 53 38 C 57 33 62 30 67 30 L 90 30" />
-                <path d="M 10 48 L 22 48 C 27 48 32 50 37 54 L 42 58 C 46 61 50 61 54 58 L 59 54 C 64 50 69 48 74 48 L 90 48" />
-                <path d="M 38 42 C 41 42 44 45 44 48 C 44 51 41 54 38 54" />
-                <path d="M 44 48 C 47 48 50 51 50 54 C 50 57 47 60 44 60" />
-                <path d="M 50 54 C 53 54 56 57 56 60 C 56 63 53 66 50 66" />
-                <path d="M 56 60 C 59 60 62 63 62 66 C 62 69 59 72 56 72" />
-              </svg>
             </div>
           </div>
         </section>

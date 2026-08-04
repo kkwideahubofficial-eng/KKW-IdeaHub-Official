@@ -125,7 +125,7 @@ const AchievementDetail = () => {
             <Card className="overflow-hidden border-border/60 shadow-sm">
               <div className="relative aspect-[16/9] bg-muted/30">
                 {achievement.imageUrl ? (
-                  <img src={achievement.imageUrl} alt={achievement.title} className="h-full w-full object-cover" />
+                  <img src={achievement.imageUrl} alt={achievement.title} className="h-full w-full object-cover object-top" />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/10 via-muted/20 to-background">
                     <div className="flex flex-col items-center gap-3 text-center text-muted-foreground">

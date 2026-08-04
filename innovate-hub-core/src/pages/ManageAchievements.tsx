@@ -252,7 +252,7 @@ const ManageAchievements = () => {
           <Card key={achievement._id} className="flex flex-col overflow-hidden hover:shadow-md transition-shadow">
              {achievement.imageUrl && (
               <div className="h-48 w-full overflow-hidden bg-muted">
-                 <img src={achievement.imageUrl} alt={achievement.title} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
+                 <img src={achievement.imageUrl} alt={achievement.title} className="w-full h-full object-cover object-top hover:scale-105 transition-transform duration-300" />
               </div>
             )}
             <CardHeader>

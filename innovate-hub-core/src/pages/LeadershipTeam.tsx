@@ -60,7 +60,7 @@ const LeadershipTeam = () => {
           {/* Photo */}
           <div className="w-32 h-36 flex-shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-inner">
             <img 
-              src="/images/nandurkar.png" 
+              src="/images/nandurkar_sir.png" 
               alt={principal.name} 
               className="w-full h-full object-cover"
             />
@@ -89,7 +89,7 @@ const LeadershipTeam = () => {
               {/* Photo */}
               <div className="w-32 h-36 flex-shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-inner">
                 <img 
-                  src={idx === 0 ? "/images/munje.png" : "/images/pawar.png"} 
+                  src={idx === 0 ? "/images/munje_sir.png" : "/images/pawar_sir.png"} 
                   alt={member.name} 
                   className="w-full h-full object-cover"
                 />

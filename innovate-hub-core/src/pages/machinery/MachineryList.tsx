@@ -1346,7 +1346,7 @@ const MachineryList = () => {
                             <Badge variant="secondary" className="text-[8px] uppercase tracking-wide font-bold">{h.role}</Badge>
                             <span>{h.action} {h.byName ? `(${h.byName})` : ''}</span>
                           </div>
-                          {h.remarks && <p className="text-3xs text-muted-foreground mt-0.5 font-medium">Remarks: {h.remarks}</p>}
+                          {h.remarks && <p className="text-3xs text-muted-foreground mt-0.5 font-medium">Remarks: {h.remarks.replace(/⚡\s*/g, '')}</p>}
                         </div>
                         <span className="text-[10px] text-muted-foreground font-mono self-center">
                           {new Date(h.date).toLocaleDateString()}

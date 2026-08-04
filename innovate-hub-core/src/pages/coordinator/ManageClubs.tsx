@@ -81,6 +81,7 @@ export interface Club {
     contactNo?: string;
     email?: string;
   };
+  order?: number;
 }
 
 const API_BASE = '/api/student-clubs';
