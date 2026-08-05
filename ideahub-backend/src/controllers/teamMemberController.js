@@ -1,4 +1,5 @@
 import TeamMember from '../models/TeamMember.js';
+import { deleteFromCloudinary } from '../utils/deleteCloudinaryImage.js';
 
 // Initial default seed data for the Development Team page
 export const INITIAL_TEAM_MEMBERS = [
@@ -260,10 +261,16 @@ export const updateTeamMember = async (req, res) => {
 // DELETE team member by ID
 export const deleteTeamMember = async (req, res) => {
   try {
-    const member = await TeamMember.findByIdAndDelete(req.params.id);
+    const member = await TeamMember.findById(req.params.id);
     if (!member) {
       return res.status(404).json({ success: false, message: 'Team member not found' });
     }
+
+    if (member.image) {
+      await deleteFromCloudinary(member.image);
+    }
+
+    await member.deleteOne();
 
     res.status(200).json({
       success: true,

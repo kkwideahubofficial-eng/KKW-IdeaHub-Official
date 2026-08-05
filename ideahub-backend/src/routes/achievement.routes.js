@@ -13,6 +13,7 @@ import {
   getAchievementById,
   updateAchievement,
   deleteAchievement,
+  deleteCloudinaryImageController,
 } from '../controllers/achievementController.js';
 
 const router = Router();
@@ -24,6 +25,9 @@ router.get('/timeline', getAchievementTimeline);
 router.get('/contributions', getContributionAnalytics);
 router.get('/analytics', getAchievementAnalytics);
 router.get('/prize-analytics', getPrizeAnalytics);
+
+// Coordinator-only routes
+router.post('/delete-image', requireAuth, requireCoordinator, deleteCloudinaryImageController);
 router.get('/:id', param('id').isMongoId(), getAchievementById);
 
 // Coordinator-only routes

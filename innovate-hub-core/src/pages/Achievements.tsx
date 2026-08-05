@@ -550,6 +550,42 @@ const Achievements = () => {
     setOpen(true);
   };
 
+  // Cloudinary image deletion handlers
+  const handleDeleteShowcaseImage = async () => {
+    if (!form.imageUrl) return;
+    if (form.imageUrl.includes('cloudinary.com')) {
+      const toastId = toast.loading('Deleting photo from Cloudinary...');
+      try {
+        await api.post('/achievements/delete-image', { imageUrl: form.imageUrl });
+        toast.success('Photo deleted from Cloudinary successfully!', { id: toastId });
+      } catch (err) {
+        console.error(err);
+        toast.error('Failed to delete photo from Cloudinary', { id: toastId });
+      }
+    } else {
+      toast.success('Image reference removed');
+    }
+    setForm(prev => ({ ...prev, imageUrl: '' }));
+    const fileInput = document.getElementById('achievement-image') as HTMLInputElement | null;
+    if (fileInput) fileInput.value = '';
+  };
+
+  const handleDeleteGalleryImage = async (url: string, idx: number) => {
+    if (url.includes('cloudinary.com')) {
+      const toastId = toast.loading('Deleting gallery photo from Cloudinary...');
+      try {
+        await api.post('/achievements/delete-image', { imageUrl: url });
+        toast.success('Gallery photo deleted from Cloudinary!', { id: toastId });
+      } catch (err) {
+        console.error(err);
+        toast.error('Failed to delete gallery photo from Cloudinary', { id: toastId });
+      }
+    } else {
+      toast.success('Gallery photo reference removed');
+    }
+    setForm(prev => ({ ...prev, gallery: prev.gallery.filter((_, i) => i !== idx) }));
+  };
+
   // Staged Timeline Helpers for main dialog form
   const handleAddStagedTimeline = () => {
     if (!timelineLabel.trim() || !timelineDate) {
@@ -1240,6 +1276,35 @@ const Achievements = () => {
                         </div>
                       </div>
 
+                      {/* Showcase Image Delete & Preview Card */}
+                      {form.imageUrl && (
+                        <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-3 shadow-2xs">
+                          <div className="flex items-center gap-3 overflow-hidden">
+                            <img src={form.imageUrl} alt="Showcase preview" className="w-12 h-12 object-cover rounded-lg border border-slate-200 shrink-0 bg-white" />
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-2xs font-extrabold text-slate-800">Showcase Photo</p>
+                                {form.imageUrl.includes('cloudinary.com') && (
+                                  <span className="text-[9px] bg-blue-100 text-blue-700 font-bold px-1.5 py-0.2 rounded-full">Cloudinary</span>
+                                )}
+                              </div>
+                              <p className="text-[10px] text-slate-400 truncate max-w-[240px] sm:max-w-[320px]">{form.imageUrl}</p>
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            className="h-8 px-2.5 text-2xs font-bold shrink-0 flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                            onClick={handleDeleteShowcaseImage}
+                            title="Delete Photo from Cloudinary"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Delete Photo
+                          </Button>
+                        </div>
+                      )}
+
                       {/* Gallery Upload section */}
                       <div className="space-y-1.5 mt-2">
                         <Label htmlFor="achievement-gallery">Upload Gallery Images (Multiple)</Label>
@@ -1266,15 +1331,15 @@ const Achievements = () => {
                             <div className="flex flex-wrap gap-3 p-1 border border-slate-100 rounded-2xl bg-slate-50/30">
                               {/* Existing Images */}
                               {form.gallery.map((url, idx) => (
-                                <div key={`existing-${url}-${idx}`} className="relative w-16 h-16 rounded-xl border border-slate-200 bg-white">
+                                <div key={`existing-${url}-${idx}`} className="relative w-16 h-16 rounded-xl border border-slate-200 bg-white group/gallery">
                                   <div className="w-full h-full rounded-xl overflow-hidden">
                                     <img src={url} alt="existing gallery" className="w-full h-full object-cover" />
                                   </div>
                                   <button
                                     type="button"
-                                    onClick={() => setForm(prev => ({ ...prev, gallery: prev.gallery.filter((_, i) => i !== idx) }))}
+                                    onClick={() => handleDeleteGalleryImage(url, idx)}
                                     className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 hover:bg-red-650 flex items-center justify-center text-white border border-white shadow-xs transition-colors"
-                                    title="Delete Image"
+                                    title="Delete Photo from Cloudinary"
                                   >
                                     <X className="w-3 h-3 stroke-[3]" />
                                   </button>

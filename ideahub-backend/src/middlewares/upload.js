@@ -7,10 +7,13 @@ const storage = new CloudinaryStorage({
   params: {
     folder: 'ideahub',
     resource_type: 'auto',
+    transformation: [
+      { quality: 'auto:good', fetch_format: 'auto', width: 1920, height: 1080, crop: 'limit' }
+    ],
   },
 });
 
-export const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
+export const upload = multer({ storage, limits: { fileSize: 3 * 1024 * 1024 } }); // 3MB limit
 
 const idProofStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
@@ -22,7 +25,7 @@ const idProofStorage = new CloudinaryStorage({
 
 export const uploadIdProof = multer({
   storage: idProofStorage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: 3 * 1024 * 1024 }, // 3MB limit
   fileFilter: (req, file, cb) => {
     const allowedMimeTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
     if (!allowedMimeTypes.includes(file.mimetype)) {

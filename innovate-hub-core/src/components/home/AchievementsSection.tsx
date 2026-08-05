@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Trophy, Award, ZoomIn } from "lucide-react";
+import { ArrowRight, Trophy, Award } from "lucide-react";
 import api from "@/lib/axios";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface AchievementItem {
   _id: string;
@@ -61,8 +60,6 @@ const fallbackStories: AchievementItem[] = [
 const AchievementsSection = () => {
   const [featured, setFeatured] = useState<AchievementItem>(fallbackFeatured);
   const [stories, setStories] = useState<AchievementItem[]>(fallbackStories);
-  const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null);
-  const [fitMode, setFitMode] = useState<"contain" | "cover">("contain");
 
   useEffect(() => {
     const fetchAchievements = async () => {
@@ -113,26 +110,17 @@ const AchievementsSection = () => {
             
             {/* Left/Top Column: Photo */}
             <div 
-              onClick={() => setPreviewImage({ 
-                url: featured.imageUrl || "https://images.unsplash.com/photo-1518241353330-0f7941c2d9b5?auto=format&fit=crop&q=80&w=800", 
-                title: featured.title 
-              })}
-              className="md:col-span-5 relative aspect-video md:aspect-auto min-h-[220px] bg-slate-950 cursor-pointer group overflow-hidden"
-              title="Click to view full image"
+              className="md:col-span-5 relative aspect-video md:aspect-auto min-h-[220px] bg-slate-950 overflow-hidden"
             >
               <img 
                 src={featured.imageUrl || "https://images.unsplash.com/photo-1518241353330-0f7941c2d9b5?auto=format&fit=crop&q=80&w=800"} 
                 alt={featured.title} 
-                className="absolute inset-0 w-full h-full object-cover object-top opacity-90 transition-transform duration-500 group-hover:scale-105"
+                className="absolute inset-0 w-full h-full object-cover object-top opacity-90"
                 loading="lazy"
               />
               <div className="absolute top-3 left-3 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-bold shadow-md z-10">
                 <Trophy className="w-3 h-3" />
                 Featured Innovation
-              </div>
-              <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-md text-white text-[10px] font-bold shadow-lg z-10">
-                <ZoomIn className="w-3.5 h-3.5" />
-                View Full Size
               </div>
             </div>
 
@@ -192,23 +180,14 @@ const AchievementsSection = () => {
               >
                 {/* Photo */}
                 <div 
-                  onClick={() => setPreviewImage({ 
-                    url: story.imageUrl || "https://images.unsplash.com/photo-1599599810769-bcde5a160d32?auto=format&fit=crop&q=80&w=400", 
-                    title: story.title 
-                  })}
-                  className="relative aspect-[16/9] overflow-hidden bg-slate-100 border-b cursor-pointer group/img"
-                  title="Click to view full image"
+                  className="relative aspect-[16/9] overflow-hidden bg-slate-100 border-b"
                 >
                   <img 
                     src={story.imageUrl || "https://images.unsplash.com/photo-1599599810769-bcde5a160d32?auto=format&fit=crop&q=80&w=400"} 
                     alt={story.title}
-                    className="w-full h-full object-cover object-top transition-transform duration-500 group-hover/img:scale-105"
+                    className="w-full h-full object-cover object-top"
                     loading="lazy"
                   />
-                  <div className="absolute bottom-2 right-2 opacity-0 group-hover/img:opacity-100 transition-opacity duration-300 inline-flex items-center gap-1 px-2 py-0.5 rounded bg-black/75 backdrop-blur-sm text-white text-[9px] font-bold">
-                    <ZoomIn className="w-3 h-3" />
-                    Full Size
-                  </div>
                 </div>
                 
                 {/* Details */}
@@ -247,35 +226,6 @@ const AchievementsSection = () => {
         </div>
 
       </div>
-
-      {/* Lightbox Dialog Modal for Original/Full-Size Image View */}
-      <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
-        <DialogContent className="max-w-4xl p-4 bg-slate-950 text-white border-slate-800 rounded-2xl overflow-hidden">
-          <DialogHeader className="flex flex-row items-center justify-between pb-2 border-b border-slate-800">
-            <DialogTitle className="text-sm font-semibold truncate pr-4 text-slate-200">
-              {previewImage?.title}
-            </DialogTitle>
-            <div className="flex items-center gap-2 mr-6">
-              <button
-                type="button"
-                onClick={() => setFitMode(fitMode === "contain" ? "cover" : "contain")}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-              >
-                {fitMode === "contain" ? "Mode: Original / Uncropped Fit" : "Mode: Fill Container"}
-              </button>
-            </div>
-          </DialogHeader>
-          <div className="relative w-full h-[65vh] flex items-center justify-center bg-black/60 rounded-xl overflow-hidden mt-3 p-2">
-            {previewImage && (
-              <img
-                src={previewImage.url}
-                alt={previewImage.title}
-                className={`max-h-full max-w-full ${fitMode === "contain" ? "object-contain" : "object-cover object-top w-full h-full"} rounded-lg transition-all duration-300`}
-              />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </section>
   );
 };

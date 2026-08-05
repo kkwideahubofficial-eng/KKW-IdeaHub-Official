@@ -9,6 +9,7 @@ import { PlusCircle, Edit, Trash2, Users, Calendar } from 'lucide-react';
 import api from '@/lib/axios';
 import { toast } from 'sonner';
 import { ReadMore } from '@/components/ReadMore';
+import { compressImageToLimit } from '@/lib/imageCompressor';
 
 interface Achievement {
   _id: string;
@@ -103,7 +104,9 @@ const ManageAchievements = () => {
       
       const fileInput = document.getElementById('achievement-image') as HTMLInputElement | null;
       if (fileInput?.files && fileInput.files[0]) {
-        formData.append('image', fileInput.files[0]);
+        const originalFile = fileInput.files[0];
+        const compressedFile = await compressImageToLimit(originalFile, 3 * 1024 * 1024);
+        formData.append('image', compressedFile);
       }
 
       if (currentAchievement) {
@@ -232,12 +235,52 @@ const ManageAchievements = () => {
               <div>
                 <Label htmlFor="achievement-image">Upload Image (optional)</Label>
                 <Input id="achievement-image" type="file" accept="image/*" />
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Max file limit: <strong>3 MB</strong>. Photos &gt; 3 MB are <strong>automatically compressed</strong> before saving.
+                </p>
               </div>
               <div>
                 <Label htmlFor="imageUrl">Or Image URL</Label>
                 <Input id="imageUrl" value={form.imageUrl} onChange={(e) => setForm({...form, imageUrl: e.target.value})} placeholder="https://..." />
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Direct link to image (JPG, PNG, WEBP)
+                </p>
               </div>
             </div>
+            {form.imageUrl && (
+              <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <img src={form.imageUrl} alt="Showcase preview" className="w-12 h-12 object-cover rounded-lg border border-slate-200 shrink-0 bg-white" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-slate-800">Current Photo</p>
+                    <p className="text-[11px] text-muted-foreground truncate max-w-[200px]">{form.imageUrl}</p>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  className="h-8 px-2.5 text-xs font-bold shrink-0 flex items-center gap-1"
+                  onClick={async () => {
+                    if (form.imageUrl.includes('cloudinary.com')) {
+                      const toastId = toast.loading('Deleting photo from Cloudinary...');
+                      try {
+                        await api.post('/achievements/delete-image', { imageUrl: form.imageUrl });
+                        toast.success('Photo deleted from Cloudinary!', { id: toastId });
+                      } catch (err) {
+                        toast.error('Failed to delete photo from Cloudinary', { id: toastId });
+                      }
+                    }
+                    setForm(prev => ({ ...prev, imageUrl: '' }));
+                    const fileInput = document.getElementById('achievement-image') as HTMLInputElement | null;
+                    if (fileInput) fileInput.value = '';
+                  }}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Delete Photo
+                </Button>
+              </div>
+            )}
             <DialogFooter>
               <Button type="submit">{currentAchievement ? 'Update' : 'Create'}</Button>
             </DialogFooter>

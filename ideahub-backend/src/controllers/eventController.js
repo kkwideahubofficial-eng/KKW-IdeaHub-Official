@@ -7,6 +7,7 @@ import { validationResult } from 'express-validator';
 import path from 'path';
 import fs from 'fs';
 import sendEmail from '../utils/sendEmail.js';
+import { deleteFromCloudinary } from '../utils/deleteCloudinaryImage.js';
 
 // Helper function to send notification to database
 const createNotification = async (userId, title, body, type) => {
@@ -271,6 +272,10 @@ export const deleteEvent = async (req, res) => {
     const event = await Event.findById(req.params.id);
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
+    }
+
+    if (event.imageUrl) {
+      await deleteFromCloudinary(event.imageUrl);
     }
 
     await EventRegistration.deleteMany({ event: event._id });

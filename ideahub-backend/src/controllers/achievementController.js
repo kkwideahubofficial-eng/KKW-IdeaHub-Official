@@ -1,5 +1,6 @@
 import Achievement from '../models/Achievement.js';
 import { validationResult } from 'express-validator';
+import { deleteFromCloudinary } from '../utils/deleteCloudinaryImage.js';
 
 const CONTRIBUTION_FIELDS = [
   'workspaceProvided',
@@ -546,10 +547,21 @@ export const updateAchievement = async (req, res) => {
         ...ideaHubContributions,
       };
     }
+    const oldImageUrl = achievement.imageUrl;
+    const oldGallery = achievement.gallery || [];
+
     if (req.files && req.files.image && req.files.image[0]) {
-      achievement.imageUrl = req.files.image[0].path;
+      const newImageUrl = req.files.image[0].path;
+      if (oldImageUrl && oldImageUrl !== newImageUrl) {
+        await deleteFromCloudinary(oldImageUrl);
+      }
+      achievement.imageUrl = newImageUrl;
     } else if (typeof req.body.imageUrl === 'string') {
-      achievement.imageUrl = req.body.imageUrl || achievement.imageUrl;
+      const newImageUrl = req.body.imageUrl;
+      if (oldImageUrl && oldImageUrl !== newImageUrl) {
+        await deleteFromCloudinary(oldImageUrl);
+      }
+      achievement.imageUrl = newImageUrl;
     }
 
     let gallery = [];
@@ -564,6 +576,13 @@ export const updateAchievement = async (req, res) => {
           : req.body.existingGallery;
         if (Array.isArray(existing)) {
           gallery = [...existing, ...gallery];
+
+          // Delete removed gallery images from Cloudinary
+          const keptSet = new Set(existing);
+          const removedFromGallery = oldGallery.filter(url => !keptSet.has(url));
+          if (removedFromGallery.length > 0) {
+            await deleteFromCloudinary(removedFromGallery);
+          }
         }
       } catch (e) {
         // Ignore parse error
@@ -630,9 +649,39 @@ export const deleteAchievement = async (req, res) => {
       return res.status(404).json({ message: 'Achievement not found' });
     }
 
+    // Delete associated images, gallery, and certificates from Cloudinary
+    if (achievement.imageUrl) {
+      await deleteFromCloudinary(achievement.imageUrl);
+    }
+    if (achievement.gallery && achievement.gallery.length > 0) {
+      await deleteFromCloudinary(achievement.gallery);
+    }
+    if (achievement.certificates && achievement.certificates.length > 0) {
+      const certUrls = achievement.certificates.map(c => c.fileUrl).filter(Boolean);
+      await deleteFromCloudinary(certUrls);
+    }
+
     await achievement.deleteOne();
     res.json({ message: 'Achievement removed' });
   } catch (err) {
     res.status(500).json({ message: 'Server Error' });
   }
 };
+
+// @desc    Delete single photo/image asset from Cloudinary
+// @route   POST /api/achievements/delete-image
+// @access  Private/Coordinator
+export const deleteCloudinaryImageController = async (req, res) => {
+  try {
+    const { imageUrl } = req.body;
+    if (!imageUrl) {
+      return res.status(400).json({ message: 'imageUrl is required' });
+    }
+    await deleteFromCloudinary(imageUrl);
+    res.json({ success: true, message: 'Image deleted from Cloudinary' });
+  } catch (err) {
+    console.error('Error deleting Cloudinary image:', err);
+    res.status(500).json({ message: 'Failed to delete image from Cloudinary' });
+  }
+};
+
