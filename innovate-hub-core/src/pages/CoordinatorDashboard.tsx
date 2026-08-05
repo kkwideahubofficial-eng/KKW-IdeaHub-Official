@@ -911,7 +911,6 @@ const CoordinatorDashboard = () => {
               <TabsTrigger value="resource_pending" className="text-xs">Pending Reviews ({resStats.pending})</TabsTrigger>
               <TabsTrigger value="resource_approved" className="text-xs">Approved Permissions</TabsTrigger>
               <TabsTrigger value="machine_bookings" className="text-xs">Machine Bookings ({machineStats.pendingCompletion})</TabsTrigger>
-              <TabsTrigger value="material_stock" className="text-xs">Material Inventory Manager</TabsTrigger>
             </TabsList>
 
             <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
@@ -1208,78 +1207,6 @@ const CoordinatorDashboard = () => {
                   </div>
                 );
               })()}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Material Stock Editor Tab */}
-          <TabsContent value="material_stock" className="space-y-4">
-            <Card>
-              <CardHeader className="flex flex-row justify-between items-center pb-3">
-                <div>
-                  <CardTitle className="text-base font-bold">Material Consumables Catalog</CardTitle>
-                  <CardDescription className="text-xs">Adjust stock levels and configure thresholds</CardDescription>
-                </div>
-                <Button 
-                  onClick={triggerSeedMaterials} 
-                  disabled={seeding || materials.length > 0} 
-                  variant="outline" 
-                  className="text-xs font-semibold gap-1.5 border-dashed"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${seeding ? 'animate-spin' : ''}`} /> Pre-seed Standard Materials
-                </Button>
-              </CardHeader>
-              <CardContent className="overflow-x-auto text-xs">
-                <table className="w-full text-left border-collapse">
-                  <thead className="bg-slate-50 uppercase text-[9px] tracking-wider text-slate-700 font-bold border-b">
-                    <tr>
-                      <th className="px-4 py-3">Material Name</th>
-                      <th className="px-4 py-3">Category</th>
-                      <th className="px-4 py-3">Current Stock</th>
-                      <th className="px-4 py-3">Allocated Qty</th>
-                      <th className="px-4 py-3">Available Stock</th>
-                      <th className="px-4 py-3">Low stock threshold</th>
-                      <th className="px-4 py-3 text-right">Stock Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y font-medium text-slate-700">
-                    {materials.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="text-center py-6 text-muted-foreground font-semibold">No materials catalogs added yet.</td>
-                      </tr>
-                    ) : (
-                      materials.map((mat) => {
-                        const isLow = mat.remainingQuantity <= mat.lowStockThreshold;
-                        return (
-                          <tr key={mat._id} className={isLow ? 'bg-amber-50/25' : ''}>
-                            <td className="px-4 py-3 font-bold text-foreground">{mat.name}</td>
-                            <td className="px-4 py-3">{mat.category}</td>
-                            <td className="px-4 py-3 font-mono font-bold text-slate-800">{mat.currentStock} {mat.unit}</td>
-                            <td className="px-4 py-3 font-mono text-indigo-700">{mat.allocatedQuantity}</td>
-                            <td className={`px-4 py-3 font-mono font-extrabold ${mat.remainingQuantity <= 0 ? 'text-red-600' : 'text-green-700'}`}>
-                              {mat.remainingQuantity} {mat.unit}
-                            </td>
-                            <td className="px-4 py-3 font-mono text-muted-foreground">{mat.lowStockThreshold} {mat.unit}</td>
-                            <td className="px-4 py-3 text-right">
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
-                                onClick={() => {
-                                  setEditingMaterial(mat);
-                                  setStockInput(mat.currentStock);
-                                  setShowStockEditDialog(true);
-                                }}
-                                className="text-3xs h-7 font-bold"
-                              >
-                                Edit Stock
-                              </Button>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
               </CardContent>
             </Card>
           </TabsContent>
