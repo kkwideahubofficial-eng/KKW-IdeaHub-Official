@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { connectToDatabase } from '../src/config/db.js';
 
 import Achievement from '../src/models/Achievement.js';
 
@@ -16,7 +17,7 @@ const achievementsData = [
     description: "Winners at PICT’s Tech Fiesta 2025. Project Guided by Dr. D. V. Medhane. Used 3D Printer, CO2 Laser Machine.",
     date: new Date("2025-12-01"),
     achievedBy: "IdeationX (Prasad Patil, Tejas Deshmukh, Saniya Bhosale, Swadesh Jadhav, Divya Bhavsar)",
-    imageUrl: "/uploads/achievement_win_1.png",
+    imageUrl: "/uploads/achievement_win.jpg",
     prizeAmount: 100000,
     eventYear: 2025,
     achievementType: "Competition",
@@ -30,7 +31,7 @@ const achievementsData = [
     description: "Winners. Project Guided by Prof. G. N. Jadhav. Used 3D Printer, CO2 Laser Machine, Power Tool, Hand Grinder, Heat Gun.",
     date: new Date("2025-12-15"),
     achievedBy: "Nikola (Electrical)",
-    imageUrl: "/uploads/achievement_win_2.png",
+    imageUrl: "/uploads/achievement_win.jpg",
     prizeAmount: 15000,
     eventYear: 2025,
     achievementType: "Competition",
@@ -44,7 +45,7 @@ const achievementsData = [
     description: "Secured AIR 5. Project Guided by Prof. P. B. Surwade. Used 3D Printer, CO2 Laser Machine, Power Tool, Hand Grinder, Heat Gun.",
     date: new Date("2025-10-30"),
     achievedBy: "Nemesis (Mechanical)",
-    imageUrl: "/uploads/achievement_win_1.png",
+    imageUrl: "/uploads/achievement_win.jpg",
     prizeAmount: 20000,
     eventYear: 2025,
     achievementType: "Competition",
@@ -58,7 +59,7 @@ const achievementsData = [
     description: "Winners at Smart India Hackathon. Project Guided by Prof. S.T. Patil. Used 3D Printer, CO2 Laser Machine, Power Tool, Hand Grinder, Heat Gun.",
     date: new Date("2025-12-10"),
     achievedBy: "Shrujamya (Computer)",
-    imageUrl: "/uploads/achievement_win_2.png",
+    imageUrl: "/uploads/achievement_win.jpg",
     prizeAmount: 150000,
     eventYear: 2025,
     achievementType: "Hackathon",
@@ -72,7 +73,7 @@ const achievementsData = [
     description: "Winners at Smart India Hackathon. Project Guided by Prof. P.Jadhav. Used 3D Printer, CO2 Laser Machine, Power Tool, Hand Grinder, Heat Gun.",
     date: new Date("2025-12-10"),
     achievedBy: "TwinX (E&rc)",
-    imageUrl: "/uploads/achievement_win_1.png",
+    imageUrl: "/uploads/achievement_win.jpg",
     prizeAmount: 150000,
     eventYear: 2025,
     achievementType: "Hackathon",
@@ -86,7 +87,7 @@ const achievementsData = [
     description: "Winners at Smart India Hackathon. Project Guided by Prof. P. D. Rakibe. Used 3D Printer, CO2 Laser Machine, Power Tool, Hand Grinder, Heat Gun.",
     date: new Date("2025-12-10"),
     achievedBy: "Sahastransh (Computer)",
-    imageUrl: "/uploads/achievement_win_2.png",
+    imageUrl: "/uploads/achievement_win.jpg",
     prizeAmount: 15000,
     eventYear: 2025,
     achievementType: "Hackathon",
@@ -100,7 +101,7 @@ const achievementsData = [
     description: "Winners at Smart India Hackathon. Project Guided by Prof. Neha Patil / Prof. Rohini Daund. Used 3D Printer, CO2 Laser Machine, Power Tool, Hand Grinder, Heat Gun.",
     date: new Date("2025-12-10"),
     achievedBy: "Agratas (E&Tc)",
-    imageUrl: "/uploads/achievement_win_1.png",
+    imageUrl: "/uploads/achievement_win.jpg",
     prizeAmount: 75000,
     eventYear: 2025,
     achievementType: "Hackathon",
@@ -114,7 +115,7 @@ const achievementsData = [
     description: "Winners at Smart India Hackathon. Project Guided by Prof. Neha Patil / Prof. Rohini Daund. Used 3D Printer, CO2 Laser Machine, Power Tool, Hand Grinder, Heat Gun.",
     date: new Date("2025-12-10"),
     achievedBy: "CableSense (E&TC)",
-    imageUrl: "/uploads/achievement_win_2.png",
+    imageUrl: "/uploads/achievement_win.jpg",
     prizeAmount: 150000,
     eventYear: 2025,
     achievementType: "Hackathon",
@@ -128,7 +129,7 @@ const achievementsData = [
     description: "Winners at Smart India Hackathon. Project Guided by Prof. P.L.Patil (IT). Used 3D Printer, CO2 Laser Machine, Power Tool, Hand Grinder, Heat Gun.",
     date: new Date("2025-12-10"),
     achievedBy: "AquacredZ (IT)",
-    imageUrl: "/uploads/achievement_win_1.png",
+    imageUrl: "/uploads/achievement_win.jpg",
     prizeAmount: 150000,
     eventYear: 2025,
     achievementType: "Hackathon",
@@ -142,7 +143,7 @@ const achievementsData = [
     description: "Winners. Project Guided by Prof. G. N. Jadhav. Used 3D Printer, CO2 Laser Machine, Power Tool, Hand Grinder, Heat Gun.",
     date: new Date("2026-03-07"),
     achievedBy: "Nikola Racing (Electrical)",
-    imageUrl: "/uploads/achievement_win_2.png",
+    imageUrl: "/uploads/achievement_win.jpg",
     prizeAmount: 7000,
     eventYear: 2026,
     achievementType: "Competition",
@@ -156,7 +157,7 @@ const achievementsData = [
     description: "Winners at Toykathon 2026. Project Guided by Dr. S. P. Ugale. Used 3D Printer, CO2 Laser Machine, Power Tool, Hand Grinder, Heat Gun.",
     date: new Date("2026-03-27"),
     achievedBy: "Spirit (Atharva Mayekar, Harshvardhan Shah, Kanad Buwa, Pranav Nikhade, Shubham Jadhav, Sahil Nerpagar)",
-    imageUrl: "/uploads/achievement_win_1.png",
+    imageUrl: "/uploads/achievement_win.jpg",
     prizeAmount: 10000,
     eventYear: 2026,
     achievementType: "Hackathon",
@@ -170,7 +171,7 @@ const achievementsData = [
     description: "Winners at Ulectra 2026. Project Guided by Dr. S. P. Ugale. Used 3D Printer, CO2 Laser Machine, Power Tool, Hand Grinder, Heat Gun.",
     date: new Date("2026-04-13"),
     achievedBy: "Spirit (Atharva Mayekar, Harshvardhan Shah, Kanad Buwa, Pranotee Pabale, Srushti Kothavade)",
-    imageUrl: "/uploads/achievement_win_2.png",
+    imageUrl: "/uploads/achievement_win.jpg",
     prizeAmount: 50000,
     eventYear: 2026,
     achievementType: "Competition",
@@ -184,7 +185,7 @@ const achievementsData = [
     description: "Winners at Unplugged 2026. Participated actively using AICTE IDEA Lab facilities.",
     date: new Date("2026-04-11"),
     achievedBy: "Pixel Mind (Atharva Mayekar, Pranav Nikhade, Shubham Jadhav, Abhishek Pathare)",
-    imageUrl: "/uploads/achievement_win_1.png",
+    imageUrl: "/uploads/achievement_win.jpg",
     prizeAmount: 15000,
     eventYear: 2026,
     achievementType: "Competition",
@@ -198,7 +199,7 @@ const achievementsData = [
 const seedDB = async () => {
   try {
     console.log('Connecting to MongoDB...');
-    await mongoose.connect(process.env.MONGO_URI);
+    await connectToDatabase(process.env.MONGO_URI);
     console.log('Connected!');
 
     console.log('Clearing old achievements...');

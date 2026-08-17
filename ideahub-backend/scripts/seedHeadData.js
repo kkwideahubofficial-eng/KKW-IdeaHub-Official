@@ -7,6 +7,7 @@ import Machinery from '../src/models/Machinery.js';
 import MachineryRequest from '../src/models/MachineryRequest.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { connectToDatabase } from '../src/config/db.js';
 
 // Fix for __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -14,18 +15,8 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
-const connectDB = async () => {
-    try {
-        await mongoose.connect(process.env.MONGO_URI);
-        console.log('MongoDB Connected');
-    } catch (err) {
-        console.error('Connection Error:', err);
-        process.exit(1);
-    }
-};
-
 const seedData = async () => {
-    await connectDB();
+    await connectToDatabase(process.env.MONGO_URI);
 
     try {
         console.log('Clearing old test data (optional - uncomment if needed)...');
@@ -34,7 +25,7 @@ const seedData = async () => {
         
         // 1. Create Head Users
         let headUser; // Store first head user for machinery backward compatibility
-        const headEmails = ['roshangaikwad1902@gmail.com', 'rnmunje@kkwagh.edu.in'];
+        const headEmails = ['ydbhise@kkwagh.edu.in', 'knbire370124@kkwagh.edu.in'];
         for (const email of headEmails) {
             let hUser = await User.findOne({ email });
             if (!hUser) {
@@ -103,8 +94,43 @@ const seedData = async () => {
             console.log('Updated Team Member User password to 123456:', teamMemberEmail);
         }
 
+        // 2.2 Create Beta Testing Students
+        const betaStudents = [
+            { name: 'S. R. Sarnaik', branch: 'Computer Engineering', email: 'srsarnaik370124@kkwagh.edu.in' },
+            { name: 'Ayush Tandale', branch: 'Computer Engineering', email: 'aptandale370124@kkwagh.edu.in' },
+            { name: 'Rohan Gaikwad', branch: 'Computer Engineering', email: 'rvgaikwad370124@kkwagh.edu.in' },
+            { name: 'Raj Sankpal', branch: 'Computer Engineering', email: 'rbsankpal370124@kkwagh.edu.in' },
+            { name: 'Ganesh Sarde', branch: 'ENTC', email: 'gmsarde370224@kkwagh.edu.in' }
+        ];
+
+        for (const student of betaStudents) {
+            let u = await User.findOne({ email: student.email });
+            if (!u) {
+                const salt = await bcrypt.genSalt(10);
+                const hashedPassword = await bcrypt.hash('123456', salt);
+                u = await User.create({
+                    name: student.name,
+                    email: student.email,
+                    passwordHash: hashedPassword,
+                    role: 'team',
+                    branch: student.branch,
+                    teamName: 'Beta Tester',
+                    phone: '1234567890'
+                });
+                console.log('Created Beta Test Student User:', student.email);
+            } else {
+                const salt = await bcrypt.genSalt(10);
+                const hashedPassword = await bcrypt.hash('123456', salt);
+                u.name = student.name;
+                u.branch = student.branch;
+                u.passwordHash = hashedPassword;
+                await u.save();
+                console.log('Updated Beta Test Student User:', student.email);
+            }
+        }
+
         // 2.5 Create Coordinator Users
-        const coordinatorEmails = ['roshangaikwad2006@gmail.com', 'rngaikwad370124@kkwagh.edu.in'];
+        const coordinatorEmails = ['kkwieer-idea-lab@kkwagh.edu.in', 'rngaikwad370124@kkwagh.edu.in'];
         for (const coordEmail of coordinatorEmails) {
             let coordUser = await User.findOne({ email: coordEmail });
             if (!coordUser) {
@@ -136,7 +162,7 @@ const seedData = async () => {
                 capacity: 1,
                 isAvailable: true,
                 createdBy: headUser._id,
-                imageUrl: 'https://placehold.co/600x400',
+                imageUrl: '/uploads/machinery_3d_printer.jpg',
                 timeSlots: [
                     { day: 'Monday', startTime: '09:00', endTime: '17:00' },
                     { day: 'Tuesday', startTime: '09:00', endTime: '17:00' },
@@ -333,10 +359,12 @@ const seedData = async () => {
         console.log('Created Scheduled Request (FUTURE: 9:10-9:15 PM today) - MAT-SEED-005');
 
         console.log('--- SEEDING COMPLETE ---');
-        console.log('Head Creds:        roshangaikwad1902@gmail.com, rnmunje@kkwagh.edu.in / 123456');
+        console.log(`Head Creds:        ${headEmails.join(', ')} / 123456`);
         console.log('Student Creds:     student@test.com / student1');
         console.log('Team Member Creds: teammember@gmail.com / 123456');
-        console.log('Coordinator Creds: roshangaikwad2006@gmail.com, rngaikwad370124@kkwagh.edu.in / 123456');
+        console.log(`Coordinator Creds: ${coordinatorEmails.join(', ')} / 123456`);
+        console.log('Beta Test Student Creds (Password: 123456):');
+        betaStudents.forEach(s => console.log(`  - ${s.name} (${s.email})`));
         console.log('');
         console.log('MAT-SEED-004 => status: Machine Scheduled | slot: 8:00-8:05 AM TODAY (PAST - for completion reminder test)');
         console.log('MAT-SEED-005 => status: Machine Scheduled | slot: 9:10-9:15 PM TODAY (FUTURE - approved by coord+head)');

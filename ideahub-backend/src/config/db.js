@@ -1,8 +1,19 @@
 import mongoose from 'mongoose';
+import dns from 'dns';
 
 export async function connectToDatabase(mongoUri) {
   if (!mongoUri) {
     throw new Error('MONGO_URI is not defined');
+  }
+
+  // Fallback DNS if system returns localhost (prevents SRV resolution failure on Windows)
+  try {
+    const servers = dns.getServers();
+    if (servers.length === 1 && servers[0] === '127.0.0.1') {
+      dns.setServers(['8.8.8.8', '1.1.1.1']);
+    }
+  } catch (e) {
+    // Ignore setting DNS servers error
   }
 
   const connectionOptions = {
